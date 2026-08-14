@@ -12,13 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 
 interface AddStaffModalProps {
@@ -39,8 +32,7 @@ export function AddStaffModal({
     password: "",
     first_name: editStaff?.first_name || "",
     last_name: editStaff?.last_name || "",
-    assigned_role: editStaff?.assigned_role || AssignedRole.MANAGER,
-    cross_functional_roles: editStaff?.cross_functional_roles || [],
+    roles: editStaff?.roles || [AssignedRole.MANAGER],
     is_active: editStaff?.is_active ?? true,
   });
 
@@ -52,18 +44,20 @@ export function AddStaffModal({
       .join(" ");
   };
 
-  const handleCrossRoleToggle = (role: AssignedRole) => {
+  const handleRoleToggle = (role: AssignedRole) => {
     setFormData((prev) => {
-      const current = prev.cross_functional_roles;
+      const current = prev.roles;
       if (current.includes(role)) {
+        // Prevent deselecting the last role
+        if (current.length === 1) return prev;
         return {
           ...prev,
-          cross_functional_roles: current.filter((r) => r !== role),
+          roles: current.filter((r) => r !== role),
         };
       }
       return {
         ...prev,
-        cross_functional_roles: [...current, role],
+        roles: [...current, role],
       };
     });
   };
@@ -84,12 +78,12 @@ export function AddStaffModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] bg-white">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-gray-900">
             {editStaff ? "Edit Staff Profile" : "Add New Staff"}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-gray-600">
             {editStaff
               ? "Update the staff member's information below."
               : "Fill in the details to add a new staff member."}
@@ -158,45 +152,21 @@ export function AddStaffModal({
             </div>
 
             <div className="grid gap-2">
-              <label htmlFor="assigned_role" className="text-sm font-medium">
-                Primary Role
-              </label>
-              <Select
-                value={formData.assigned_role}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, assigned_role: value as AssignedRole })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(AssignedRole).map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {formatRole(role)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">
-                Cross-Functional Roles
+              <label className="text-sm font-medium text-gray-700">
+                Roles
               </label>
               <div className="flex flex-wrap gap-2">
                 {Object.values(AssignedRole).map((role) => {
-                  if (role === formData.assigned_role) return null;
-                  const isSelected = formData.cross_functional_roles.includes(role);
+                  const isSelected = formData.roles.includes(role);
                   return (
                     <button
                       key={role}
                       type="button"
-                      onClick={() => handleCrossRoleToggle(role)}
+                      onClick={() => handleRoleToggle(role)}
                       className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
                         isSelected
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background border-border hover:bg-muted"
+                          ? "bg-blue-500 text-white border-blue-500 hover:bg-blue-600"
+                          : "bg-white text-gray-700 border-gray-200 hover:bg-blue-50"
                       }`}
                     >
                       {formatRole(role)}
@@ -204,38 +174,32 @@ export function AddStaffModal({
                   );
                 })}
               </div>
-              {formData.cross_functional_roles.length === 0 && (
-                <p className="text-xs text-muted-foreground">
-                  No cross-functional roles selected
-                </p>
-              )}
+              <p className="text-xs text-gray-500">
+                Select at least one role
+              </p>
             </div>
 
             <div className="grid gap-2">
-              <label className="text-sm font-medium">Account Status</label>
-              <div className="flex gap-2">
+              <label className="text-sm font-medium text-gray-700">Account Status</label>
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => setFormData({ ...formData, is_active: true })}
-                  className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                  onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     formData.is_active
-                      ? "bg-green-500 text-white border-green-500"
-                      : "bg-background border-border hover:bg-muted"
+                      ? "bg-green-500"
+                      : "bg-gray-300"
                   }`}
                 >
-                  Active
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      formData.is_active ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, is_active: false })}
-                  className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
-                    !formData.is_active
-                      ? "bg-gray-200 text-gray-700 border-gray-300"
-                      : "bg-background border-border hover:bg-muted"
-                  }`}
-                >
-                  Inactive
-                </button>
+                <span className="text-sm text-gray-700">
+                  {formData.is_active ? "Active" : "Inactive"}
+                </span>
               </div>
             </div>
           </div>

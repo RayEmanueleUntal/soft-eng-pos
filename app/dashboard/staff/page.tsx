@@ -36,8 +36,7 @@ export default function StaffPage() {
         password_hash: staffData.password_hash || "hashed_password",
         first_name: staffData.first_name || "",
         last_name: staffData.last_name || "",
-        assigned_role: staffData.assigned_role!,
-        cross_functional_roles: staffData.cross_functional_roles || [],
+        roles: staffData.roles || [],
         is_active: staffData.is_active ?? true,
       };
       setStaff((prev) => [...prev, newStaff]);
@@ -48,9 +47,6 @@ export default function StaffPage() {
     <div className="container mx-auto p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Staff Profiling</h1>
-        <p className="text-muted-foreground">
-          Manage staff profiles and cross-functional role assignments
-        </p>
       </div>
 
       <StaffTable

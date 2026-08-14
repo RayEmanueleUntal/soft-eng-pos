@@ -12,9 +12,8 @@ export interface Staff {
   password_hash: string;
   first_name: string;
   last_name: string;
-  assigned_role: AssignedRole;
+  roles: AssignedRole[];
   is_active: boolean;
-  cross_functional_roles: AssignedRole[];
 }
 
 export const mockStaffData: Staff[] = [
@@ -24,9 +23,8 @@ export const mockStaffData: Staff[] = [
     password_hash: "hashed_password_1",
     first_name: "John",
     last_name: "Manager",
-    assigned_role: AssignedRole.MANAGER,
+    roles: [AssignedRole.MANAGER, AssignedRole.SALES_CLERK, AssignedRole.CASHIER],
     is_active: true,
-    cross_functional_roles: [AssignedRole.SALES_CLERK, AssignedRole.CASHIER],
   },
   {
     id: 2,
@@ -34,9 +32,8 @@ export const mockStaffData: Staff[] = [
     password_hash: "hashed_password_2",
     first_name: "Sarah",
     last_name: "Secretary",
-    assigned_role: AssignedRole.SECRETARY,
+    roles: [AssignedRole.SECRETARY, AssignedRole.CASHIER],
     is_active: true,
-    cross_functional_roles: [AssignedRole.CASHIER],
   },
   {
     id: 3,
@@ -44,9 +41,8 @@ export const mockStaffData: Staff[] = [
     password_hash: "hashed_password_3",
     first_name: "Mike",
     last_name: "Cashier",
-    assigned_role: AssignedRole.CASHIER,
+    roles: [AssignedRole.CASHIER, AssignedRole.SALES_CLERK],
     is_active: true,
-    cross_functional_roles: [AssignedRole.SALES_CLERK],
   },
   {
     id: 4,
@@ -54,9 +50,8 @@ export const mockStaffData: Staff[] = [
     password_hash: "hashed_password_4",
     first_name: "Anna",
     last_name: "Sales",
-    assigned_role: AssignedRole.SALES_CLERK,
+    roles: [AssignedRole.SALES_CLERK, AssignedRole.CASHIER, AssignedRole.STOCK_MANAGEMENT],
     is_active: true,
-    cross_functional_roles: [AssignedRole.CASHIER, AssignedRole.STOCK_MANAGEMENT],
   },
   {
     id: 5,
@@ -64,9 +59,8 @@ export const mockStaffData: Staff[] = [
     password_hash: "hashed_password_5",
     first_name: "Bob",
     last_name: "Stock",
-    assigned_role: AssignedRole.STOCK_MANAGEMENT,
+    roles: [AssignedRole.STOCK_MANAGEMENT, AssignedRole.SALES_CLERK],
     is_active: true,
-    cross_functional_roles: [AssignedRole.SALES_CLERK],
   },
   {
     id: 6,
@@ -74,9 +68,8 @@ export const mockStaffData: Staff[] = [
     password_hash: "hashed_password_6",
     first_name: "Emily",
     last_name: "Assistant",
-    assigned_role: AssignedRole.MANAGER,
+    roles: [AssignedRole.MANAGER, AssignedRole.SECRETARY],
     is_active: false,
-    cross_functional_roles: [AssignedRole.SECRETARY],
   },
   {
     id: 7,
@@ -84,9 +77,8 @@ export const mockStaffData: Staff[] = [
     password_hash: "hashed_password_7",
     first_name: "David",
     last_name: "Cashier2",
-    assigned_role: AssignedRole.CASHIER,
+    roles: [AssignedRole.CASHIER],
     is_active: true,
-    cross_functional_roles: [],
   },
   {
     id: 8,
@@ -94,9 +86,8 @@ export const mockStaffData: Staff[] = [
     password_hash: "hashed_password_8",
     first_name: "Lisa",
     last_name: "Sales2",
-    assigned_role: AssignedRole.SALES_CLERK,
+    roles: [AssignedRole.SALES_CLERK, AssignedRole.CASHIER],
     is_active: true,
-    cross_functional_roles: [AssignedRole.CASHIER],
   },
   {
     id: 9,
@@ -104,9 +95,8 @@ export const mockStaffData: Staff[] = [
     password_hash: "hashed_password_9",
     first_name: "Kevin",
     last_name: "Stock2",
-    assigned_role: AssignedRole.STOCK_MANAGEMENT,
+    roles: [AssignedRole.STOCK_MANAGEMENT, AssignedRole.SALES_CLERK, AssignedRole.CASHIER],
     is_active: false,
-    cross_functional_roles: [AssignedRole.SALES_CLERK, AssignedRole.CASHIER],
   },
   {
     id: 10,
@@ -114,9 +104,8 @@ export const mockStaffData: Staff[] = [
     password_hash: "hashed_password_10",
     first_name: "Rachel",
     last_name: "Secretary2",
-    assigned_role: AssignedRole.SECRETARY,
+    roles: [AssignedRole.SECRETARY, AssignedRole.CASHIER, AssignedRole.SALES_CLERK],
     is_active: true,
-    cross_functional_roles: [AssignedRole.CASHIER, AssignedRole.SALES_CLERK],
   },
   {
     id: 11,
@@ -124,9 +113,8 @@ export const mockStaffData: Staff[] = [
     password_hash: "hashed_password_11",
     first_name: "Tom",
     last_name: "Manager3",
-    assigned_role: AssignedRole.MANAGER,
+    roles: [AssignedRole.MANAGER, AssignedRole.STOCK_MANAGEMENT],
     is_active: true,
-    cross_functional_roles: [AssignedRole.STOCK_MANAGEMENT],
   },
   {
     id: 12,
@@ -134,9 +122,8 @@ export const mockStaffData: Staff[] = [
     password_hash: "hashed_password_12",
     first_name: "Jessica",
     last_name: "Cashier3",
-    assigned_role: AssignedRole.CASHIER,
+    roles: [AssignedRole.CASHIER],
     is_active: true,
-    cross_functional_roles: [],
   },
   {
     id: 13,
@@ -144,9 +131,8 @@ export const mockStaffData: Staff[] = [
     password_hash: "hashed_password_13",
     first_name: "Chris",
     last_name: "Sales3",
-    assigned_role: AssignedRole.SALES_CLERK,
+    roles: [AssignedRole.SALES_CLERK, AssignedRole.STOCK_MANAGEMENT],
     is_active: false,
-    cross_functional_roles: [AssignedRole.STOCK_MANAGEMENT],
   },
   {
     id: 14,
@@ -154,9 +140,8 @@ export const mockStaffData: Staff[] = [
     password_hash: "hashed_password_14",
     first_name: "Amanda",
     last_name: "Stock3",
-    assigned_role: AssignedRole.STOCK_MANAGEMENT,
+    roles: [AssignedRole.STOCK_MANAGEMENT, AssignedRole.SALES_CLERK],
     is_active: true,
-    cross_functional_roles: [AssignedRole.SALES_CLERK],
   },
   {
     id: 15,
@@ -164,8 +149,7 @@ export const mockStaffData: Staff[] = [
     password_hash: "hashed_password_15",
     first_name: "Mark",
     last_name: "Secretary3",
-    assigned_role: AssignedRole.SECRETARY,
+    roles: [AssignedRole.SECRETARY, AssignedRole.CASHIER],
     is_active: true,
-    cross_functional_roles: [AssignedRole.CASHIER],
   },
 ];
