@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,12 +8,12 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export function AddProductModal() {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     category: "",
@@ -22,20 +22,18 @@ export function AddProductModal() {
     size: "",
     retailPrice: "",
     wholesalePrice: "",
-  })
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     // Logic to save product will connect here later
-    console.log("New Product:", formData)
-    setOpen(false)
-  }
+    console.log("New Product:", formData);
+    setOpen(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>+ Add New Product</Button>
-      </DialogTrigger>
+      <DialogTrigger render={<Button>+ Add Product</Button>} />
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add New Hardware Product</DialogTitle>
@@ -50,19 +48,25 @@ export function AddProductModal() {
           <Input
             placeholder="Category (e.g., Bolts)"
             value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, category: e.target.value })
+            }
             required
           />
           <Input
             placeholder="Thread Type (e.g., Metric, UNC)"
             value={formData.threadType}
-            onChange={(e) => setFormData({ ...formData, threadType: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, threadType: e.target.value })
+            }
             required
           />
           <Input
             placeholder="Material (e.g., Stainless Steel 304)"
             value={formData.material}
-            onChange={(e) => setFormData({ ...formData, material: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, material: e.target.value })
+            }
             required
           />
           <Input
@@ -77,7 +81,9 @@ export function AddProductModal() {
               step="0.01"
               placeholder="Retail Price (PHP)"
               value={formData.retailPrice}
-              onChange={(e) => setFormData({ ...formData, retailPrice: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, retailPrice: e.target.value })
+              }
               required
             />
             <Input
@@ -85,7 +91,9 @@ export function AddProductModal() {
               step="0.01"
               placeholder="Wholesale Price (PHP)"
               value={formData.wholesalePrice}
-              onChange={(e) => setFormData({ ...formData, wholesalePrice: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, wholesalePrice: e.target.value })
+              }
               required
             />
           </div>
@@ -95,5 +103,5 @@ export function AddProductModal() {
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

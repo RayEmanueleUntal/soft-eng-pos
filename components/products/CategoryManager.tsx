@@ -1,34 +1,39 @@
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 
 export function CategoryManager() {
-  const [categories, setCategories] = useState(["Bolts", "Nuts", "Screws", "Washers"])
-  const [newCategory, setNewCategory] = useState("")
+  const [categories, setCategories] = useState([
+    "Bolts",
+    "Nuts",
+    "Screws",
+    "Washers",
+  ]);
+  const [newCategory, setNewCategory] = useState("");
 
   const handleAddCategory = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (newCategory.trim() && !categories.includes(newCategory.trim())) {
-      setCategories([...categories, newCategory.trim()])
-      setNewCategory("")
+      setCategories([...categories, newCategory.trim()]);
+      setNewCategory("");
     }
-  }
+  };
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="outline">Manage Categories</Button>
-      </DialogTrigger>
+      <DialogTrigger
+        render={<Button variant="outline">Manage Categories</Button>}
+      />
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
           <DialogTitle>Product Categories</DialogTitle>
@@ -52,5 +57,5 @@ export function CategoryManager() {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
