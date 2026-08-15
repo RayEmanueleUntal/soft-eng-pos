@@ -1,0 +1,155 @@
+export enum AssignedRole {
+  MANAGER = "MANAGER",
+  SECRETARY = "SECRETARY",
+  CASHIER = "CASHIER",
+  SALES_CLERK = "SALES_CLERK",
+  STOCK_MANAGEMENT = "STOCK_MANAGEMENT",
+}
+
+export interface Staff {
+  id: number;
+  username: string;
+  password_hash: string;
+  first_name: string;
+  last_name: string;
+  roles: AssignedRole[];
+  is_active: boolean;
+}
+
+export const mockStaffData: Staff[] = [
+  {
+    id: 1,
+    username: "jmanager",
+    password_hash: "hashed_password_1",
+    first_name: "John",
+    last_name: "Manager",
+    roles: [AssignedRole.MANAGER, AssignedRole.SALES_CLERK, AssignedRole.CASHIER],
+    is_active: true,
+  },
+  {
+    id: 2,
+    username: "ssecretary",
+    password_hash: "hashed_password_2",
+    first_name: "Sarah",
+    last_name: "Secretary",
+    roles: [AssignedRole.SECRETARY, AssignedRole.CASHIER],
+    is_active: true,
+  },
+  {
+    id: 3,
+    username: "mcashier",
+    password_hash: "hashed_password_3",
+    first_name: "Mike",
+    last_name: "Cashier",
+    roles: [AssignedRole.CASHIER, AssignedRole.SALES_CLERK],
+    is_active: true,
+  },
+  {
+    id: 4,
+    username: "asales",
+    password_hash: "hashed_password_4",
+    first_name: "Anna",
+    last_name: "Sales",
+    roles: [AssignedRole.SALES_CLERK, AssignedRole.CASHIER, AssignedRole.STOCK_MANAGEMENT],
+    is_active: true,
+  },
+  {
+    id: 5,
+    username: "bstock",
+    password_hash: "hashed_password_5",
+    first_name: "Bob",
+    last_name: "Stock",
+    roles: [AssignedRole.STOCK_MANAGEMENT, AssignedRole.SALES_CLERK],
+    is_active: true,
+  },
+  {
+    id: 6,
+    username: "emanager2",
+    password_hash: "hashed_password_6",
+    first_name: "Emily",
+    last_name: "Assistant",
+    roles: [AssignedRole.MANAGER, AssignedRole.SECRETARY],
+    is_active: false,
+  },
+  {
+    id: 7,
+    username: "dcashier2",
+    password_hash: "hashed_password_7",
+    first_name: "David",
+    last_name: "Cashier2",
+    roles: [AssignedRole.CASHIER],
+    is_active: true,
+  },
+  {
+    id: 8,
+    username: "lsales2",
+    password_hash: "hashed_password_8",
+    first_name: "Lisa",
+    last_name: "Sales2",
+    roles: [AssignedRole.SALES_CLERK, AssignedRole.CASHIER],
+    is_active: true,
+  },
+  {
+    id: 9,
+    username: "kstock2",
+    password_hash: "hashed_password_9",
+    first_name: "Kevin",
+    last_name: "Stock2",
+    roles: [AssignedRole.STOCK_MANAGEMENT, AssignedRole.SALES_CLERK, AssignedRole.CASHIER],
+    is_active: false,
+  },
+  {
+    id: 10,
+    username: "rsecretary2",
+    password_hash: "hashed_password_10",
+    first_name: "Rachel",
+    last_name: "Secretary2",
+    roles: [AssignedRole.SECRETARY, AssignedRole.CASHIER, AssignedRole.SALES_CLERK],
+    is_active: true,
+  },
+  {
+    id: 11,
+    username: "tmanager3",
+    password_hash: "hashed_password_11",
+    first_name: "Tom",
+    last_name: "Manager3",
+    roles: [AssignedRole.MANAGER, AssignedRole.STOCK_MANAGEMENT],
+    is_active: true,
+  },
+  {
+    id: 12,
+    username: "jcashier3",
+    password_hash: "hashed_password_12",
+    first_name: "Jessica",
+    last_name: "Cashier3",
+    roles: [AssignedRole.CASHIER],
+    is_active: true,
+  },
+  {
+    id: 13,
+    username: "csales3",
+    password_hash: "hashed_password_13",
+    first_name: "Chris",
+    last_name: "Sales3",
+    roles: [AssignedRole.SALES_CLERK, AssignedRole.STOCK_MANAGEMENT],
+    is_active: false,
+  },
+  {
+    id: 14,
+    username: "astock3",
+    password_hash: "hashed_password_14",
+    first_name: "Amanda",
+    last_name: "Stock3",
+    roles: [AssignedRole.STOCK_MANAGEMENT, AssignedRole.SALES_CLERK],
+    is_active: true,
+  },
+  {
+    id: 15,
+    username: "msecretary3",
+    password_hash: "hashed_password_15",
+    first_name: "Mark",
+    last_name: "Secretary3",
+    roles: [AssignedRole.SECRETARY, AssignedRole.CASHIER],
+    is_active: true,
+  },
+];
