@@ -22,6 +22,13 @@ export function StockAdjustmentModal() {
     staffId: "",
   });
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Logic to adjust stock will connect here later
+    console.log("Adjusted Stock:", formData);
+    setOpen(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button>Adjust Stock</Button>} /> 
@@ -29,7 +36,7 @@ export function StockAdjustmentModal() {
             <DialogHeader>
                 <DialogTitle>Adjust Stock</DialogTitle>
             </DialogHeader>
-            <form className="grid gap-4 py-4">
+            <form onSubmit={handleSubmit} className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                     <label htmlFor="productId" className="text-right">
                         Product ID
@@ -96,6 +103,9 @@ export function StockAdjustmentModal() {
                         className="col-span-3"
                     />
                 </div>
+                <DialogFooter className="mt-4">
+                     <Button type="submit">Save Product</Button>
+                </DialogFooter>
             </form>
         </DialogContent>
     </Dialog>
