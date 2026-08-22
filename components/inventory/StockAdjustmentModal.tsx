@@ -11,6 +11,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu";
 
 export function StockAdjustmentModal() {
   const [open, setOpen] = useState(false);
@@ -54,14 +61,24 @@ export function StockAdjustmentModal() {
                     <label htmlFor="adjustmentType" className="text-right">
                         Adjustment Type
                     </label>
-                    <Input
-                        id="adjustmentType"
-                        value={formData.adjustmentType}
-                        onChange={(e) =>
-                            setFormData({ ...formData, adjustmentType: e.target.value })
-                        }
-                        className="col-span-3"
-                    />
+                    <DropdownMenu>
+                        <DropdownMenuTrigger>
+                            <Button variant="outline" className="col-span-3">
+                                {formData.adjustmentType || "Select Type"}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            <DropdownMenuRadioGroup
+                                value={formData.adjustmentType}
+                                onValueChange={(value) =>
+                                    setFormData({ ...formData, adjustmentType: value })
+                                }
+                            >
+                                <DropdownMenuRadioItem value="Stock In">Stock In</DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="Stock Out">Stock Out</DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                     <label htmlFor="quantity" className="text-right">
@@ -104,7 +121,7 @@ export function StockAdjustmentModal() {
                     />
                 </div>
                 <DialogFooter className="mt-4">
-                     <Button type="submit">Save Product</Button>
+                     <Button type="submit">Adjust Stock</Button>
                 </DialogFooter>
             </form>
         </DialogContent>

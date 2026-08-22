@@ -2,6 +2,7 @@ import { products } from "./data"
 import { ProductTable } from "@/components/products/ProductTable"
 import { AddProductModal } from "@/components/products/AddProductModal"
 import { CategoryManager } from "@/components/products/CategoryManager"
+import { StockAdjustmentModal } from "@/components/inventory/StockAdjustmentModal"
 
 export default function ProductsPage() {
   return (
@@ -11,6 +12,7 @@ export default function ProductsPage() {
         <div className="flex gap-3">
           <CategoryManager />
           <AddProductModal />
+          <StockAdjustmentModal />
         </div>
       </div>
 
