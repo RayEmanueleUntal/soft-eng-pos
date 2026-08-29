@@ -12,7 +12,6 @@ export default function ProductsPage() {
         <div className="flex gap-3">
           <CategoryManager />
           <AddProductModal />
-          <StockAdjustmentModal />
         </div>
       </div>
 
