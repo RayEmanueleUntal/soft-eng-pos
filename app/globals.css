@@ -130,6 +130,11 @@
 }
 
 @media print {
+  @page {
+    margin: 0;
+    size: 80mm auto; /* Thermal printer width */
+  }
+
   body * {
     visibility: hidden;
   }
@@ -141,8 +146,37 @@
 
   #printable-receipt {
     position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
+    left: 50%;
+    top: 10mm; /* Add top margin from paper edge */
+    transform: translateX(-50%);
+    width: 80mm;
+    max-width: 80mm;
+    margin: 0;
+    padding: 4mm; /* Add padding around receipt */
+  }
+
+  /* Hide browser headers and footers */
+  @page {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  /* Prevent blank pages by constraining height */
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* Ensure single page */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Remove any hidden elements that might cause blank pages */
+  .hidden,
+  [aria-hidden="true"] {
+    display: none !important;
   }
 }

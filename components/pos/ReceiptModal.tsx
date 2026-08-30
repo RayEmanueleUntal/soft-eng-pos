@@ -23,9 +23,9 @@ interface ReceiptModalProps {
   onNewSale: () => void;
 }
 
-/** Builds invoice label from invoice_number with numeric id fallback. */
+/** Builds invoice label from invoice_number with transactionId fallback. */
 function getInvoiceLabel(receipt: Receipt): string {
-  return receipt.invoice_number ?? `#${receipt.id}`;
+  return receipt.invoice_number ?? `#${receipt.transactionId}`;
 }
 
 /** Maps backend payment method enum to a readable label. */
@@ -95,11 +95,11 @@ export function ReceiptModal({
                   </span>
                 </div>
                 {primaryPayment.payment_method === "CASH" &&
-                primaryPayment.cashPayment ? (
+                primaryPayment.change_given !== undefined ? (
                   <div className="flex justify-between gap-4">
                     <span className="text-gray-600">Change</span>
                     <span className="font-medium text-gray-900">
-                      {formatPeso(primaryPayment.cashPayment.change_given)}
+                      {formatPeso(primaryPayment.change_given)}
                     </span>
                   </div>
                 ) : null}

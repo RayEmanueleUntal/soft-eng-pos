@@ -20,24 +20,18 @@ interface PrintableInvoiceProps {
   id?: string;
 }
 
-/** Builds a display label for invoice_number with id fallback. */
+/** Builds a display label for invoice_number with transactionId fallback. */
 function getInvoiceLabel(receipt: Receipt): string {
-  return receipt.invoice_number ?? `#${receipt.id}`;
-}
-
-/** Formats cashier full name from staff relation. */
-function getCashierName(receipt: Receipt): string {
-  return `${receipt.staff.first_name} ${receipt.staff.last_name}`.trim();
+  return receipt.invoice_number ?? `#${receipt.transactionId}`;
 }
 
 /** Formats quantity without trailing zeros when whole. */
-function formatQuantity(quantity: string): string {
-  const num = parseFloat(quantity);
-  if (!Number.isFinite(num)) {
-    return quantity;
+function formatQuantity(quantity: number): string {
+  if (!Number.isFinite(quantity)) {
+    return String(quantity);
   }
 
-  return Number.isInteger(num) ? String(num) : String(num);
+  return Number.isInteger(quantity) ? String(quantity) : String(quantity);
 }
 
 /** Maps backend payment method enum to readable label. */
@@ -56,46 +50,27 @@ function formatPaymentMethod(method: PaymentMethod): string {
 
 /** Renders payment-specific details below the payment method row. */
 function PaymentDetails({ payment }: { payment: ReceiptPayment }) {
-  if (payment.payment_method === "CASH" && payment.cashPayment) {
+  if (payment.payment_method === "CASH" && payment.cash_tendered !== undefined) {
     return (
       <>
         <ReceiptRow
           label="Cash tendered"
-          value={formatPeso(payment.cashPayment.cash_tendered)}
+          value={formatPeso(payment.cash_tendered)}
         />
         <ReceiptRow
           label="Change"
-          value={formatPeso(payment.cashPayment.change_given)}
+          value={formatPeso(payment.change_given || 0)}
         />
       </>
     );
   }
 
-  if (payment.payment_method === "GCASH" && payment.gCashPayment) {
+  if (payment.payment_method === "GCASH" && payment.reference_number) {
     return (
       <>
         <ReceiptRow
           label="GCash ref"
-          value={payment.gCashPayment.reference_number}
-        />
-        <ReceiptRow
-          label="Mobile"
-          value={payment.gCashPayment.gcash_mobile_number}
-        />
-      </>
-    );
-  }
-
-  if (payment.payment_method === "CREDIT" && payment.creditPayment) {
-    return (
-      <>
-        <ReceiptRow
-          label="Due date"
-          value={formatReceiptDate(payment.creditPayment.due_date)}
-        />
-        <ReceiptRow
-          label="Balance"
-          value={formatPeso(payment.creditPayment.remaining_credit_balance)}
+          value={payment.reference_number}
         />
       </>
     );
@@ -154,7 +129,7 @@ export function PrintableInvoice({
       <div className="space-y-1">
         <ReceiptRow label="Invoice" value={getInvoiceLabel(receipt)} />
         <ReceiptRow label="Date" value={formatReceiptDate(receipt.date)} />
-        <ReceiptRow label="Cashier" value={getCashierName(receipt)} />
+        <ReceiptRow label="Cashier" value={receipt.cashier_name} />
         <ReceiptRow label="Customer" value={customerName} />
         <ReceiptRow label="Type" value={receipt.transaction_type} />
       </div>
@@ -162,24 +137,21 @@ export function PrintableInvoice({
       <ReceiptDivider />
 
       <div className="space-y-3">
-        {receipt.transactionItems.map((item, index) => (
-          <div key={`${item.product.name}-${index}`} className="space-y-0.5">
-            <p className="font-medium wrap-break-word">{item.product.name}</p>
-            {item.product.sku ? (
-              <p className="text-[10px] text-gray-600">{item.product.sku}</p>
-            ) : null}
+        {receipt.items.map((item, index) => (
+          <div key={`${item.product_name}-${index}`} className="space-y-0.5">
+            <p className="font-medium wrap-break-word">{item.product_name}</p>
             <ReceiptRow
-              label={`${formatQuantity(item.quantity_sold)} ${item.unit_of_measure}`}
-              value={formatPeso(item.subtotal)}
+              label={`${formatQuantity(item.quantity)}`}
+              value={formatPeso(item.net_price)}
             />
             <ReceiptRow
-              label={`@ ${formatPeso(item.unit_price)}`}
+              label={`@ ${formatPeso(item.applied_price)}`}
               value=""
             />
-            {hasAmount(item.discount) ? (
+            {item.subtotal > item.net_price ? (
               <ReceiptRow
                 label="Discount"
-                value={`-${formatPeso(item.discount)}`}
+                value={`-${formatPeso(item.subtotal - item.net_price)}`}
               />
             ) : null}
           </div>
@@ -189,16 +161,6 @@ export function PrintableInvoice({
       <ReceiptDivider />
 
       <div className="space-y-1">
-        <ReceiptRow label="Subtotal" value={formatPeso(receipt.subtotal)} />
-        {hasAmount(receipt.tax_total) ? (
-          <ReceiptRow label="Tax" value={formatPeso(receipt.tax_total)} />
-        ) : null}
-        {hasAmount(receipt.discount_total) ? (
-          <ReceiptRow
-            label="Discount"
-            value={`-${formatPeso(receipt.discount_total)}`}
-          />
-        ) : null}
         <ReceiptRow
           label="TOTAL"
           value={formatPeso(receipt.grand_total)}
