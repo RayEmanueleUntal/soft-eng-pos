@@ -92,6 +92,7 @@ export function ROPTable({ ropItems, onEdit }: ROPTableProps) {
         <Table>
           <TableHeader>
             <TableRow className="bg-blue-50 hover:bg-blue-50">
+              <TableHead className="text-gray-700 font-semibold">SKU</TableHead>
               <TableHead className="text-gray-700 font-semibold">Name</TableHead>
               <TableHead className="text-gray-700 font-semibold">Category</TableHead>
               <TableHead className="text-gray-700 font-semibold">Dimensions</TableHead>
@@ -106,11 +107,12 @@ export function ROPTable({ ropItems, onEdit }: ROPTableProps) {
           <TableBody>
             {sortedItems.map((item) => (
               <TableRow key={item.id} className="hover:bg-blue-50/50">
+                <TableCell className="font-medium text-gray-900">{item.sku || '-'}</TableCell>
                 <TableCell className="font-medium text-gray-900">{item.name}</TableCell>
                 <TableCell>Category {item.categoryId}</TableCell>
-                <TableCell>{item.size_dimensions}</TableCell>
-                <TableCell>{item.thread_type}</TableCell>
-                <TableCell>{item.material_grade}</TableCell>
+                <TableCell>{item.size_dimensions || '-'}</TableCell>
+                <TableCell>{item.thread_type || '-'}</TableCell>
+                <TableCell>{item.material_grade || '-'}</TableCell>
                 <TableCell>{item.current_quantity}</TableCell>
                 <TableCell>{item.reorder_point_ROP}</TableCell>
                 <TableCell>{getStatusBadge(item)}</TableCell>
