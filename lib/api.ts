@@ -1,56 +1,52 @@
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 
+declare module "axios" {
+  export interface AxiosRequestConfig {
+    idempotency?: boolean | string;
+  }
+}
+
 export const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
-    // Temporary auth token for testing - remove in production
-    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsInVzZXJuYW1lIjoiYWRtaW4xMjMiLCJyb2xlIjoiQURNSU4iLCJpYXQiOjE3ODgwNzc4NzQsImV4cCI6MTc4ODA3ODc3NH0.17izYHtcca_49GQjWEpZC-7pCPo2RsKKi9rDgMfsxxc"
   },
 });
 
-// Add auth token and idempotency key interceptors
+// Request Interceptor
 apiClient.interceptors.request.use((config) => {
-
+  // 1. Mock Role Header (Development environment)
   if (process.env.NODE_ENV !== "production") {
     config.headers["x-mock-role"] = process.env.NEXT_PUBLIC_MOCK_ROLE || "ADMIN";
   }
-  
-  // 1. Attach JWT token from storage if available
-  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  
-  // 2. Attach Idempotency-Key for transactional routes
-  if (config.url?.includes("/pos/checkout") && config.method?.toLowerCase() === "post") {
-    let idempotencyKey = sessionStorage.getItem("active_checkout_key");
-    if (!idempotencyKey) {
-      idempotencyKey = uuidv4();
-      sessionStorage.setItem("active_checkout_key", idempotencyKey);
+
+  // 2. Attach Auth Token
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    config.headers["Idempotency-Key"] = idempotencyKey;
   }
-  
+
+  // 3. Dynamic Idempotency-Key Handler
+  if (config.idempotency) {
+    if (typeof config.idempotency === "string") {
+      config.headers["Idempotency-Key"] = config.idempotency;
+    } else if (config.idempotency === true) {
+      config.headers["Idempotency-Key"] = uuidv4();
+    }
+  }
+
   return config;
 });
 
-// Clear Idempotency Key upon successful response
+// Response Interceptor
 apiClient.interceptors.response.use(
-  (response) => {
-    if (response.config.url?.includes("/pos/checkout")) {
-      sessionStorage.removeItem("active_checkout_key");
-    }
-    return response;
-  },
+  (response) => response,
   (error) => {
-    // Handle authentication errors
-    if (error.response?.status === 401) {
-      // Clear invalid token
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("access_token");
-      }
+    if (error.response?.status === 401 && typeof window !== "undefined") {
+      localStorage.removeItem("access_token");
     }
     return Promise.reject(error);
   }
