@@ -157,7 +157,7 @@ export function ProductSearchGrid({ onAddToCart }: ProductSearchGridProps) {
               <div
                 key={product.id}
                 className="border rounded-lg p-3 bg-card flex flex-col justify-between hover:border-primary transition-colors cursor-pointer shadow-sm"
-                onClick={() => onAddToCart(product)}
+               
               >
                 <div>
                   <span className="text-[10px] text-muted-foreground font-mono">
@@ -184,6 +184,10 @@ export function ProductSearchGrid({ onAddToCart }: ProductSearchGridProps) {
                       size="sm"
                       variant="secondary"
                       className="h-6 text-[11px] px-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAddToCart(product);
+                      }}
                     >
                       + Add
                     </Button>
