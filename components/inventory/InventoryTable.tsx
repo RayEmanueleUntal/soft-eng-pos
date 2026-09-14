@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   Table,
   TableHeader,
@@ -8,30 +8,42 @@ import {
   TableHead,
   TableRow,
   TableCell,
-} from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { InventoryItem } from "@/lib/inventory/mock-inventory"
-import { BinAssignmentModal } from "./BinAssignmentModal"
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { InventoryItem } from "@/lib/inventory/types";
+import { BinAssignmentModal } from "./BinAssignmentModal";
 
 interface InventoryTableProps {
-  inventory: InventoryItem[]
+  inventory: InventoryItem[];
+  categories: Record<number, string>;
 }
 
-export function InventoryTable({ inventory }: InventoryTableProps) {
+export function InventoryTable({ inventory, categories }: InventoryTableProps) {
   const [selectedItem, setSelectedItem] = React.useState<InventoryItem | null>(
-    null
-  )
-  const [isModalOpen, setIsModalOpen] = React.useState(false)
+    null,
+  );
+
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
 
   const handleOpenModal = (item: InventoryItem) => {
-    setSelectedItem(item)
-    setIsModalOpen(true)
-  }
+    setSelectedItem(item);
+    setIsModalOpen(true);
+  };
 
   const handleCloseModal = () => {
-    setSelectedItem(null)
-    setIsModalOpen(false)
-  }
+    setSelectedItem(null);
+    setIsModalOpen(false);
+  };
+
+  const handleSave = async () => {
+    try {
+      handleCloseModal();
+
+      window.location.reload();
+    } catch (error) {
+      console.error("Failed to save:", error);
+    }
+  };
 
   return (
     <>
@@ -48,19 +60,34 @@ export function InventoryTable({ inventory }: InventoryTableProps) {
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
+
         <TableBody>
           {inventory.length > 0 ? (
             inventory.map((item) => (
               <TableRow key={item.id}>
                 <TableCell>{item.name}</TableCell>
-                <TableCell>{item.category}</TableCell>
-                <TableCell>{item.threadType}</TableCell>
-                <TableCell>{item.material}</TableCell>
-                <TableCell>{item.size}</TableCell>
-                <TableCell>{item.currentQuantity}</TableCell>
+
                 <TableCell>
-                  {item.binLocation.aisle} - {item.binLocation.shelf}
+                  {categories[item.categoryId] ??
+                    `Category #${item.categoryId}`}
                 </TableCell>
+
+                <TableCell>{item.thread_type ?? "-"}</TableCell>
+
+                <TableCell>{item.material_grade ?? "-"}</TableCell>
+
+                <TableCell>{item.size_dimensions ?? "-"}</TableCell>
+
+                <TableCell>{item.current_quantity}</TableCell>
+
+                <TableCell>
+                  {item.bin_aisle_number || item.bin_shelf_location
+                    ? `${item.bin_aisle_number ?? "-"} - ${
+                        item.bin_shelf_location ?? "-"
+                      }`
+                    : "-"}
+                </TableCell>
+
                 <TableCell>
                   <Button onClick={() => handleOpenModal(item)}>
                     Assign Bin
@@ -77,13 +104,15 @@ export function InventoryTable({ inventory }: InventoryTableProps) {
           )}
         </TableBody>
       </Table>
+
       {isModalOpen && selectedItem && (
         <BinAssignmentModal
           isOpen={isModalOpen}
           onClose={handleCloseModal}
+          onSaved={handleSave}
           item={selectedItem}
         />
       )}
     </>
-  )
+  );
 }

@@ -24,16 +24,19 @@ apiClient.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // 2. Attach Idempotency-Key for transactional routes
-  if (
-    config.url?.includes("/pos/checkout") &&
-    config.method?.toLowerCase() === "post"
-  ) {
-    let idempotencyKey = sessionStorage.getItem("active_checkout_key");
+  // 2. Attach Idempotency-Key for all mutating routes
+  const mutatingMethods = ["post", "put", "patch"];
+
+  if (config.method && mutatingMethods.includes(config.method.toLowerCase())) {
+    // Use the URL path as a unique key descriptor for pending requests
+    const requestPath = config.url || "";
+    let idempotencyKey = sessionStorage.getItem(`idempotency_${requestPath}`);
+
     if (!idempotencyKey) {
       idempotencyKey = uuidv4();
-      sessionStorage.setItem("active_checkout_key", idempotencyKey);
+      sessionStorage.setItem(`idempotency_${requestPath}`, idempotencyKey);
     }
+
     config.headers["Idempotency-Key"] = idempotencyKey;
   }
 
@@ -43,8 +46,12 @@ apiClient.interceptors.request.use((config) => {
 // Clear Idempotency Key upon successful response
 apiClient.interceptors.response.use(
   (response) => {
-    if (response.config.url?.includes("/pos/checkout")) {
-      sessionStorage.removeItem("active_checkout_key");
+    const mutatingMethods = ["post", "put", "patch"];
+    const method = response.config.method?.toLowerCase();
+
+    if (method && mutatingMethods.includes(method)) {
+      const requestPath = response.config.url || "";
+      sessionStorage.removeItem(`idempotency_${requestPath}`);
     }
 
     return response;
@@ -57,6 +64,19 @@ apiClient.interceptors.response.use(
       if (typeof window !== "undefined") {
         window.location.href = "/auth/login";
       }
+    }
+
+    // Clear the key on bad user requests (like a 400 Validation Error)
+    // so they can fix their input and click save again.
+    const method = error.config?.method?.toLowerCase();
+    const mutatingMethods = ["post", "put", "patch"];
+    if (
+      method &&
+      mutatingMethods.includes(method) &&
+      error.response?.status < 500
+    ) {
+      const requestPath = error.config.url || "";
+      sessionStorage.removeItem(`idempotency_${requestPath}`);
     }
 
     return Promise.reject(error);
