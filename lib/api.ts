@@ -6,25 +6,29 @@ export const apiClient = axios.create({
   headers: {
     "Content-Type": "application/json",
     // Temporary auth token for testing - remove in production
-    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsInVzZXJuYW1lIjoiYWRtaW4xMjMiLCJyb2xlIjoiQURNSU4iLCJpYXQiOjE3ODgwNzc4NzQsImV4cCI6MTc4ODA3ODc3NH0.17izYHtcca_49GQjWEpZC-7pCPo2RsKKi9rDgMfsxxc"
+    // "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsInVzZXJuYW1lIjoiYWRtaW4xMjMiLCJyb2xlIjoiQURNSU4iLCJpYXQiOjE3ODgwNzc4NzQsImV4cCI6MTc4ODA3ODc3NH0.17izYHtcca_49GQjWEpZC-7pCPo2RsKKi9rDgMfsxxc"
   },
 });
 
 // Add auth token and idempotency key interceptors
 apiClient.interceptors.request.use((config) => {
-
   if (process.env.NODE_ENV !== "production") {
-    config.headers["x-mock-role"] = process.env.NEXT_PUBLIC_MOCK_ROLE || "ADMIN";
+    config.headers["x-mock-role"] =
+      process.env.NEXT_PUBLIC_MOCK_ROLE || "ADMIN";
   }
-  
+
   // 1. Attach JWT token from storage if available
-  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  
+
   // 2. Attach Idempotency-Key for transactional routes
-  if (config.url?.includes("/pos/checkout") && config.method?.toLowerCase() === "post") {
+  if (
+    config.url?.includes("/pos/checkout") &&
+    config.method?.toLowerCase() === "post"
+  ) {
     let idempotencyKey = sessionStorage.getItem("active_checkout_key");
     if (!idempotencyKey) {
       idempotencyKey = uuidv4();
@@ -32,7 +36,7 @@ apiClient.interceptors.request.use((config) => {
     }
     config.headers["Idempotency-Key"] = idempotencyKey;
   }
-  
+
   return config;
 });
 
@@ -42,16 +46,19 @@ apiClient.interceptors.response.use(
     if (response.config.url?.includes("/pos/checkout")) {
       sessionStorage.removeItem("active_checkout_key");
     }
+
     return response;
   },
   (error) => {
-    // Handle authentication errors
-    if (error.response?.status === 401) {
-      // Clear invalid token
+    if (
+      error.response?.status === 401 &&
+      !error.config?.url?.includes("/auth/signin")
+    ) {
       if (typeof window !== "undefined") {
-        localStorage.removeItem("access_token");
+        window.location.href = "/auth/login";
       }
     }
+
     return Promise.reject(error);
-  }
+  },
 );
