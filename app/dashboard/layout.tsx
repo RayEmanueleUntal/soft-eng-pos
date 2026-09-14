@@ -15,6 +15,7 @@ import {
   ShoppingCart,
   Users,
   UserRound,
+  Truck,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,11 @@ const navigation = [
     name: "Customers",
     href: "/dashboard/customers",
     icon: Users,
+  },
+  {
+    name: "Suppliers",
+    href: "/dashboard/suppliers",
+    icon: Truck,
   },
   {
     name: "Staff",

@@ -1,24 +1,61 @@
-// proxy.ts
 import { NextRequest, NextResponse } from "next/server";
+import { ROLE_PERMISSIONS, Role } from "@/lib/auth/roles";
 
-export function proxy(request: NextRequest) {
-  const token = request.cookies.get("access_token")?.value;
+function decodeJwtPayload(token: string) {
+  try {
+    const payload = token.split(".")[1];
 
-  const isDashboardRoute = request.nextUrl.pathname.startsWith("/dashboard");
-  const isLoginRoute = request.nextUrl.pathname === "/auth/login";
+    if (!payload) {
+      return null;
+    }
 
-  // Protect dashboard routes
-  if (isDashboardRoute && !token) {
-    const loginUrl = new URL("/auth/login", request.url);
+    return JSON.parse(Buffer.from(payload, "base64url").toString("utf-8"));
+  } catch {
+    return null;
+  }
+}
 
-    // Optional: remember where the user wanted to go
-    loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
-
-    return NextResponse.redirect(loginUrl);
+function getAllowedRoles(pathname: string): Role[] | null {
+  // Exact match
+  if (ROLE_PERMISSIONS[pathname]) {
+    return ROLE_PERMISSIONS[pathname];
   }
 
-  // If already logged in, don't allow going back to login
-  if (isLoginRoute && token) {
+  // Match nested routes
+  const matchingRoute = Object.keys(ROLE_PERMISSIONS)
+    .sort((a, b) => b.length - a.length)
+    .find((route) => pathname.startsWith(`${route}/`));
+
+  return matchingRoute ? ROLE_PERMISSIONS[matchingRoute] : null;
+}
+
+export function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (!pathname.startsWith("/dashboard")) {
+    return NextResponse.next();
+  }
+
+  const token = request.cookies.get("access_token")?.value;
+
+  // Not logged in
+  if (!token) {
+    return NextResponse.redirect(new URL("/auth/login", request.url));
+  }
+
+  const payload = decodeJwtPayload(token);
+
+  // Invalid JWT structure
+  if (!payload) {
+    return NextResponse.redirect(new URL("/auth/login", request.url));
+  }
+
+  const role = payload.role as Role | undefined;
+
+  const allowedRoles = getAllowedRoles(pathname);
+
+  // Route requires specific roles
+  if (allowedRoles && (!role || !allowedRoles.includes(role))) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
@@ -26,5 +63,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/auth/login"],
+  matcher: ["/dashboard/:path*"],
 };

@@ -1,4 +1,4 @@
-import { SupplierTable } from "@/components/ui/profiles/SupplierTable";
+import { SupplierTable } from "@/components/profiles/suppliers/SupplierTable";
 
 export default function SuppliersPage() {
   return (
@@ -9,7 +9,7 @@ export default function SuppliersPage() {
           Manage procurement contacts and delivery lead times.
         </p>
       </div>
-      
+
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <SupplierTable />
       </div>
