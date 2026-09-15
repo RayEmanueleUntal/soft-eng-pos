@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   Select,
   SelectContent,
@@ -8,27 +8,37 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { mockInventory } from "@/lib/inventory/mock-inventory"
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-interface InventoryFilterBarProps {
-  size: string | null
-  setSize: (size: string | null) => void
-  threadType: string | null
-  setThreadType: (threadType: string | null) => void
-  material: string | null
-  setMaterial: (material: string | null) => void
-  category: string | null
-  setCategory: (category: string | null) => void
+interface CategoryOption {
+  id: number;
+  name: string;
 }
 
-const sizes = [...new Set(mockInventory.map((item) => item.size))]
-const threadTypes = [...new Set(mockInventory.map((item) => item.threadType))]
-const materials = [...new Set(mockInventory.map((item) => item.material))]
-const categories = [...new Set(mockInventory.map((item) => item.category))]
+interface InventoryFilterBarProps {
+  search: string;
+  setSearch: (search: string) => void;
+
+  size: string | null;
+  setSize: (size: string | null) => void;
+
+  threadType: string | null;
+  setThreadType: (threadType: string | null) => void;
+
+  material: string | null;
+  setMaterial: (material: string | null) => void;
+
+  category: string | null;
+  setCategory: (category: string | null) => void;
+
+  categories: CategoryOption[];
+}
 
 export function InventoryFilterBar({
+  search,
+  setSearch,
   size,
   setSize,
   threadType,
@@ -37,94 +47,68 @@ export function InventoryFilterBar({
   setMaterial,
   category,
   setCategory,
+  categories,
 }: InventoryFilterBarProps) {
   const handleClearFilters = () => {
-    setSize(null)
-    setThreadType(null)
-    setMaterial(null)
-    setCategory(null)
-  }
+    setSearch("");
+    setSize(null);
+    setThreadType(null);
+    setMaterial(null);
+    setCategory(null);
+  };
 
-  const areFiltersActive = size || threadType || material || category
+  const areFiltersActive =
+    Boolean(search) ||
+    Boolean(size) ||
+    Boolean(threadType) ||
+    Boolean(material) ||
+    Boolean(category);
 
   return (
-    <div className="flex items-center space-x-4">
-      <Select
-        value={size || ""}
-        onValueChange={(value) => setSize(value === "all" ? null : value)}
-      >
-        <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Filter by size..." />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value="all">All Sizes</SelectItem>
-            {sizes.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
+    <div className="flex flex-wrap items-center gap-4">
+      <Input
+        placeholder="Search inventory..."
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        className="w-[220px]"
+      />
 
-      <Select
-        value={threadType || ""}
-        onValueChange={(value) =>
-          setThreadType(value === "all" ? null : value)
-        }
-      >
-        <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Filter by thread type..." />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value="all">All Thread Types</SelectItem>
-            {threadTypes.map((t) => (
-              <SelectItem key={t} value={t}>
-                {t}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
+      <Input
+        placeholder="Filter by size..."
+        value={size ?? ""}
+        onChange={(event) => setSize(event.target.value || null)}
+        className="w-[180px]"
+      />
 
-      <Select
-        value={material || ""}
-        onValueChange={(value) =>
-          setMaterial(value === "all" ? null : value)
-        }
-      >
-        <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Filter by material..." />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value="all">All Materials</SelectItem>
-            {materials.map((m) => (
-              <SelectItem key={m} value={m}>
-                {m}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
+      <Input
+        placeholder="Filter by thread type..."
+        value={threadType ?? ""}
+        onChange={(event) => setThreadType(event.target.value || null)}
+        className="w-[200px]"
+      />
+
+      <Input
+        placeholder="Filter by material..."
+        value={material ?? ""}
+        onChange={(event) => setMaterial(event.target.value || null)}
+        className="w-[200px]"
+      />
 
       <Select
         value={category || ""}
-        onValueChange={(value) =>
-          setCategory(value === "all" ? null : value)
-        }
+        onValueChange={(value) => setCategory(value === "all" ? null : value)}
       >
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-[200px]">
           <SelectValue placeholder="Filter by category..." />
         </SelectTrigger>
+
         <SelectContent>
           <SelectGroup>
             <SelectItem value="all">All Categories</SelectItem>
-            {categories.map((c) => (
-              <SelectItem key={c} value={c}>
-                {c}
+
+            {categories.map((item) => (
+              <SelectItem key={item.id} value={item.id.toString()}>
+                {item.name}
               </SelectItem>
             ))}
           </SelectGroup>
@@ -139,5 +123,5 @@ export function InventoryFilterBar({
         Clear Filters
       </Button>
     </div>
-  )
+  );
 }
