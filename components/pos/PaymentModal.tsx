@@ -187,21 +187,21 @@ export default function PaymentModal({
         <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-center">POS Checkout</DialogTitle>
-            <DialogDescription className="text-center text-xs text-gray-500">
+            <DialogDescription className="text-center text-xs text-muted-foreground">
               Select payment method and finalize customer transaction
             </DialogDescription>
           </DialogHeader>
 
           {/* Cart Total Summary Banner */}
-          <div className="bg-gray-900 text-white p-5 rounded-lg text-center my-2 shadow-sm">
-            <p className="text-xs text-gray-400 uppercase tracking-wider font-medium">
+          <div className="bg-foreground text-white p-5 rounded-lg text-center my-2 shadow-sm">
+            <p className="text-xs text-muted-foreground/80 uppercase tracking-wider font-medium">
               Total Amount Due
             </p>
             <p className="text-3xl font-extrabold mt-1 text-white">
               {formatPeso(cartTotal)}
             </p>
             {customer && (
-              <p className="text-xs text-gray-300 mt-1">
+              <p className="text-xs text-muted-foreground/60 mt-1">
                 Customer: <span className="font-semibold text-white">{customer.name}</span> ({customer.type || "Retail"})
               </p>
             )}
@@ -209,8 +209,8 @@ export default function PaymentModal({
 
           {/* Checkout Error Banner */}
           {checkoutError && (
-            <div className="flex items-center gap-2 text-xs font-medium text-red-700 bg-red-50 border border-red-200 p-2.5 rounded-md">
-              <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+            <div className="flex items-center gap-2 text-xs font-medium text-destructive bg-destructive/10 border border-destructive/30 p-2.5 rounded-md">
+              <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
               <span>{checkoutError}</span>
             </div>
           )}
@@ -279,7 +279,7 @@ export default function PaymentModal({
             <Button
               onClick={handleCompleteSale}
               disabled={!isPaymentValid || isSubmitting}
-              className="bg-[#6366f1] hover:bg-[#4f46e5] text-white min-w-[140px]"
+              className="bg-primary hover:bg-primary/80 text-white min-w-[140px]"
             >
               {isSubmitting ? (
                 <>

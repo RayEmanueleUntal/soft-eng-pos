@@ -202,7 +202,7 @@ export function CustomerForm({ mode, customer, onSaved }: CustomerFormProps) {
           </>
         )}
 
-        {formError && <p className="text-sm text-red-600">{formError}</p>}
+        {formError && <p className="text-sm text-destructive">{formError}</p>}
       </div>
 
       <DialogFooter>

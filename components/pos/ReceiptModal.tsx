@@ -64,41 +64,41 @@ export function ReceiptModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[440px] bg-white print:hidden">
+        <DialogContent className="sm:max-w-[440px] bg-card print:hidden">
           <DialogHeader>
-            <DialogTitle className="text-gray-900">Sale completed</DialogTitle>
-            <DialogDescription className="text-gray-600">
+            <DialogTitle className="text-foreground">Sale completed</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
               Transaction saved successfully. You can print the receipt or start a
               new sale.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="rounded-lg border bg-gray-50 p-4 space-y-2 text-sm">
+          <div className="rounded-lg border bg-muted p-4 space-y-2 text-sm">
             <div className="flex justify-between gap-4">
-              <span className="text-gray-600">Invoice</span>
-              <span className="font-medium text-gray-900">
+              <span className="text-muted-foreground">Invoice</span>
+              <span className="font-medium text-foreground">
                 {getInvoiceLabel(receipt)}
               </span>
             </div>
             <div className="flex justify-between gap-4">
-              <span className="text-gray-600">Total</span>
-              <span className="font-semibold text-gray-900">
+              <span className="text-muted-foreground">Total</span>
+              <span className="font-semibold text-foreground">
                 {formatPeso(receipt.grand_total)}
               </span>
             </div>
             {primaryPayment ? (
               <>
                 <div className="flex justify-between gap-4">
-                  <span className="text-gray-600">Payment</span>
-                  <span className="font-medium text-gray-900">
+                  <span className="text-muted-foreground">Payment</span>
+                  <span className="font-medium text-foreground">
                     {formatPaymentMethod(primaryPayment.payment_method)}
                   </span>
                 </div>
                 {primaryPayment.payment_method === "CASH" &&
                 primaryPayment.change_given !== undefined ? (
                   <div className="flex justify-between gap-4">
-                    <span className="text-gray-600">Change</span>
-                    <span className="font-medium text-gray-900">
+                    <span className="text-muted-foreground">Change</span>
+                    <span className="font-medium text-foreground">
                       {formatPeso(primaryPayment.change_given)}
                     </span>
                   </div>

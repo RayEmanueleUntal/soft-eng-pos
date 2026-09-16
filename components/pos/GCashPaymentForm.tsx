@@ -88,7 +88,7 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
       <div className="grid gap-1.5">
         <div className="flex justify-between items-center">
           <Label htmlFor="gcash-ref">GCash Reference Number *</Label>
-          <span className="text-[11px] text-gray-400">From customer receipt</span>
+          <span className="text-[11px] text-muted-foreground/80">From customer receipt</span>
         </div>
         <Input
           id="gcash-ref"
@@ -100,7 +100,7 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
           className={touched.ref && !isRefValid ? "border-red-500" : ""}
         />
         {touched.ref && !isRefValid && (
-          <p className="text-xs text-red-500">
+          <p className="text-xs text-destructive">
             Reference Number is required (min 6 alphanumeric characters).
           </p>
         )}
@@ -110,7 +110,7 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
       <div className="grid gap-1.5">
         <div className="flex justify-between items-center">
           <Label htmlFor="gcash-mobile">GCash Mobile Number *</Label>
-          <span className="text-[11px] text-gray-400">09XXXXXXXXX</span>
+          <span className="text-[11px] text-muted-foreground/80">09XXXXXXXXX</span>
         </div>
         <Input
           id="gcash-mobile"
@@ -127,7 +127,7 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
           className={touched.mobile && !isMobileValid ? "border-red-500" : ""}
         />
         {touched.mobile && !isMobileValid && (
-          <p className="text-xs text-red-500">
+          <p className="text-xs text-destructive">
             Enter a valid 11-digit mobile number starting with 09.
           </p>
         )}

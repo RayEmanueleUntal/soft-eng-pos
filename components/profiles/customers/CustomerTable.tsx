@@ -106,14 +106,14 @@ export function CustomerTable() {
       />
 
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
         </div>
       )}
 
-      <div className="rounded-md border bg-white">
+      <div className="rounded-md border bg-card">
         <Table>
-          <TableHeader className="bg-gray-50/50">
+          <TableHeader className="bg-muted/50">
             <TableRow>
               <TableHead>Customer Name</TableHead>
               <TableHead>Type</TableHead>
@@ -147,7 +147,7 @@ export function CustomerTable() {
             ) : (
               customers.map((customer) => (
                 <TableRow key={customer.id}>
-                  <TableCell className="font-medium text-gray-900">
+                  <TableCell className="font-medium text-foreground">
                     {customer.name}
                   </TableCell>
 

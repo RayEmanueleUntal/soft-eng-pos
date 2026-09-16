@@ -10,7 +10,7 @@ export default function SuppliersPage() {
         </p>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+      <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
         <SupplierTable />
       </div>
     </div>

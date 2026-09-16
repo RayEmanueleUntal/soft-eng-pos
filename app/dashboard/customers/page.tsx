@@ -11,7 +11,7 @@ export default function CustomersPage() {
         </p>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+      <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
         <CustomerTable />
       </div>
     </div>

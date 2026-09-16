@@ -37,7 +37,7 @@ export function CustomerSearch({
 
         <Input
           placeholder="Search customer..."
-          className="bg-gray-50/50 pl-8"
+          className="bg-muted/50 pl-8"
           value={searchTerm}
           onChange={(event) => onSearchChange(event.target.value)}
         />
