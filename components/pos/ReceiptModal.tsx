@@ -73,14 +73,14 @@ export function ReceiptModal({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="rounded-lg border bg-muted p-4 space-y-2 text-sm">
-            <div className="flex justify-between gap-4">
+          <div className="rounded-lg border bg-muted p-3 space-y-2 text-sm">
+            <div className="flex justify-between gap-3">
               <span className="text-muted-foreground">Invoice</span>
               <span className="font-medium text-foreground">
                 {getInvoiceLabel(receipt)}
               </span>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="flex justify-between gap-3">
               <span className="text-muted-foreground">Total</span>
               <span className="font-semibold text-foreground">
                 {formatPeso(receipt.grand_total)}
@@ -88,7 +88,7 @@ export function ReceiptModal({
             </div>
             {primaryPayment ? (
               <>
-                <div className="flex justify-between gap-4">
+                <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground">Payment</span>
                   <span className="font-medium text-foreground">
                     {formatPaymentMethod(primaryPayment.payment_method)}
@@ -96,7 +96,7 @@ export function ReceiptModal({
                 </div>
                 {primaryPayment.payment_method === "CASH" &&
                 primaryPayment.change_given !== undefined ? (
-                  <div className="flex justify-between gap-4">
+                  <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">Change</span>
                     <span className="font-medium text-foreground">
                       {formatPeso(primaryPayment.change_given)}

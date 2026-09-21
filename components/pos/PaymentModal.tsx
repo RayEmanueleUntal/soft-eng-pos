@@ -223,15 +223,15 @@ export default function PaymentModal({
             className="w-full"
           >
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="cash" className="flex items-center gap-1.5 py-2">
+              <TabsTrigger value="cash" className="flex items-center gap-0.5.5 py-2">
                 <Banknote className="h-4 w-4" />
                 <span>Cash</span>
               </TabsTrigger>
-              <TabsTrigger value="gcash" className="flex items-center gap-1.5 py-2">
+              <TabsTrigger value="gcash" className="flex items-center gap-0.5.5 py-2">
                 <QrCode className="h-4 w-4" />
                 <span>GCash</span>
               </TabsTrigger>
-              <TabsTrigger value="credit" className="flex items-center gap-1.5 py-2">
+              <TabsTrigger value="credit" className="flex items-center gap-0.5.5 py-2">
                 <CreditCard className="h-4 w-4" />
                 <span>Credit (AR)</span>
               </TabsTrigger>
@@ -268,7 +268,7 @@ export default function PaymentModal({
           )}
 
           {/* Action Footer */}
-          <div className="flex justify-end gap-3 mt-3 border-t pt-4">
+          <div className="flex justify-end gap-2.5 mt-3 border-t pt-4">
             <Button
               variant="outline"
               onClick={onClose}

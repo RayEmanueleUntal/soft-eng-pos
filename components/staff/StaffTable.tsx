@@ -40,10 +40,10 @@ export function StaffTable({ staff, onEdit, onAdd }: StaffTableProps) {
           <button className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-500 text-white hover:bg-primary">
             All ({staff.length})
           </button>
-          <button className="px-4 py-2 text-sm font-medium rounded-lg bg-card text-foreground border border-border hover:bg-blue-50">
+          <button className="px-4 py-2 text-sm font-medium rounded-lg bg-card text-foreground border border-border hover:bg-[#eff4ff]">
             Active ({activeCount})
           </button>
-          <button className="px-4 py-2 text-sm font-medium rounded-lg bg-card text-foreground border border-border hover:bg-blue-50">
+          <button className="px-4 py-2 text-sm font-medium rounded-lg bg-card text-foreground border border-border hover:bg-[#eff4ff]">
             Inactive ({inactiveCount})
           </button>
         </div>
@@ -74,7 +74,7 @@ export function StaffTable({ staff, onEdit, onAdd }: StaffTableProps) {
       <div className="rounded-lg border border-border bg-card">
         <Table>
           <TableHeader>
-            <TableRow className="bg-blue-50 hover:bg-blue-50">
+            <TableRow className="bg-[#eff4ff] hover:bg-[#eff4ff]">
               <TableHead className="text-foreground font-semibold">Employee Name</TableHead>
               <TableHead className="text-foreground font-semibold">Roles</TableHead>
               <TableHead className="text-foreground font-semibold">Account Status</TableHead>
@@ -83,15 +83,15 @@ export function StaffTable({ staff, onEdit, onAdd }: StaffTableProps) {
           </TableHeader>
           <TableBody>
             {staff.map((member) => (
-              <TableRow key={member.id} className="hover:bg-blue-50/50">
+              <TableRow key={member.id} className="hover:bg-[#eff4ff]/50">
                 <TableCell className="font-medium text-foreground">
                   {member.first_name} {member.last_name}
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-0.5">
                     {member.roles.length > 0 ? (
                       member.roles.map((role) => (
-                        <Badge key={role} variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">
+                        <Badge key={role} variant="outline" className="text-xs bg-[#eff4ff] border-blue-200 text-blue-700">
                           {formatRole(role)}
                         </Badge>
                       ))

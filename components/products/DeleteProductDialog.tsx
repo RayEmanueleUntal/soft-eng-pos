@@ -75,13 +75,13 @@ export function DeleteProductDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm">
+        <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2.5 text-sm">
           This action cannot be undone. Products with existing transaction
           history cannot be deleted by the backend.
         </div>
 
         {error && (
-          <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2.5 text-sm text-destructive">
             {error}
           </div>
         )}

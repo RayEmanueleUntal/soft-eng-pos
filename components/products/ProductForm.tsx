@@ -255,7 +255,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="name">Product Name *</Label>
           <Input
@@ -324,10 +324,10 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
         </div>
       </div>
 
-      <div className="rounded-lg border p-4">
+      <div className="rounded-lg border p-3">
         <h3 className="mb-4 font-semibold">Inventory</h3>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="base_uom">Base UOM</Label>
 
@@ -388,10 +388,10 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
         </div>
       </div>
 
-      <div className="rounded-lg border p-4">
+      <div className="rounded-lg border p-3">
         <h3 className="mb-4 font-semibold">Pricing</h3>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="pricing_uom">Pricing UOM</Label>
 
@@ -475,8 +475,8 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
       </div>
 
       {isEdit && product && product.base_uom !== formData.base_uom && (
-        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-4">
-          <div className="flex items-start gap-3">
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3">
+          <div className="flex items-start gap-2.5">
             <input
               id="confirmUomChange"
               type="checkbox"

@@ -64,7 +64,7 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
   return (
     <div className="space-y-4 py-4">
       {/* Amount Field */}
-      <div className="grid gap-1.5">
+      <div className="grid gap-0.5.5">
         <Label htmlFor="gcash-amount">Amount Paid via GCash (₱)</Label>
         <Input
           id="gcash-amount"
@@ -85,7 +85,7 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
       </div>
 
       {/* Reference Number Field */}
-      <div className="grid gap-1.5">
+      <div className="grid gap-0.5.5">
         <div className="flex justify-between items-center">
           <Label htmlFor="gcash-ref">GCash Reference Number *</Label>
           <span className="text-[11px] text-muted-foreground/80">From customer receipt</span>
@@ -107,7 +107,7 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
       </div>
 
       {/* Mobile Number Field */}
-      <div className="grid gap-1.5">
+      <div className="grid gap-0.5.5">
         <div className="flex justify-between items-center">
           <Label htmlFor="gcash-mobile">GCash Mobile Number *</Label>
           <span className="text-[11px] text-muted-foreground/80">09XXXXXXXXX</span>

@@ -67,8 +67,8 @@ export function StockAdjustmentModal({ onAddAdjustment }: StockAdjustmentModalPr
         <DialogHeader>
           <DialogTitle>Adjust Stock</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
+        <form onSubmit={handleSubmit} className="grid gap-3 py-4">
+          <div className="grid grid-cols-4 items-center gap-3">
             <label htmlFor="productId" className="text-right text-sm font-medium">
               Product ID
             </label>
@@ -84,7 +84,7 @@ export function StockAdjustmentModal({ onAddAdjustment }: StockAdjustmentModalPr
             />
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="grid grid-cols-4 items-center gap-3">
             <label htmlFor="adjustmentType" className="text-right text-sm font-medium">
               Type
             </label>
@@ -101,7 +101,7 @@ export function StockAdjustmentModal({ onAddAdjustment }: StockAdjustmentModalPr
             </select>
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="grid grid-cols-4 items-center gap-3">
             <label htmlFor="quantity" className="text-right text-sm font-medium">
               Quantity
             </label>
@@ -118,7 +118,7 @@ export function StockAdjustmentModal({ onAddAdjustment }: StockAdjustmentModalPr
             />
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="grid grid-cols-4 items-center gap-3">
             <label htmlFor="reason" className="text-right text-sm font-medium">
               Reason
             </label>
@@ -134,7 +134,7 @@ export function StockAdjustmentModal({ onAddAdjustment }: StockAdjustmentModalPr
             />
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="grid grid-cols-4 items-center gap-3">
             <label htmlFor="staffId" className="text-right text-sm font-medium">
               Staff ID
             </label>

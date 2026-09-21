@@ -113,7 +113,7 @@ export function PrintableInvoice({
     <div
       id={id}
       className={cn(
-        "w-full max-w-[80mm] bg-card text-black font-mono text-xs leading-relaxed p-4",
+        "w-full max-w-[80mm] bg-card text-black font-mono text-xs leading-relaxed p-3",
         className
       )}
     >

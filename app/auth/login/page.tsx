@@ -110,7 +110,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+    <main className="flex min-h-screen items-center justify-center bg-muted/40 p-3">
       <div className="w-full max-w-md rounded-xl border bg-background p-6 shadow-sm">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold">Welcome back</h1>

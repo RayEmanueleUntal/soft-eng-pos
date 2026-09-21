@@ -50,7 +50,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Overview Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {/* Today's Sales */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -132,7 +132,7 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {quickActions.map((action) => {
             const Icon = action.icon;
 
@@ -158,7 +158,7 @@ export default function DashboardPage() {
                   {/* Action */}
                   <Link
                     href={action.href}
-                    className="mt-4 -ml-3 inline-flex h-9 items-center justify-center gap-1 rounded-md px-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                    className="mt-4 -ml-3 inline-flex h-9 items-center justify-center gap-0.5 rounded-md px-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
                   >
                     Open
                     <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />

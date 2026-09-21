@@ -90,7 +90,7 @@ export function AddStaffModal({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-3 py-4">
             <div className="grid gap-2">
               <label htmlFor="username" className="text-sm font-medium">
                 Username
@@ -122,7 +122,7 @@ export function AddStaffModal({
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <label htmlFor="first_name" className="text-sm font-medium">
                   First Name
@@ -166,7 +166,7 @@ export function AddStaffModal({
                       className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
                         isSelected
                           ? "bg-blue-500 text-white border-blue-500 hover:bg-primary"
-                          : "bg-card text-foreground border-border hover:bg-blue-50"
+                          : "bg-card text-foreground border-border hover:bg-[#eff4ff]"
                       }`}
                     >
                       {formatRole(role)}
@@ -181,7 +181,7 @@ export function AddStaffModal({
 
             <div className="grid gap-2">
               <label className="text-sm font-medium text-foreground">Account Status</label>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}

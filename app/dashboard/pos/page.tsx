@@ -123,7 +123,7 @@ export default function PosPage() {
   return (
     <div className="flex flex-col h-full bg-background min-h-[calc(100vh-4rem)]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border-b border-border bg-card shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 border-b border-border bg-card shrink-0">
         <div>
           <h1 className="text-[24px] font-heading font-bold tracking-tight text-foreground flex items-center gap-2">
             <ShoppingCart className="h-6 w-6 text-primary" />
@@ -132,7 +132,7 @@ export default function PosPage() {
         </div>
 
         {/* Customer Selector */}
-        <div className="flex items-center gap-3 bg-card p-2 rounded-[4px] border border-input shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
+        <div className="flex items-center gap-2.5 bg-card p-2 rounded-[4px] border border-input shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
           <User className="h-4 w-4 text-muted-foreground" />
           <div className="text-xs font-sans">
             <span className="text-muted-foreground block">Customer</span>
@@ -158,16 +158,16 @@ export default function PosPage() {
       </div>
 
       {lastCompletedSale && (
-        <div className="mx-4 mt-4 flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 p-3 rounded-[4px] shrink-0">
+        <div className="mx-4 mt-4 flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 p-2.5 rounded-[4px] shrink-0">
           <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
           <span>Last transaction ({lastCompletedSale}) completed successfully!</span>
         </div>
       )}
 
       {/* Main Grid: Catalog and Cart */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-10 p-4 gap-4 overflow-hidden">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-10 p-3 gap-3 overflow-hidden">
         {/* Left: Quick Catalog / Product Grid */}
-        <div className="lg:col-span-6 flex flex-col gap-4 overflow-hidden">
+        <div className="lg:col-span-6 flex flex-col gap-3 overflow-hidden">
           
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -194,7 +194,7 @@ export default function PosPage() {
                 <div
                   key={prod.id}
                   onClick={() => addItemToCart(prod)}
-                  className="bg-card p-3 rounded-[4px] border border-border hover:border-primary transition-colors cursor-pointer flex flex-col justify-between"
+                  className="bg-card p-2.5 rounded-[4px] border border-border hover:border-primary transition-colors cursor-pointer flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex justify-between items-start gap-2 mb-1">
@@ -223,7 +223,7 @@ export default function PosPage() {
             {cart.length > 0 && (
               <button
                 onClick={clearCart}
-                className="text-[11px] text-destructive hover:text-destructive flex items-center gap-1 cursor-pointer font-bold uppercase font-mono"
+                className="text-[11px] text-destructive hover:text-destructive flex items-center gap-0.5 cursor-pointer font-bold uppercase font-mono"
               >
                 <Trash2 className="h-3 w-3" /> Void
               </button>
@@ -262,7 +262,7 @@ export default function PosPage() {
 
                       {/* Quantity controls */}
                       <td className="px-2 py-1 align-top text-right">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-0.5">
                           <button
                             onClick={() => updateQuantity(item.productId ?? item.id, -1)}
                             className="p-0.5 text-muted-foreground hover:text-foreground rounded-[2px] border border-transparent hover:border-input bg-card"
@@ -290,7 +290,7 @@ export default function PosPage() {
           </div>
 
           {/* Summary */}
-          <div className="p-3 border-t border-border bg-background shrink-0 space-y-1">
+          <div className="p-2.5 border-t border-border bg-background shrink-0 space-y-1">
             <div className="flex justify-between text-[12px] text-muted-foreground">
               <span>Subtotal</span>
               <span className="font-mono">{formatPeso(cartTotal)}</span>
@@ -308,7 +308,7 @@ export default function PosPage() {
       </div>
 
       {/* Bottom Command Bar */}
-      <div className="h-[48px] bg-secondary-foreground shrink-0 flex items-center px-4 gap-4">
+      <div className="h-[48px] bg-secondary-foreground shrink-0 flex items-center px-4 gap-3">
         <button 
           onClick={() => searchInputRef.current?.focus()}
           className="flex items-center gap-2 text-white/80 hover:text-white text-sm"
