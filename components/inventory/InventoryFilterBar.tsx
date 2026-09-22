@@ -65,7 +65,7 @@ export function InventoryFilterBar({
     Boolean(category);
 
   return (
-    <div className="flex flex-wrap items-center gap-4">
+    <div className="flex flex-wrap items-center gap-3">
       <Input
         placeholder="Search inventory..."
         value={search}

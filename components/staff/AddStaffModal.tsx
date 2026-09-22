@@ -78,19 +78,19 @@ export function AddStaffModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] bg-white">
+      <DialogContent className="sm:max-w-[500px] bg-card">
         <DialogHeader>
-          <DialogTitle className="text-gray-900">
+          <DialogTitle className="text-foreground">
             {editStaff ? "Edit Staff Profile" : "Add New Staff"}
           </DialogTitle>
-          <DialogDescription className="text-gray-600">
+          <DialogDescription className="text-muted-foreground">
             {editStaff
               ? "Update the staff member's information below."
               : "Fill in the details to add a new staff member."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-3 py-4">
             <div className="grid gap-2">
               <label htmlFor="username" className="text-sm font-medium">
                 Username
@@ -122,7 +122,7 @@ export function AddStaffModal({
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <label htmlFor="first_name" className="text-sm font-medium">
                   First Name
@@ -152,7 +152,7 @@ export function AddStaffModal({
             </div>
 
             <div className="grid gap-2">
-              <label className="text-sm font-medium text-gray-700">
+              <label className="text-sm font-medium text-foreground">
                 Roles
               </label>
               <div className="flex flex-wrap gap-2">
@@ -165,8 +165,8 @@ export function AddStaffModal({
                       onClick={() => handleRoleToggle(role)}
                       className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
                         isSelected
-                          ? "bg-blue-500 text-white border-blue-500 hover:bg-blue-600"
-                          : "bg-white text-gray-700 border-gray-200 hover:bg-blue-50"
+                          ? "bg-blue-500 text-white border-blue-500 hover:bg-primary"
+                          : "bg-card text-foreground border-border hover:bg-[#eff4ff]"
                       }`}
                     >
                       {formatRole(role)}
@@ -174,30 +174,30 @@ export function AddStaffModal({
                   );
                 })}
               </div>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 Select at least one role
               </p>
             </div>
 
             <div className="grid gap-2">
-              <label className="text-sm font-medium text-gray-700">Account Status</label>
-              <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-foreground">Account Status</label>
+              <div className="flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     formData.is_active
                       ? "bg-green-500"
-                      : "bg-gray-300"
+                      : "bg-border"
                   }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${
                       formData.is_active ? "translate-x-6" : "translate-x-1"
                     }`}
                   />
                 </button>
-                <span className="text-sm text-gray-700">
+                <span className="text-sm text-foreground">
                   {formData.is_active ? "Active" : "Inactive"}
                 </span>
               </div>

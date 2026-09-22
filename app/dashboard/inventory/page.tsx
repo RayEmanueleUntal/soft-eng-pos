@@ -179,7 +179,7 @@ export default function InventoryPage() {
       />
 
       {error ? (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
           {error}
         </div>
       ) : loading ? (

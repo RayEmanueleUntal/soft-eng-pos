@@ -99,7 +99,7 @@ function ReceiptRow({
 
 /** Renders a dashed divider between receipt sections. */
 function ReceiptDivider() {
-  return <div className="border-t border-dashed border-gray-400 my-2" />;
+  return <div className="border-t border-dashed border-muted-foreground my-2" />;
 }
 
 export function PrintableInvoice({
@@ -113,7 +113,7 @@ export function PrintableInvoice({
     <div
       id={id}
       className={cn(
-        "w-full max-w-[80mm] bg-white text-black font-mono text-xs leading-relaxed p-4",
+        "w-full max-w-[80mm] bg-card text-black font-mono text-xs leading-relaxed p-3",
         className
       )}
     >

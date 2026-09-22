@@ -134,9 +134,9 @@ export default function CreditPaymentForm({
   return (
     <div className="space-y-4 py-3">
       {/* Customer Selection */}
-      <div className="grid gap-1.5">
+      <div className="grid gap-0.5.5">
         <div className="flex items-center justify-between">
-          <Label htmlFor="wholesale-customer" className="font-semibold text-gray-800">
+          <Label htmlFor="wholesale-customer" className="font-semibold text-foreground">
             Wholesale Customer Account
           </Label>
           {selectedCustomer && (
@@ -162,37 +162,37 @@ export default function CreditPaymentForm({
 
       {/* Credit Balance Card */}
       {selectedCustomer && (
-        <div className={`rounded-lg border p-3.5 space-y-3 transition-colors ${
+        <div className={`rounded-lg border p-2.5.5 space-y-3 transition-colors ${
           isExceeded || isInactive
-            ? "bg-red-50/70 border-red-200"
-            : "bg-gray-50 border-gray-200"
+            ? "bg-destructive/10 border-destructive/30"
+            : "bg-muted border-border"
         }`}>
-          <div className="flex items-center justify-between text-xs font-medium text-gray-500 border-b pb-2">
-            <span className="flex items-center gap-1.5">
+          <div className="flex items-center justify-between text-xs font-medium text-muted-foreground border-b pb-2">
+            <span className="flex items-center gap-0.5.5">
               <CreditCard className="h-3.5 w-3.5" />
               Accounts Receivable Status
             </span>
-            <span className="text-gray-700">{selectedCustomer.contactInfo}</span>
+            <span className="text-foreground">{selectedCustomer.contactInfo}</span>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div>
-              <p className="text-xs text-gray-500">Credit Limit</p>
-              <p className="font-semibold text-gray-900">{formatPeso(creditLimit)}</p>
+              <p className="text-xs text-muted-foreground">Credit Limit</p>
+              <p className="font-semibold text-foreground">{formatPeso(creditLimit)}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500">Outstanding Balance</p>
+              <p className="text-xs text-muted-foreground">Outstanding Balance</p>
               <p className="font-semibold text-amber-700">{formatPeso(outstandingBalance)}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500">Available Credit</p>
-              <p className={`font-bold ${availableCredit >= amountDue ? "text-green-600" : "text-red-600"}`}>
+              <p className="text-xs text-muted-foreground">Available Credit</p>
+              <p className={`font-bold ${availableCredit >= amountDue ? "text-green-600" : "text-destructive"}`}>
                 {formatPeso(availableCredit)}
               </p>
             </div>
             <div>
-              <p className="text-xs text-gray-500">Remaining After Sale</p>
-              <p className={`font-semibold ${remainingCreditAfterPurchase >= 0 ? "text-gray-700" : "text-red-600"}`}>
+              <p className="text-xs text-muted-foreground">Remaining After Sale</p>
+              <p className={`font-semibold ${remainingCreditAfterPurchase >= 0 ? "text-foreground" : "text-destructive"}`}>
                 {formatPeso(remainingCreditAfterPurchase)}
               </p>
             </div>
@@ -200,14 +200,14 @@ export default function CreditPaymentForm({
 
           {/* Credit Limit Warning */}
           {isExceeded && (
-            <div className="flex items-center gap-2 text-xs font-medium text-red-600 bg-red-100/60 p-2 rounded">
+            <div className="flex items-center gap-2 text-xs font-medium text-destructive bg-destructive/10 p-2 rounded">
               <ShieldAlert className="h-4 w-4 shrink-0" />
               <span>Credit limit exceeded by {formatPeso(amountDue - availableCredit)}. Cannot process credit payment.</span>
             </div>
           )}
 
           {isInactive && (
-            <div className="flex items-center gap-2 text-xs font-medium text-red-600 bg-red-100/60 p-2 rounded">
+            <div className="flex items-center gap-2 text-xs font-medium text-destructive bg-destructive/10 p-2 rounded">
               <AlertCircle className="h-4 w-4 shrink-0" />
               <span>This wholesale account is inactive. Please settle past obligations first.</span>
             </div>
@@ -216,14 +216,14 @@ export default function CreditPaymentForm({
           {/* Utilization indicator */}
           {!isExceeded && !isInactive && (
             <div className="space-y-1 pt-1">
-              <div className="flex justify-between text-[11px] text-gray-500">
+              <div className="flex justify-between text-[11px] text-muted-foreground">
                 <span>Credit Utilization</span>
                 <span>{creditUsagePercent}% of limit</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+              <div className="w-full bg-accent rounded-full h-1.5 overflow-hidden">
                 <div
                   className={`h-1.5 rounded-full transition-all ${
-                    creditUsagePercent > 85 ? "bg-amber-500" : "bg-indigo-600"
+                    creditUsagePercent > 85 ? "bg-amber-500" : "bg-primary"
                   }`}
                   style={{ width: `${creditUsagePercent}%` }}
                 />
@@ -236,11 +236,11 @@ export default function CreditPaymentForm({
       {/* Payment Due Date Setting */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="due-date" className="font-semibold text-gray-800 flex items-center gap-1.5">
-            <Calendar className="h-3.5 w-3.5 text-gray-500" />
+          <Label htmlFor="due-date" className="font-semibold text-foreground flex items-center gap-0.5.5">
+            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
             Payment Due Date
           </Label>
-          <span className="text-xs text-gray-500">Quick Terms</span>
+          <span className="text-xs text-muted-foreground">Quick Terms</span>
         </div>
 
         {/* Quick Terms Buttons */}
@@ -257,7 +257,7 @@ export default function CreditPaymentForm({
               className={`text-xs py-1.5 px-3 rounded-md border font-medium transition-colors ${
                 selectedTermDays === term.days
                   ? "bg-indigo-50 border-indigo-500 text-indigo-700 font-semibold"
-                  : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                  : "bg-card border-border text-foreground hover:bg-muted"
               }`}
             >
               {term.label}
@@ -275,14 +275,14 @@ export default function CreditPaymentForm({
           className={isDateInvalid ? "border-red-500" : ""}
         />
         {isDateInvalid && (
-          <p className="text-xs text-red-500">Please choose a valid future payment due date.</p>
+          <p className="text-xs text-destructive">Please choose a valid future payment due date.</p>
         )}
       </div>
 
       {/* PO / Reference Number (Optional) */}
-      <div className="grid gap-1.5">
-        <Label htmlFor="po-number" className="text-xs text-gray-600">
-          Purchase Order (PO) / Credit Ref # <span className="text-gray-400">(Optional)</span>
+      <div className="grid gap-0.5.5">
+        <Label htmlFor="po-number" className="text-xs text-muted-foreground">
+          Purchase Order (PO) / Credit Ref # <span className="text-muted-foreground/80">(Optional)</span>
         </Label>
         <Input
           id="po-number"

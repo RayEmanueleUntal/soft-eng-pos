@@ -40,12 +40,12 @@ export function SupplierTable() {
   return (
     <div className="space-y-4">
       {/* Search and Action Row */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-3">
         <div className="relative w-72">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input 
             placeholder="Search supplier..." 
-            className="pl-8 bg-gray-50/50"
+            className="pl-8 bg-muted/50"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -63,7 +63,7 @@ export function SupplierTable() {
                 Register procurement details and lead times for hardware suppliers.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
+            <div className="grid gap-3 py-4">
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Company Name</label>
                 <Input placeholder="e.g. Manila Industrial Fasteners" />
@@ -91,9 +91,9 @@ export function SupplierTable() {
       </div>
 
       {/* Suppliers Table */}
-      <div className="rounded-md border bg-white">
+      <div className="rounded-md border bg-card">
         <Table>
-          <TableHeader className="bg-gray-50/50">
+          <TableHeader className="bg-muted/50">
             <TableRow>
               <TableHead>Company Name</TableHead>
               <TableHead>Contact Person</TableHead>
@@ -112,7 +112,7 @@ export function SupplierTable() {
             ) : (
               filteredSuppliers.map((supplier) => (
                 <TableRow key={supplier.id}>
-                  <TableCell className="font-medium text-gray-900">{supplier.companyName}</TableCell>
+                  <TableCell className="font-medium text-foreground">{supplier.companyName}</TableCell>
                   <TableCell>{supplier.contactPerson}</TableCell>
                   <TableCell className="text-muted-foreground">{supplier.contactInfo}</TableCell>
                   <TableCell className="font-mono">{supplier.leadTimeDays} Days</TableCell>

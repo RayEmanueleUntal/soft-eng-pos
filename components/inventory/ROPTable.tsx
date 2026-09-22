@@ -55,7 +55,7 @@ export function ROPTable({ ropItems, onEdit }: ROPTableProps) {
     }
     
     return (
-      <Badge className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100">
+      <Badge className="bg-[#eff4ff] border-blue-200 text-blue-700 hover:bg-blue-100">
         ADEQUATE STOCK
       </Badge>
     )
@@ -66,19 +66,19 @@ export function ROPTable({ ropItems, onEdit }: ROPTableProps) {
       {/* Header with tabs and search */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <button className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-500 text-white hover:bg-blue-600">
+          <button className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-500 text-white hover:bg-primary">
             All ({ropItems.length})
           </button>
-          <button className="px-4 py-2 text-sm font-medium rounded-lg bg-white text-gray-700 border border-gray-200 hover:bg-blue-50">
+          <button className="px-4 py-2 text-sm font-medium rounded-lg bg-card text-foreground border border-border hover:bg-[#eff4ff]">
             Low Stock ({lowStockCount})
           </button>
-          <button className="px-4 py-2 text-sm font-medium rounded-lg bg-white text-gray-700 border border-gray-200 hover:bg-blue-50">
+          <button className="px-4 py-2 text-sm font-medium rounded-lg bg-card text-foreground border border-border hover:bg-[#eff4ff]">
             Adequate Stock ({adequateStockCount})
           </button>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/80" />
             <Input
               placeholder="Search..."
               className="pl-9 w-64"
@@ -88,27 +88,27 @@ export function ROPTable({ ropItems, onEdit }: ROPTableProps) {
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border border-gray-200 bg-white">
+      <div className="rounded-lg border border-border bg-card">
         <Table>
           <TableHeader>
-            <TableRow className="bg-blue-50 hover:bg-blue-50">
-              <TableHead className="text-gray-700 font-semibold">SKU</TableHead>
-              <TableHead className="text-gray-700 font-semibold">Name</TableHead>
-              <TableHead className="text-gray-700 font-semibold">Category</TableHead>
-              <TableHead className="text-gray-700 font-semibold">Dimensions</TableHead>
-              <TableHead className="text-gray-700 font-semibold">Thread Type</TableHead>
-              <TableHead className="text-gray-700 font-semibold">Material</TableHead>
-              <TableHead className="text-gray-700 font-semibold">Current Qty</TableHead>
-              <TableHead className="text-gray-700 font-semibold">ROP</TableHead>
-              <TableHead className="text-gray-700 font-semibold">Status</TableHead>
-              <TableHead className="w-[100px] text-gray-700 font-semibold">Actions</TableHead>
+            <TableRow className="bg-[#eff4ff] hover:bg-[#eff4ff]">
+              <TableHead className="text-foreground font-semibold">SKU</TableHead>
+              <TableHead className="text-foreground font-semibold">Name</TableHead>
+              <TableHead className="text-foreground font-semibold">Category</TableHead>
+              <TableHead className="text-foreground font-semibold">Dimensions</TableHead>
+              <TableHead className="text-foreground font-semibold">Thread Type</TableHead>
+              <TableHead className="text-foreground font-semibold">Material</TableHead>
+              <TableHead className="text-foreground font-semibold">Current Qty</TableHead>
+              <TableHead className="text-foreground font-semibold">ROP</TableHead>
+              <TableHead className="text-foreground font-semibold">Status</TableHead>
+              <TableHead className="w-[100px] text-foreground font-semibold">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedItems.map((item) => (
-              <TableRow key={item.id} className="hover:bg-blue-50/50">
-                <TableCell className="font-medium text-gray-900">{item.sku || '-'}</TableCell>
-                <TableCell className="font-medium text-gray-900">{item.name}</TableCell>
+              <TableRow key={item.id} className="hover:bg-[#eff4ff]/50">
+                <TableCell className="font-medium text-foreground">{item.sku || '-'}</TableCell>
+                <TableCell className="font-medium text-foreground">{item.name}</TableCell>
                 <TableCell>Category {item.categoryId}</TableCell>
                 <TableCell>{item.size_dimensions || '-'}</TableCell>
                 <TableCell>{item.thread_type || '-'}</TableCell>
@@ -123,7 +123,7 @@ export function ROPTable({ ropItems, onEdit }: ROPTableProps) {
                     onClick={() => onEdit(item)}
                     className="hover:bg-blue-100"
                   >
-                    <PencilIcon className="size-4 text-gray-600" />
+                    <PencilIcon className="size-4 text-muted-foreground" />
                   </Button>
                 </TableCell>
               </TableRow>

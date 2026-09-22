@@ -56,20 +56,20 @@ export default function ReceiptPage() {
   };
 
   return (
-    <div className="flex-1 space-y-6 p-8 bg-gray-50 min-h-screen">
+    <div className="flex-1 space-y-6 p-8 bg-muted min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             onClick={handleBack}
-            className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+            className="text-muted-foreground hover:text-foreground hover:bg-accent"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Dashboard
           </Button>
-          <div className="h-6 w-px bg-gray-300" />
-          <h1 className="text-2xl font-bold text-gray-900">
+          <div className="h-6 w-px bg-border" />
+          <h1 className="text-2xl font-bold text-foreground">
             Receipt #{id}
           </h1>
         </div>
@@ -78,20 +78,20 @@ export default function ReceiptPage() {
       {/* Loading State */}
       {loading && (
         <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="h-12 w-12 text-[#6366f1] animate-spin mb-4" />
-          <p className="text-gray-600">Loading receipt...</p>
+          <Loader2 className="h-9 w-12 text-[#6366f1] animate-spin mb-4" />
+          <p className="text-muted-foreground">Loading receipt...</p>
         </div>
       )}
 
       {/* Error State */}
       {error && (
         <div className="flex flex-col items-center justify-center py-20">
-          <div className="bg-white rounded-lg border border-gray-200 p-8 max-w-md text-center">
-            <AlertCircle className="h-16 w-16 text-[#6366f1] mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+          <div className="bg-card rounded-lg border border-border p-8 max-w-md text-center">
+            <AlertCircle className="h-12 w-16 text-[#6366f1] mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-foreground mb-2">
               {error === "Receipt not found" ? "Receipt Not Found" : "Error Loading Receipt"}
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-muted-foreground mb-6">
               {error === "Receipt not found"
                 ? `The receipt with ID #${id} could not be found. It may have been deleted or the ID is incorrect.`
                 : "There was a problem loading the receipt. Please try again later."}
@@ -111,13 +111,13 @@ export default function ReceiptPage() {
       {!loading && !error && receipt && (
         <div className="space-y-6">
           {/* Receipt Card */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="bg-card rounded-lg border border-border p-6">
             {/* Status Badges */}
             <div className="flex flex-wrap gap-2 mb-6">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border border-[#6366f1] bg-white text-[#6366f1]">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border border-[#6366f1] bg-card text-[#6366f1]">
                 {receipt.transaction_type}
               </span>
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border border-gray-300 bg-white text-gray-600">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border border-border bg-card text-muted-foreground">
                 #{receipt.transactionId}
               </span>
             </div>
@@ -128,7 +128,7 @@ export default function ReceiptPage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+            <div className="flex justify-end gap-2.5 pt-4 border-t border-border">
               <Button
                 variant="outline"
                 onClick={handleBack}

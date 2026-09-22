@@ -122,7 +122,7 @@ export function CustomerForm({ mode, customer, onSaved }: CustomerFormProps) {
         </DialogDescription>
       </DialogHeader>
 
-      <div className="grid gap-4 py-4">
+      <div className="grid gap-3 py-4">
         <div className="grid gap-2">
           <label className="text-sm font-medium">Customer Name</label>
 
@@ -202,7 +202,7 @@ export function CustomerForm({ mode, customer, onSaved }: CustomerFormProps) {
           </>
         )}
 
-        {formError && <p className="text-sm text-red-600">{formError}</p>}
+        {formError && <p className="text-sm text-destructive">{formError}</p>}
       </div>
 
       <DialogFooter>

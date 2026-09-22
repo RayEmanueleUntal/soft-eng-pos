@@ -75,14 +75,14 @@ export default function CashPaymentForm({ amountDue, onPaymentChange }: CashPaym
           autoFocus
         />
         {isShort && (
-          <p className="text-sm text-red-500">Insufficient cash tendered.</p>
+          <p className="text-sm text-destructive">Insufficient cash tendered.</p>
         )}
       </div>
 
       {/* Quick Cash Presets */}
       {quickPresets.length > 0 && (
         <div className="space-y-1.5">
-          <span className="text-xs text-gray-500">Quick Cash Tendered</span>
+          <span className="text-xs text-muted-foreground">Quick Cash Tendered</span>
           <div className="flex flex-wrap gap-2">
             {quickPresets.map((preset) => (
               <button
@@ -92,7 +92,7 @@ export default function CashPaymentForm({ amountDue, onPaymentChange }: CashPaym
                 className={`text-xs px-2.5 py-1.5 rounded border transition-colors ${
                   cashTendered === preset
                     ? "bg-indigo-50 border-indigo-500 text-indigo-700 font-semibold"
-                    : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                    : "bg-card border-border text-foreground hover:bg-muted"
                 }`}
               >
                 {preset === amountDue ? "Exact (₱" + preset.toFixed(2) + ")" : "₱" + preset.toLocaleString()}
@@ -102,8 +102,8 @@ export default function CashPaymentForm({ amountDue, onPaymentChange }: CashPaym
         </div>
       )}
 
-      <div className="flex justify-between items-center rounded-lg bg-gray-50 p-4 border">
-        <span className="font-medium text-gray-700">Change Due:</span>
+      <div className="flex justify-between items-center rounded-lg bg-muted p-3 border">
+        <span className="font-medium text-foreground">Change Due:</span>
         <span className="text-xl font-bold text-green-600">₱{changeDue.toFixed(2)}</span>
       </div>
     </div>

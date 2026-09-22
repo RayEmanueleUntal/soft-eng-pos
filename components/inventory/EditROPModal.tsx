@@ -50,10 +50,10 @@ export function EditROPModal({ item, open, onOpenChange, onSave }: EditROPModalP
         <DialogHeader>
           <DialogTitle>Edit Reorder Point</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+        <form onSubmit={handleSubmit} className="grid gap-3 py-4">
           <div className="space-y-2">
             <p className="text-sm font-medium text-muted-foreground">Product Information</p>
-            <div className="bg-muted/50 p-3 rounded-lg space-y-1">
+            <div className="bg-muted/50 p-2.5 rounded-lg space-y-1">
               <p className="text-sm"><span className="font-medium">Name:</span> {item.name}</p>
               <p className="text-sm"><span className="font-medium">Current Quantity:</span> {item.current_quantity}</p>
               <p className="text-sm"><span className="font-medium">Current ROP:</span> {item.reorder_point_ROP}</p>

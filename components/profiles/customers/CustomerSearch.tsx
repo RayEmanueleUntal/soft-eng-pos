@@ -31,13 +31,13 @@ export function CustomerSearch({
   onSaved,
 }: CustomerSearchProps) {
   return (
-    <div className="flex items-center justify-between gap-4">
+    <div className="flex items-center justify-between gap-3">
       <div className="relative w-72">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 
         <Input
           placeholder="Search customer..."
-          className="bg-gray-50/50 pl-8"
+          className="bg-muted/50 pl-8"
           value={searchTerm}
           onChange={(event) => onSearchChange(event.target.value)}
         />
