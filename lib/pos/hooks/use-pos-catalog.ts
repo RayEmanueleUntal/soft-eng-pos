@@ -15,85 +15,93 @@ export interface CatalogProduct {
 
 interface BackendProduct {
   id: number;
-  sku: string;
+  sku?: string | null;
   name: string;
-  retail_price?: number;
-  retailPrice?: number;
-  wholesale_price?: number;
-  wholesalePrice?: number;
-  price?: number;
-  material_grade?: string;
-  category?: { name: string } | string;
+  retail_price?: number | string | null;
+  wholesale_price?: number | string | null;
+  category?: { name: string } | string | null;
+}
+
+/**
+ * Pure adapter function: maps raw database product into clean frontend CatalogProduct.
+ */
+export function toCatalogProduct(item: BackendProduct): CatalogProduct {
+  const price = Number(item.retail_price ?? 0);
+  const categoryName =
+    typeof item.category === "object" && item.category !== null
+      ? item.category.name
+      : typeof item.category === "string"
+      ? item.category
+      : "General";
+
+  return {
+    id: item.id,
+    name: item.name,
+    sku: item.sku || `SKU-${item.id}`,
+    price,
+    retailPrice: price,
+    wholesalePrice: Number(item.wholesale_price ?? price),
+    category: categoryName,
+  };
+}
+
+/**
+ * Fetch and map catalog products from backend API.
+ */
+async function fetchProductsApi(): Promise<CatalogProduct[]> {
+  const response = await apiClient.get<{ data: BackendProduct[] } | BackendProduct[]>("/products");
+  const rawList = Array.isArray(response.data)
+    ? response.data
+    : response.data?.data || [];
+
+  return rawList.map(toCatalogProduct);
 }
 
 export function usePosCatalog() {
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reloadCount, setReloadCount] = useState(0);
 
-  const refetch = useCallback(() => {
+  const refetch = useCallback(async () => {
     setLoading(true);
-    setReloadCount((prev) => prev + 1);
+    setError(null);
+    try {
+      const data = await fetchProductsApi();
+      setProducts(data);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to load products from server";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    let isCancelled = false;
+    let ignore = false;
 
-    async function loadCatalog() {
-      try {
-        const response = await apiClient.get<{ data: BackendProduct[] } | BackendProduct[]>("/products");
-        if (isCancelled) return;
-
-        const rawList = Array.isArray(response.data)
-          ? response.data
-          : response.data?.data || [];
-
-        if (rawList.length > 0) {
-          const mappedProducts: CatalogProduct[] = rawList.map((p) => {
-            const retail = Number(p.retail_price ?? p.retailPrice ?? p.price ?? 0);
-            const wholesale = Number(p.wholesale_price ?? p.wholesalePrice ?? retail);
-            const cat = typeof p.category === "object" && p.category !== null
-              ? p.category.name
-              : typeof p.category === "string"
-              ? p.category
-              : p.material_grade ?? "General";
-
-            return {
-              id: p.id,
-              name: p.name,
-              sku: p.sku || `SKU-${p.id}`,
-              price: retail,
-              retailPrice: retail,
-              wholesalePrice: wholesale,
-              category: cat,
-            };
-          });
-
-          setProducts(mappedProducts);
+    fetchProductsApi()
+      .then((data) => {
+        if (!ignore) {
+          setProducts(data);
           setError(null);
-        } else {
-          setProducts([]);
         }
-      } catch (err: unknown) {
-        if (isCancelled) return;
-        const message = err instanceof Error ? err.message : "Failed to load products from server";
-        console.error("Failed to load catalog from /products:", message);
-        setProducts([]);
-        setError(message);
-      } finally {
-        if (!isCancelled) {
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          const message = err instanceof Error ? err.message : "Failed to load products from server";
+          setError(message);
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
           setLoading(false);
         }
-      }
-    }
-
-    loadCatalog();
+      });
 
     return () => {
-      isCancelled = true;
+      ignore = true;
     };
-  }, [reloadCount]);
+  }, []);
 
   return { products, loading, error, refetch };
 }
