@@ -153,7 +153,9 @@ export function generateMockReceipt(payload: CheckoutPayload): Receipt {
  */
 export async function submitCheckout(payload: CheckoutPayload): Promise<CheckoutResponse> {
   try {
-    const response = await apiClient.post<any>("/pos/checkout", payload);
+    const response = await apiClient.post<any>("/pos/checkout", payload, {
+      timeout: 1000, // 1s timeout so user isn't stuck waiting if backend hangs
+    });
     
     // If backend returns receipt directly or within data
     const data = response.data;
@@ -166,10 +168,7 @@ export async function submitCheckout(payload: CheckoutPayload): Promise<Checkout
       receipt: receipt,
     };
   } catch (error: any) {
-    console.warn("Backend /pos/checkout failed or not running, falling back to mock payment handler:", error.message);
-    
-    // Simulate slight network delay for realistic POS feel
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    console.warn("Backend /pos/checkout offline or hanging, falling back to mock receipt:", error.message);
 
     const mockReceipt = generateMockReceipt(payload);
     

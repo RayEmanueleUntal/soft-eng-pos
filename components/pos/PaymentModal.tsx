@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import CashPaymentForm from "./CashPaymentForm";
 import GCashPaymentForm from "./GCashPaymentForm";
 import CreditPaymentForm from "./CreditPaymentForm";
-import { ReceiptModal } from "./ReceiptModal";
 import { submitCheckout, type CheckoutPayload } from "@/lib/pos/mock-payment";
 import type { Receipt, PaymentMethod } from "@/lib/pos/receipt-types";
 import { formatPeso } from "@/lib/pos/format-currency";
@@ -56,16 +55,32 @@ export default function PaymentModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  // Post-checkout receipt display state
-  const [completedReceipt, setCompletedReceipt] = useState<Receipt | null>(null);
-  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const handlePaymentUpdate = useCallback((tabKey: string, details: any) => {
+    setPaymentDetails((prev) => {
+      if (JSON.stringify(prev[tabKey]) === JSON.stringify(details)) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [tabKey]: details,
+      };
+    });
+  }, []);
 
-  const handlePaymentUpdate = (tabKey: string, details: any) => {
-    setPaymentDetails((prev) => ({
-      ...prev,
-      [tabKey]: details,
-    }));
-  };
+  const handleCashChange = useCallback(
+    (details: any) => handlePaymentUpdate("cash", details),
+    [handlePaymentUpdate]
+  );
+
+  const handleGCashChange = useCallback(
+    (details: any) => handlePaymentUpdate("gcash", details),
+    [handlePaymentUpdate]
+  );
+
+  const handleCreditChange = useCallback(
+    (details: any) => handlePaymentUpdate("credit", details),
+    [handlePaymentUpdate]
+  );
 
   // Get the active payment details based on selected tab
   const currentPayment = paymentDetails[activeTab];
@@ -162,10 +177,8 @@ export default function PaymentModal({
       const response = await submitCheckout(checkoutPayload);
 
       if (response.success) {
-        setCompletedReceipt(response.receipt);
-        onClose();
-        setShowReceiptModal(true);
         onSuccess?.(response.receipt);
+        onClose();
       } else {
         setCheckoutError(response.message || "Failed to process checkout. Please try again.");
       }
@@ -174,11 +187,6 @@ export default function PaymentModal({
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleNewSale = () => {
-    setShowReceiptModal(false);
-    setCompletedReceipt(null);
   };
 
   return (
@@ -240,14 +248,14 @@ export default function PaymentModal({
             <TabsContent value="cash">
               <CashPaymentForm
                 amountDue={cartTotal}
-                onPaymentChange={(details) => handlePaymentUpdate("cash", details)}
+                onPaymentChange={handleCashChange}
               />
             </TabsContent>
 
             <TabsContent value="gcash">
               <GCashPaymentForm
                 amountDue={cartTotal}
-                onPaymentChange={(details) => handlePaymentUpdate("gcash", details)}
+                onPaymentChange={handleGCashChange}
               />
             </TabsContent>
 
@@ -255,7 +263,7 @@ export default function PaymentModal({
               <CreditPaymentForm
                 amountDue={cartTotal}
                 initialCustomerId={customer?.type === "Wholesale" ? customer.id : undefined}
-                onPaymentChange={(details) => handlePaymentUpdate("credit", details)}
+                onPaymentChange={handleCreditChange}
               />
             </TabsContent>
           </Tabs>
@@ -293,16 +301,6 @@ export default function PaymentModal({
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Post-Checkout Receipt Modal */}
-      {completedReceipt && (
-        <ReceiptModal
-          open={showReceiptModal}
-          onOpenChange={setShowReceiptModal}
-          receipt={completedReceipt}
-          onNewSale={handleNewSale}
-        />
-      )}
     </>
   );
 }

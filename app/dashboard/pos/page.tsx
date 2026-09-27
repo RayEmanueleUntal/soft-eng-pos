@@ -9,6 +9,8 @@ import { PosCommandBar } from "@/components/pos/PosCommandBar";
 import PaymentModal, {
   type PaymentModalCustomer,
 } from "@/components/pos/PaymentModal";
+import { ReceiptModal } from "@/components/pos/ReceiptModal";
+import type { Receipt } from "@/lib/pos/receipt-types";
 import { mockCustomers } from "@/lib/customers/mock-data";
 import { usePosCart } from "@/lib/pos/use-pos-cart";
 import { usePosShortcuts } from "@/lib/pos/use-pos-shortcuts";
@@ -20,6 +22,7 @@ export default function PosPage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("cust-2");
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [lastCompletedSale, setLastCompletedSale] = useState<string | null>(null);
+  const [completedReceipt, setCompletedReceipt] = useState<Receipt | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -97,9 +100,24 @@ export default function PosPage() {
           setLastCompletedSale(
             receipt.invoice_number ?? `#${receipt.transactionId}`
           );
+          setCompletedReceipt(receipt);
           clearCart();
         }}
       />
+
+      {/* 5. Post-Checkout Receipt Modal */}
+      {completedReceipt && (
+        <ReceiptModal
+          open={!!completedReceipt}
+          onOpenChange={(open) => {
+            if (!open) setCompletedReceipt(null);
+          }}
+          receipt={completedReceipt}
+          onNewSale={() => {
+            setCompletedReceipt(null);
+          }}
+        />
+      )}
     </div>
   );
 }

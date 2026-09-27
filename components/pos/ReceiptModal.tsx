@@ -118,7 +118,7 @@ export function ReceiptModal({
         </DialogContent>
       </Dialog>
 
-      <div aria-hidden="true" className="hidden print:block">
+      <div className="print-only">
         <PrintableInvoice receipt={receipt} />
       </div>
     </>

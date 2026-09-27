@@ -22,12 +22,13 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
   const [mobileNumber, setMobileNumber] = useState("");
   const [touched, setTouched] = useState({ ref: false, mobile: false });
 
-  // If amountDue changes from props, update amount
-  useEffect(() => {
-    if (amountDue !== undefined && amount === "") {
-      setAmount(amountDue);
+  const [prevAmountDue, setPrevAmountDue] = useState(amountDue);
+  if (amountDue !== prevAmountDue) {
+    setPrevAmountDue(amountDue);
+    if (amount === "" || amount === prevAmountDue) {
+      setAmount(amountDue ?? "");
     }
-  }, [amountDue, amount]);
+  }
 
   // Validation rules
   const trimmedRef = referenceNumber.trim();
