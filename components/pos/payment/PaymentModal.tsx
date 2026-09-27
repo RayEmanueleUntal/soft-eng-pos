@@ -37,9 +37,9 @@ export interface PaymentModalItem {
 }
 
 export interface PaymentModalCustomer {
-  id: string;
+  id: string | number;
   name: string;
-  type?: "Retail" | "Wholesale";
+  type?: "Retail" | "Wholesale" | "RETAIL" | "WHOLESALE";
 }
 
 interface PaymentModalProps {
@@ -162,8 +162,9 @@ export default function PaymentModal({
             },
           ];
 
+      const isWholesale = activeTab === "credit" || customer?.type?.toUpperCase() === "WHOLESALE";
       const checkoutPayload: CheckoutPayload = {
-        transaction_type: activeTab === "credit" || customer?.type === "Wholesale" ? "WHOLESALE" : "RETAIL",
+        transaction_type: isWholesale ? "WHOLESALE" : "RETAIL",
         items: itemsPayload,
         customer_id: activeTab === "credit" ? creditPayment?.customerId : customer?.id ?? null,
         customer_name: activeTab === "credit" ? creditPayment?.customerName : customer?.name ?? null,
@@ -276,7 +277,7 @@ export default function PaymentModal({
             <TabsContent value="credit">
               <CreditPaymentForm
                 amountDue={cartTotal}
-                initialCustomerId={customer?.type === "Wholesale" ? customer.id : undefined}
+                initialCustomerId={customer?.type?.toUpperCase() === "WHOLESALE" ? customer.id : undefined}
                 onPaymentChange={handleCreditChange}
               />
             </TabsContent>

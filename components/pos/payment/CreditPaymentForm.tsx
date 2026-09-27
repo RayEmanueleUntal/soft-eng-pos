@@ -14,7 +14,7 @@ import { AlertCircle, Calendar, CreditCard, ShieldAlert } from "lucide-react";
 export interface CreditPaymentDetails {
   type: "CREDIT";
   amount: number;
-  customerId?: string;
+  customerId?: string | number;
   customerName?: string;
   creditLimit?: number;
   outstandingBalance?: number;
@@ -27,7 +27,7 @@ export interface CreditPaymentDetails {
 
 interface CreditPaymentFormProps {
   amountDue: number;
-  initialCustomerId?: string;
+  initialCustomerId?: string | number;
   onPaymentChange: (details: CreditPaymentDetails) => void;
 }
 
@@ -52,7 +52,7 @@ export default function CreditPaymentForm({
   
   // Default to first active wholesale customer or initialCustomerId if provided
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(() => {
-    if (initialCustomerId) return initialCustomerId;
+    if (initialCustomerId) return String(initialCustomerId);
     const firstActive = wholesaleCustomers.find((c) => c.isActive);
     return firstActive ? firstActive.id : wholesaleCustomers[0]?.id || "";
   });

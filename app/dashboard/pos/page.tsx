@@ -11,22 +11,23 @@ import {
   ReceiptModal,
   type PaymentModalCustomer,
 } from "@/components/pos";
-import { usePosCart, usePosShortcuts, type Receipt } from "@/lib/pos";
-import { mockCustomers } from "@/lib/customers/mock-data";
+import { usePosCart, usePosShortcuts, usePosCustomers, type Receipt } from "@/lib/pos";
 
 export default function PosPage() {
   const { cart, cartTotal, addItemToCart, updateQuantity, clearCart } =
     usePosCart();
+  const { customers, loading: isCustomersLoading } = usePosCustomers();
 
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("cust-2");
+  // Default to Walk-in customer (ID "1" in database)
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("1");
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [lastCompletedSale, setLastCompletedSale] = useState<string | null>(null);
   const [completedReceipt, setCompletedReceipt] = useState<Receipt | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const selectedCustomerData = mockCustomers.find(
-    (c) => c.id === selectedCustomerId
+  const selectedCustomerData = customers.find(
+    (c) => String(c.id) === String(selectedCustomerId)
   );
   const selectedCustomer: PaymentModalCustomer | null = selectedCustomerData
     ? {
@@ -50,6 +51,8 @@ export default function PosPage() {
       <PosHeader
         selectedCustomerId={selectedCustomerId}
         onSelectCustomer={setSelectedCustomerId}
+        customers={customers}
+        loading={isCustomersLoading}
       />
 
       {/* Success Notification Banner */}

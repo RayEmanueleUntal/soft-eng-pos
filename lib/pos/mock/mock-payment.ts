@@ -51,7 +51,7 @@ export interface CheckoutPayload {
     unit_price: number;
     subtotal: number;
   }>;
-  customer_id?: string | null;
+  customer_id?: string | number | null;
   customer_name?: string | null;
   grand_total: number;
   payment: {
@@ -123,7 +123,7 @@ export function generateMockReceipt(payload: CheckoutPayload): Receipt {
     customer: payload.customer_name
       ? {
           name: payload.customer_name,
-          number: payload.customer_id ?? "N/A",
+          number: String(payload.customer_id ?? "N/A"),
         }
       : null,
     items: payload.items.map((item) => ({
