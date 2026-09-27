@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { formatPeso } from "@/lib/pos/format-currency";
 import {
+  formatPeso,
   getWholesaleCustomers,
   type WholesaleCustomerCredit,
-} from "@/lib/pos/mock-payment";
+} from "@/lib/pos";
 import { AlertCircle, Calendar, CheckCircle2, CreditCard, ShieldAlert } from "lucide-react";
 
 export interface CreditPaymentDetails {

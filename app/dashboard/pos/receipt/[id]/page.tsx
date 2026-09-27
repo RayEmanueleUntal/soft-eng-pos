@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { PrintableInvoice } from "@/components/pos/PrintableInvoice";
+import { PrintableInvoice } from "@/components/pos";
 import { apiClient } from "@/lib/api";
-import type { Receipt } from "@/lib/pos/receipt-types";
-import { mockReceipt } from "@/lib/pos/mock-receipt";
+import type { Receipt } from "@/lib/pos";
 import { ArrowLeft, Printer, Loader2, AlertCircle } from "lucide-react";
 
 export default function ReceiptPage() {

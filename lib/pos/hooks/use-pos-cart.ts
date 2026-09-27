@@ -1,27 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import type { PaymentModalItem } from "@/components/pos/PaymentModal";
-import type { CatalogProduct } from "@/components/pos/PosCatalog";
+import type { PaymentModalItem, CatalogProduct } from "@/components/pos";
 
-const DEFAULT_INITIAL_CART: PaymentModalItem[] = [
-  {
-    id: 101,
-    productId: 101,
-    name: "Portland Cement Type 1 (40kg)",
-    quantity: 10,
-    unitPrice: 280.0,
-    subtotal: 2800.0,
-  },
-  {
-    id: 102,
-    productId: 102,
-    name: "Deformed Steel Bar 12mm x 6m",
-    quantity: 20,
-    unitPrice: 345.5,
-    subtotal: 6910.0,
-  },
-];
+const DEFAULT_INITIAL_CART: PaymentModalItem[] = [];
 
 export function usePosCart(initialCart: PaymentModalItem[] = DEFAULT_INITIAL_CART) {
   const [cart, setCart] = useState<PaymentModalItem[]>(initialCart);

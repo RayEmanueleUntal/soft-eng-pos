@@ -2,7 +2,7 @@
 // Supports backend API (POST /pos/checkout) with seamless fallback to mock data
 
 import { apiClient } from "@/lib/api";
-import type { Receipt, PaymentMethod, TransactionType } from "@/lib/pos/receipt-types";
+import type { Receipt, PaymentMethod, TransactionType } from "../types/receipt-types";
 import { mockCustomers, type Customer } from "@/lib/customers/mock-data";
 
 export interface WholesaleCustomerCredit {

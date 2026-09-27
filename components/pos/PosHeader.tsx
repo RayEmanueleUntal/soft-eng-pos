@@ -2,7 +2,7 @@
 
 import { ShoppingCart, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { formatPeso } from "@/lib/pos/format-currency";
+import { formatPeso } from "@/lib/pos";
 import { mockCustomers } from "@/lib/customers/mock-data";
 
 interface PosHeaderProps {

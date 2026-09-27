@@ -2,18 +2,17 @@
 
 import { useState, useRef } from "react";
 import { CheckCircle2 } from "lucide-react";
-import { PosHeader } from "@/components/pos/PosHeader";
-import { PosCatalog } from "@/components/pos/PosCatalog";
-import { PosCart } from "@/components/pos/PosCart";
-import { PosCommandBar } from "@/components/pos/PosCommandBar";
-import PaymentModal, {
+import {
+  PosHeader,
+  PosCatalog,
+  PosCart,
+  PosCommandBar,
+  PaymentModal,
+  ReceiptModal,
   type PaymentModalCustomer,
-} from "@/components/pos/PaymentModal";
-import { ReceiptModal } from "@/components/pos/ReceiptModal";
-import type { Receipt } from "@/lib/pos/receipt-types";
+} from "@/components/pos";
+import { usePosCart, usePosShortcuts, type Receipt } from "@/lib/pos";
 import { mockCustomers } from "@/lib/customers/mock-data";
-import { usePosCart } from "@/lib/pos/use-pos-cart";
-import { usePosShortcuts } from "@/lib/pos/use-pos-shortcuts";
 
 export default function PosPage() {
   const { cart, cartTotal, addItemToCart, updateQuantity, clearCart } =

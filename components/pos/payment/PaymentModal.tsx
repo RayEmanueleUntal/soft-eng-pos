@@ -13,9 +13,13 @@ import { Button } from "@/components/ui/button";
 import CashPaymentForm from "./CashPaymentForm";
 import GCashPaymentForm from "./GCashPaymentForm";
 import CreditPaymentForm from "./CreditPaymentForm";
-import { submitCheckout, type CheckoutPayload } from "@/lib/pos/mock-payment";
-import type { Receipt, PaymentMethod } from "@/lib/pos/receipt-types";
-import { formatPeso } from "@/lib/pos/format-currency";
+import {
+  submitCheckout,
+  formatPeso,
+  type CheckoutPayload,
+  type Receipt,
+  type PaymentMethod,
+} from "@/lib/pos";
 import { AlertCircle, Banknote, CreditCard, Loader2, QrCode } from "lucide-react";
 
 export interface PaymentModalItem {

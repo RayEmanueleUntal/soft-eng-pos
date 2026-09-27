@@ -1,7 +1,7 @@
 // Mock receipt data for developing PrintableInvoice and ReceiptModal without API calls.
 // Mirrors the backend GetReceiptResponseDto structure for local UI testing.
 
-import type { Receipt } from "@/lib/pos/receipt-types";
+import type { Receipt } from "../types/receipt-types";
 
 export const mockReceipt: Receipt = {
   transactionId: 42,

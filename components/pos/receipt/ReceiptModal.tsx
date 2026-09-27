@@ -12,9 +12,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { PrintableInvoice } from "@/components/pos/PrintableInvoice";
-import type { PaymentMethod, Receipt } from "@/lib/pos/receipt-types";
-import { formatPeso } from "@/lib/pos/format-currency";
+import { PrintableInvoice } from "./PrintableInvoice";
+import { formatPeso, type PaymentMethod, type Receipt } from "@/lib/pos";
 
 interface ReceiptModalProps {
   open: boolean;
