@@ -10,9 +10,9 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import CashPaymentForm from "./CashPaymentForm";
-import GCashPaymentForm from "./GCashPaymentForm";
-import CreditPaymentForm from "./CreditPaymentForm";
+import CashPaymentForm, { type CashPaymentDetails } from "./CashPaymentForm";
+import GCashPaymentForm, { type GCashPaymentDetails } from "./GCashPaymentForm";
+import CreditPaymentForm, { type CreditPaymentDetails } from "./CreditPaymentForm";
 import {
   submitCheckout,
   formatPeso,
@@ -21,6 +21,11 @@ import {
   type PaymentMethod,
 } from "@/lib/pos";
 import { AlertCircle, Banknote, CreditCard, Loader2, QrCode } from "lucide-react";
+
+export type PaymentTabDetails =
+  | CashPaymentDetails
+  | GCashPaymentDetails
+  | CreditPaymentDetails;
 
 export interface PaymentModalItem {
   id?: string | number;
@@ -55,11 +60,11 @@ export default function PaymentModal({
   onSuccess,
 }: PaymentModalProps) {
   const [activeTab, setActiveTab] = useState<string>("cash");
-  const [paymentDetails, setPaymentDetails] = useState<Record<string, any>>({});
+  const [paymentDetails, setPaymentDetails] = useState<Record<string, PaymentTabDetails>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  const handlePaymentUpdate = useCallback((tabKey: string, details: any) => {
+  const handlePaymentUpdate = useCallback((tabKey: string, details: PaymentTabDetails) => {
     setPaymentDetails((prev) => {
       if (JSON.stringify(prev[tabKey]) === JSON.stringify(details)) {
         return prev;
@@ -72,29 +77,32 @@ export default function PaymentModal({
   }, []);
 
   const handleCashChange = useCallback(
-    (details: any) => handlePaymentUpdate("cash", details),
+    (details: CashPaymentDetails) => handlePaymentUpdate("cash", details),
     [handlePaymentUpdate]
   );
 
   const handleGCashChange = useCallback(
-    (details: any) => handlePaymentUpdate("gcash", details),
+    (details: GCashPaymentDetails) => handlePaymentUpdate("gcash", details),
     [handlePaymentUpdate]
   );
 
   const handleCreditChange = useCallback(
-    (details: any) => handlePaymentUpdate("credit", details),
+    (details: CreditPaymentDetails) => handlePaymentUpdate("credit", details),
     [handlePaymentUpdate]
   );
 
-  // Get the active payment details based on selected tab
+  // Get active payment details narrowed by payment method
   const currentPayment = paymentDetails[activeTab];
+  const cashPayment = currentPayment?.type === "CASH" ? currentPayment : null;
+  const gcashPayment = currentPayment?.type === "GCASH" ? currentPayment : null;
+  const creditPayment = currentPayment?.type === "CREDIT" ? currentPayment : null;
 
   // Validation logic based on active payment method
   let isPaymentValid = false;
   let validationMessage = "";
 
   if (activeTab === "cash") {
-    const cashTendered = currentPayment?.cashTendered ?? 0;
+    const cashTendered = cashPayment?.cashTendered ?? 0;
     if (cashTendered === 0) {
       validationMessage = "Enter cash tendered to continue.";
     } else if (cashTendered < cartTotal) {
@@ -103,17 +111,17 @@ export default function PaymentModal({
       isPaymentValid = true;
     }
   } else if (activeTab === "gcash") {
-    if (!currentPayment?.referenceNumber || currentPayment.referenceNumber.length < 6) {
+    if (!gcashPayment?.referenceNumber || gcashPayment.referenceNumber.length < 6) {
       validationMessage = "Valid GCash Reference Number is required.";
-    } else if (!currentPayment?.mobileNumber || currentPayment.mobileNumber.length < 11) {
+    } else if (!gcashPayment?.mobileNumber || gcashPayment.mobileNumber.length < 11) {
       validationMessage = "Valid 11-digit GCash mobile number is required.";
     } else {
       isPaymentValid = true;
     }
   } else if (activeTab === "credit") {
-    if (currentPayment?.errorMessage) {
-      validationMessage = currentPayment.errorMessage;
-    } else if (currentPayment?.isValid) {
+    if (creditPayment?.errorMessage) {
+      validationMessage = creditPayment.errorMessage;
+    } else if (creditPayment?.isValid) {
       isPaymentValid = true;
     } else {
       validationMessage = "Select an eligible wholesale account with sufficient credit.";
@@ -157,23 +165,23 @@ export default function PaymentModal({
       const checkoutPayload: CheckoutPayload = {
         transaction_type: activeTab === "credit" || customer?.type === "Wholesale" ? "WHOLESALE" : "RETAIL",
         items: itemsPayload,
-        customer_id: activeTab === "credit" ? currentPayment?.customerId : customer?.id ?? null,
-        customer_name: activeTab === "credit" ? currentPayment?.customerName : customer?.name ?? null,
+        customer_id: activeTab === "credit" ? creditPayment?.customerId : customer?.id ?? null,
+        customer_name: activeTab === "credit" ? creditPayment?.customerName : customer?.name ?? null,
         grand_total: cartTotal,
         payment: {
           payment_method: paymentMethod,
           amount_paid: cartTotal,
-          cash_tendered: activeTab === "cash" ? currentPayment?.cashTendered : undefined,
-          change_given: activeTab === "cash" ? currentPayment?.changeDue : undefined,
+          cash_tendered: activeTab === "cash" ? cashPayment?.cashTendered : undefined,
+          change_given: activeTab === "cash" ? cashPayment?.changeDue : undefined,
           reference_number:
             activeTab === "gcash"
-              ? currentPayment?.referenceNumber
+              ? gcashPayment?.referenceNumber
               : activeTab === "credit"
-              ? currentPayment?.poNumber
+              ? creditPayment?.poNumber
               : undefined,
-          mobile_number: activeTab === "gcash" ? currentPayment?.mobileNumber : undefined,
-          credit_due_date: activeTab === "credit" ? currentPayment?.dueDate : undefined,
-          po_number: activeTab === "credit" ? currentPayment?.poNumber : undefined,
+          mobile_number: activeTab === "gcash" ? gcashPayment?.mobileNumber : undefined,
+          credit_due_date: activeTab === "credit" ? creditPayment?.dueDate : undefined,
+          po_number: activeTab === "credit" ? creditPayment?.poNumber : undefined,
         },
       };
 
@@ -186,8 +194,10 @@ export default function PaymentModal({
       } else {
         setCheckoutError(response.message || "Failed to process checkout. Please try again.");
       }
-    } catch (err: any) {
-      setCheckoutError(err.message || "An unexpected error occurred during checkout.");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "An unexpected error occurred during checkout.";
+      setCheckoutError(message);
     } finally {
       setIsSubmitting(false);
     }

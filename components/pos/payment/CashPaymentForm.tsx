@@ -4,15 +4,17 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+export interface CashPaymentDetails {
+  type: "CASH";
+  amount: number;
+  cashTendered: number;
+  changeDue?: number;
+  isValid?: boolean;
+}
+
 interface CashPaymentFormProps {
   amountDue: number;
-  onPaymentChange: (details: {
-    type: string;
-    amount: number;
-    cashTendered: number;
-    changeDue?: number;
-    isValid?: boolean;
-  }) => void;
+  onPaymentChange: (details: CashPaymentDetails) => void;
 }
 
 export default function CashPaymentForm({ amountDue, onPaymentChange }: CashPaymentFormProps) {

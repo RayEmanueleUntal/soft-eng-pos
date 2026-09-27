@@ -4,16 +4,18 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+export interface GCashPaymentDetails {
+  type: "GCASH";
+  amount: number;
+  referenceNumber: string;
+  mobileNumber: string;
+  isValid?: boolean;
+  errorMessage?: string;
+}
+
 interface GCashPaymentFormProps {
   amountDue?: number;
-  onPaymentChange: (details: {
-    type: string;
-    amount: number;
-    referenceNumber: string;
-    mobileNumber: string;
-    isValid?: boolean;
-    errorMessage?: string;
-  }) => void;
+  onPaymentChange: (details: GCashPaymentDetails) => void;
 }
 
 export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPaymentFormProps) {

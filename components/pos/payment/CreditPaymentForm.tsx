@@ -9,7 +9,7 @@ import {
   getWholesaleCustomers,
   type WholesaleCustomerCredit,
 } from "@/lib/pos";
-import { AlertCircle, Calendar, CheckCircle2, CreditCard, ShieldAlert } from "lucide-react";
+import { AlertCircle, Calendar, CreditCard, ShieldAlert } from "lucide-react";
 
 export interface CreditPaymentDetails {
   type: "CREDIT";

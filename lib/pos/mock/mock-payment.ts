@@ -3,7 +3,7 @@
 
 import { apiClient } from "@/lib/api";
 import type { Receipt, PaymentMethod, TransactionType } from "../types/receipt-types";
-import { mockCustomers, type Customer } from "@/lib/customers/mock-data";
+import { mockCustomers } from "@/lib/customers/mock-data";
 
 export interface WholesaleCustomerCredit {
   id: string;
@@ -147,19 +147,22 @@ export function generateMockReceipt(payload: CheckoutPayload): Receipt {
   };
 }
 
-/**
- * Process checkout by sending payload to backend POST /pos/checkout.
- * If server is offline or fails with network error, falls back gracefully to mock receipt.
- */
+interface BackendCheckoutResponse {
+  receipt?: Receipt;
+  transactionId?: number;
+  invoice_number?: string;
+  [key: string]: unknown;
+}
+
 export async function submitCheckout(payload: CheckoutPayload): Promise<CheckoutResponse> {
   try {
-    const response = await apiClient.post<any>("/pos/checkout", payload, {
+    const response = await apiClient.post<BackendCheckoutResponse>("/pos/checkout", payload, {
       timeout: 1000, // 1s timeout so user isn't stuck waiting if backend hangs
     });
     
     // If backend returns receipt directly or within data
     const data = response.data;
-    const receipt: Receipt = data.receipt || data;
+    const receipt: Receipt = (data.receipt || data) as unknown as Receipt;
     
     return {
       success: true,
@@ -167,8 +170,9 @@ export async function submitCheckout(payload: CheckoutPayload): Promise<Checkout
       invoice_number: receipt.invoice_number || `INV-${new Date().getFullYear()}-0001`,
       receipt: receipt,
     };
-  } catch (error: any) {
-    console.warn("Backend /pos/checkout offline or hanging, falling back to mock receipt:", error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Checkout failed";
+    console.warn("Backend /pos/checkout offline or hanging, falling back to mock receipt:", message);
 
     const mockReceipt = generateMockReceipt(payload);
     
