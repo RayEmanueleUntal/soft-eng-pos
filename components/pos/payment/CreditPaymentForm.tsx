@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   formatPeso,
-  getWholesaleCustomers,
+  usePosCustomers,
   type WholesaleCustomerCredit,
 } from "@/lib/pos";
 import { AlertCircle, Calendar, CreditCard, ShieldAlert } from "lucide-react";
@@ -48,21 +48,36 @@ export default function CreditPaymentForm({
   initialCustomerId,
   onPaymentChange,
 }: CreditPaymentFormProps) {
-  const [wholesaleCustomers] = useState<WholesaleCustomerCredit[]>(getWholesaleCustomers());
-  
-  // Default to first active wholesale customer or initialCustomerId if provided
+  const { customers, loading: isCustomersLoading } = usePosCustomers();
+
+  // Filter real customers who are wholesale or have credit lines
+  const wholesaleCustomers: WholesaleCustomerCredit[] = useMemo(() => {
+    return customers
+      .filter((c) => c.type === "WHOLESALE" || c.creditLimit > 0)
+      .map((c) => ({
+        id: String(c.id),
+        name: c.companyName ? `${c.name} (${c.companyName})` : c.name,
+        contactInfo: c.contactNumber,
+        credit_limit: c.creditLimit,
+        outstanding_balance: c.outstandingBalance,
+        available_credit: c.availableCredit,
+        isActive: true,
+      }));
+  }, [customers]);
+
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(() => {
-    if (initialCustomerId) return String(initialCustomerId);
-    const firstActive = wholesaleCustomers.find((c) => c.isActive);
-    return firstActive ? firstActive.id : wholesaleCustomers[0]?.id || "";
+    return initialCustomerId ? String(initialCustomerId) : "";
   });
+
+  const effectiveCustomerId =
+    selectedCustomerId || (initialCustomerId ? String(initialCustomerId) : wholesaleCustomers[0]?.id || "");
 
   // Default payment due date to Net 30
   const [dueDate, setDueDate] = useState<string>(() => getFutureDateString(30));
   const [selectedTermDays, setSelectedTermDays] = useState<number | null>(30);
   const [poNumber, setPoNumber] = useState("");
 
-  const selectedCustomer = wholesaleCustomers.find((c) => c.id === selectedCustomerId);
+  const selectedCustomer = wholesaleCustomers.find((c) => c.id === effectiveCustomerId);
 
   // Available credit calculation: credit_limit - outstanding_balance
   const creditLimit = selectedCustomer?.credit_limit ?? 0;
@@ -77,7 +92,7 @@ export default function CreditPaymentForm({
 
   let errorMessage = "";
   if (!selectedCustomer) {
-    errorMessage = "Please select a wholesale customer.";
+    errorMessage = isCustomersLoading ? "Loading accounts..." : "Please select a wholesale customer.";
   } else if (isInactive) {
     errorMessage = "Selected wholesale account is inactive. Credit sales disabled.";
   } else if (isExceeded) {
@@ -104,7 +119,7 @@ export default function CreditPaymentForm({
       errorMessage: errorMessage || undefined,
     });
   }, [
-    selectedCustomerId,
+    effectiveCustomerId,
     dueDate,
     poNumber,
     amountDue,
@@ -134,7 +149,7 @@ export default function CreditPaymentForm({
   return (
     <div className="space-y-4 py-3">
       {/* Customer Selection */}
-      <div className="grid gap-0.5.5">
+      <div className="grid gap-1.5">
         <div className="flex items-center justify-between">
           <Label htmlFor="wholesale-customer" className="font-semibold text-foreground">
             Wholesale Customer Account
@@ -148,27 +163,33 @@ export default function CreditPaymentForm({
 
         <select
           id="wholesale-customer"
-          value={selectedCustomerId}
+          value={effectiveCustomerId}
           onChange={(e) => setSelectedCustomerId(e.target.value)}
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
         >
-          {wholesaleCustomers.map((c) => (
-            <option key={c.id} value={c.id} disabled={!c.isActive}>
-              {c.name} {c.isActive ? "" : "(Inactive)"} - Avail: {formatPeso(c.available_credit)}
-            </option>
-          ))}
+          {isCustomersLoading ? (
+            <option value="">Loading wholesale accounts...</option>
+          ) : wholesaleCustomers.length === 0 ? (
+            <option value="">No wholesale customer accounts found</option>
+          ) : (
+            wholesaleCustomers.map((c) => (
+              <option key={c.id} value={c.id} disabled={!c.isActive}>
+                {c.name} {c.isActive ? "" : "(Inactive)"} - Avail: {formatPeso(c.available_credit)}
+              </option>
+            ))
+          )}
         </select>
       </div>
 
       {/* Credit Balance Card */}
       {selectedCustomer && (
-        <div className={`rounded-lg border p-2.5.5 space-y-3 transition-colors ${
+        <div className={`rounded-lg border p-3.5 space-y-3 transition-colors ${
           isExceeded || isInactive
             ? "bg-destructive/10 border-destructive/30"
             : "bg-muted border-border"
         }`}>
           <div className="flex items-center justify-between text-xs font-medium text-muted-foreground border-b pb-2">
-            <span className="flex items-center gap-0.5.5">
+            <span className="flex items-center gap-1.5">
               <CreditCard className="h-3.5 w-3.5" />
               Accounts Receivable Status
             </span>
@@ -198,99 +219,105 @@ export default function CreditPaymentForm({
             </div>
           </div>
 
-          {/* Credit Limit Warning */}
-          {isExceeded && (
-            <div className="flex items-center gap-2 text-xs font-medium text-destructive bg-destructive/10 p-2 rounded">
-              <ShieldAlert className="h-4 w-4 shrink-0" />
-              <span>Credit limit exceeded by {formatPeso(amountDue - availableCredit)}. Cannot process credit payment.</span>
+          {/* Credit Limit Usage Progress Bar */}
+          <div className="space-y-1 pt-1">
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Credit Utilization (incl. current)</span>
+              <span className={`font-medium ${creditUsagePercent >= 90 ? "text-destructive" : "text-foreground"}`}>
+                {creditUsagePercent}%
+              </span>
             </div>
-          )}
-
-          {isInactive && (
-            <div className="flex items-center gap-2 text-xs font-medium text-destructive bg-destructive/10 p-2 rounded">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>This wholesale account is inactive. Please settle past obligations first.</span>
+            <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all duration-300 ${
+                  isExceeded
+                    ? "bg-destructive"
+                    : creditUsagePercent >= 80
+                    ? "bg-amber-500"
+                    : "bg-green-600"
+                }`}
+                style={{ width: `${Math.min(creditUsagePercent, 100)}%` }}
+              />
             </div>
-          )}
-
-          {/* Utilization indicator */}
-          {!isExceeded && !isInactive && (
-            <div className="space-y-1 pt-1">
-              <div className="flex justify-between text-[11px] text-muted-foreground">
-                <span>Credit Utilization</span>
-                <span>{creditUsagePercent}% of limit</span>
-              </div>
-              <div className="w-full bg-accent rounded-full h-1.5 overflow-hidden">
-                <div
-                  className={`h-1.5 rounded-full transition-all ${
-                    creditUsagePercent > 85 ? "bg-amber-500" : "bg-primary"
-                  }`}
-                  style={{ width: `${creditUsagePercent}%` }}
-                />
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       )}
 
-      {/* Payment Due Date Setting */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="due-date" className="font-semibold text-foreground flex items-center gap-0.5.5">
-            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-            Payment Due Date
-          </Label>
-          <span className="text-xs text-muted-foreground">Quick Terms</span>
+      {/* Warning / Error Notifications */}
+      {isInactive && (
+        <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 p-2.5 rounded-md border border-destructive/20">
+          <ShieldAlert className="h-4 w-4 shrink-0" />
+          <span>This account has been flagged as inactive. Contact the manager or finance team to reactivate.</span>
         </div>
+      )}
 
-        {/* Quick Terms Buttons */}
-        <div className="grid grid-cols-3 gap-2">
+      {isExceeded && !isInactive && (
+        <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 p-2.5 rounded-md border border-destructive/20">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>
+            Sale exceeds available credit by {formatPeso(Math.abs(remainingCreditAfterPurchase))}.
+            Requires manager override or partial payment.
+          </span>
+        </div>
+      )}
+
+      {/* Payment Terms & Due Date */}
+      <div className="space-y-2 pt-1">
+        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Payment Terms
+        </Label>
+        <div className="grid grid-cols-4 gap-2">
           {[
-            { days: 15, label: "Net 15" },
-            { days: 30, label: "Net 30" },
-            { days: 60, label: "Net 60" },
+            { label: "Net 7", days: 7 },
+            { label: "Net 15", days: 15 },
+            { label: "Net 30", days: 30 },
+            { label: "Net 60", days: 60 },
           ].map((term) => (
             <button
               key={term.days}
               type="button"
               onClick={() => handleTermPreset(term.days)}
-              className={`text-xs py-1.5 px-3 rounded-md border font-medium transition-colors ${
+              className={`py-1.5 text-xs rounded-md border transition-all ${
                 selectedTermDays === term.days
-                  ? "bg-indigo-50 border-indigo-500 text-indigo-700 font-semibold"
-                  : "bg-card border-border text-foreground hover:bg-muted"
+                  ? "bg-primary text-primary-foreground border-primary font-medium shadow-sm"
+                  : "bg-background hover:bg-muted text-foreground border-input"
               }`}
             >
               {term.label}
             </button>
           ))}
         </div>
-
-        {/* Custom Due Date Input */}
-        <Input
-          id="due-date"
-          type="date"
-          min={formatDateToInput(new Date())}
-          value={dueDate}
-          onChange={handleCustomDateChange}
-          className={isDateInvalid ? "border-red-500" : ""}
-        />
-        {isDateInvalid && (
-          <p className="text-xs text-destructive">Please choose a valid future payment due date.</p>
-        )}
       </div>
 
-      {/* PO / Reference Number (Optional) */}
-      <div className="grid gap-0.5.5">
-        <Label htmlFor="po-number" className="text-xs text-muted-foreground">
-          Purchase Order (PO) / Credit Ref # <span className="text-muted-foreground/80">(Optional)</span>
-        </Label>
-        <Input
-          id="po-number"
-          type="text"
-          placeholder="e.g. PO-2026-0881"
-          value={poNumber}
-          onChange={(e) => setPoNumber(e.target.value)}
-        />
+      {/* Custom Due Date & PO Number Fields */}
+      <div className="grid grid-cols-2 gap-3 pt-1">
+        <div className="grid gap-1.5">
+          <Label htmlFor="due-date" className="text-xs text-muted-foreground flex items-center gap-1">
+            <Calendar className="h-3.5 w-3.5" /> Due Date
+          </Label>
+          <Input
+            id="due-date"
+            type="date"
+            value={dueDate}
+            min={formatDateToInput(new Date())}
+            onChange={handleCustomDateChange}
+            className={`text-sm ${isDateInvalid ? "border-destructive focus-visible:ring-destructive" : ""}`}
+          />
+        </div>
+
+        <div className="grid gap-1.5">
+          <Label htmlFor="po-number" className="text-xs text-muted-foreground">
+            Customer PO # (Optional)
+          </Label>
+          <Input
+            id="po-number"
+            type="text"
+            placeholder="e.g. PO-8921"
+            value={poNumber}
+            onChange={(e) => setPoNumber(e.target.value)}
+            className="text-sm"
+          />
+        </div>
       </div>
     </div>
   );

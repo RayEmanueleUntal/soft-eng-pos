@@ -9,5 +9,4 @@ export type * from "./types/receipt-types";
 export * from "./utils/format-currency";
 export * from "./utils/store-config";
 
-export * from "./mock/mock-payment";
-export * from "./mock/mock-receipt";
+export * from "./services/pos-api";

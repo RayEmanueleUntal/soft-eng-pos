@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PrintableInvoice } from "@/components/pos";
-import { apiClient } from "@/lib/api";
-import type { Receipt } from "@/lib/pos";
+import { fetchReceiptApi, type Receipt } from "@/lib/pos";
 import { ArrowLeft, Printer, Loader2, AlertCircle } from "lucide-react";
 import { getErrorMessage } from "@/lib/utils";
 
@@ -25,8 +24,8 @@ export default function ReceiptPage() {
         setError(null);
         
         // Try to fetch from API first
-        const response = await apiClient.get<Receipt>(`/pos/receipt/${id}`);
-        setReceipt(response.data);
+        const data = await fetchReceiptApi(id);
+        setReceipt(data);
       } catch (err: unknown) {
         setError(getErrorMessage(err, "Receipt not found"));
       } finally {

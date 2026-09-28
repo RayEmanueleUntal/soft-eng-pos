@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { apiClient } from "@/lib/api";
+import { getErrorMessage } from "@/lib/utils";
+import { fetchProductsApi, toCatalogProduct, type BackendProduct } from "../services/pos-api";
+
+export { toCatalogProduct, type BackendProduct };
 
 export interface CatalogProduct {
   id: number;
@@ -11,50 +14,6 @@ export interface CatalogProduct {
   category: string;
   retailPrice?: number;
   wholesalePrice?: number;
-}
-
-interface BackendProduct {
-  id: number;
-  sku?: string | null;
-  name: string;
-  retail_price?: number | string | null;
-  wholesale_price?: number | string | null;
-  category?: { name: string } | string | null;
-}
-
-/**
- * Pure adapter function: maps raw database product into clean frontend CatalogProduct.
- */
-export function toCatalogProduct(item: BackendProduct): CatalogProduct {
-  const price = Number(item.retail_price ?? 0);
-  const categoryName =
-    typeof item.category === "object" && item.category !== null
-      ? item.category.name
-      : typeof item.category === "string"
-      ? item.category
-      : "General";
-
-  return {
-    id: item.id,
-    name: item.name,
-    sku: item.sku || `SKU-${item.id}`,
-    price,
-    retailPrice: price,
-    wholesalePrice: Number(item.wholesale_price ?? price),
-    category: categoryName,
-  };
-}
-
-/**
- * Fetch and map catalog products from backend API.
- */
-async function fetchProductsApi(): Promise<CatalogProduct[]> {
-  const response = await apiClient.get<{ data: BackendProduct[] } | BackendProduct[]>("/products");
-  const rawList = Array.isArray(response.data)
-    ? response.data
-    : response.data?.data || [];
-
-  return rawList.map(toCatalogProduct);
 }
 
 export function usePosCatalog() {
@@ -71,6 +30,7 @@ export function usePosCatalog() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to load products from server";
       setError(message);
+      setError(getErrorMessage(err, "Failed to load products from server"));
     } finally {
       setLoading(false);
     }
@@ -90,6 +50,7 @@ export function usePosCatalog() {
         if (!ignore) {
           const message = err instanceof Error ? err.message : "Failed to load products from server";
           setError(message);
+          setError(getErrorMessage(err, "Failed to load products from server"));
         }
       })
       .finally(() => {

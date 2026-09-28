@@ -20,6 +20,7 @@ import {
   type Receipt,
   type PaymentMethod,
 } from "@/lib/pos";
+import { getErrorMessage } from "@/lib/utils";
 import { AlertCircle, Banknote, CreditCard, Loader2, QrCode } from "lucide-react";
 
 export type PaymentTabDetails =
@@ -186,19 +187,17 @@ export default function PaymentModal({
         },
       };
 
-      // Submit checkout payload to backend / mock handler
+      // Submit checkout payload to backend API
       const response = await submitCheckout(checkoutPayload);
 
-      if (response.success) {
+      if (response.success && response.receipt) {
         onSuccess?.(response.receipt);
         onClose();
       } else {
         setCheckoutError(response.message || "Failed to process checkout. Please try again.");
       }
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "An unexpected error occurred during checkout.";
-      setCheckoutError(message);
+      setCheckoutError(getErrorMessage(err, "An unexpected error occurred during checkout."));
     } finally {
       setIsSubmitting(false);
     }

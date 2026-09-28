@@ -14,74 +14,25 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, Eye, FileText, ArrowLeft, RefreshCw } from "lucide-react";
-import { apiClient } from "@/lib/api";
-
-export interface TransactionSummary {
-  id: string;
-  invoice_number?: string;
-  transactionId?: string;
-  date: string;
-  customerName: string;
-  paymentMethod: "CASH" | "GCASH" | "CREDIT";
-  totalAmount: number;
-  cashierName?: string;
-}
-
-const MOCK_TRANSACTIONS: TransactionSummary[] = [
-  {
-    id: "REC-2026-001",
-    invoice_number: "INV-2026-001",
-    transactionId: "TX-1001",
-    date: "2026-09-27 14:32",
-    customerName: "Juan Dela Cruz (Retail)",
-    paymentMethod: "CASH",
-    totalAmount: 1450.00,
-    cashierName: "Simar",
-  },
-  {
-    id: "REC-2026-002",
-    invoice_number: "INV-2026-002",
-    transactionId: "TX-1002",
-    date: "2026-09-27 15:10",
-    customerName: "Hardware Depot Inc. (Wholesale)",
-    paymentMethod: "GCASH",
-    totalAmount: 8900.00,
-    cashierName: "Cary",
-  },
-  {
-    id: "REC-2026-003",
-    invoice_number: "INV-2026-003",
-    transactionId: "TX-1003",
-    date: "2026-09-27 16:05",
-    customerName: "Constructo Corp",
-    paymentMethod: "CREDIT",
-    totalAmount: 12450.00,
-    cashierName: "Ray",
-  },
-];
-
-async function fetchTransactionsApi(): Promise<TransactionSummary[]> {
-  try {
-    const res = await apiClient.get<TransactionSummary[]>("/pos/transactions");
-    return res.data || [];
-  } catch {
-    console.warn("Backend /pos/transactions offline, using mock transaction logs.");
-    return MOCK_TRANSACTIONS;
-  }
-}
+import { Search, Eye, FileText, ArrowLeft, RefreshCw, AlertCircle } from "lucide-react";
+import { getErrorMessage } from "@/lib/utils";
+import { fetchTransactionsApi, type TransactionSummary } from "@/lib/pos";
 
 export default function TransactionHistoryPage() {
   const router = useRouter();
   const [transactions, setTransactions] = useState<TransactionSummary[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const handleRefresh = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await fetchTransactionsApi();
       setTransactions(data);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to load transaction history"));
     } finally {
       setLoading(false);
     }
@@ -94,6 +45,12 @@ export default function TransactionHistoryPage() {
       .then((data) => {
         if (!ignore) {
           setTransactions(data);
+          setError(null);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          setError(getErrorMessage(err, "Failed to load transaction history"));
         }
       })
       .finally(() => {
@@ -164,6 +121,14 @@ export default function TransactionHistoryPage() {
           />
         </div>
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="flex items-center gap-2 p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-[4px]">
+          <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Logs Table */}
       <div className="border rounded-lg bg-card shadow-sm">
