@@ -1,10 +1,29 @@
 // Centralized TypeScript domain and API types for the POS module.
+// Aligned with backend Prisma schema models and enums.
 
 // ==========================================
-// 1. Payment & Transaction Primitives
+// 1. Enums & Primitives
 // ==========================================
 export type PaymentMethod = "CASH" | "GCASH" | "CREDIT";
 export type TransactionType = "RETAIL" | "WHOLESALE";
+
+export type UnitOfMeasure =
+  | "PCS"
+  | "BOX"
+  | "SET"
+  | "KG"
+  | "G"
+  | "METER"
+  | "HUNDRED"
+  | "GROSS"
+  | "SACKs";
+
+export type TransactionStatus =
+  | "COMPLETED"
+  | "PENDING"
+  | "CANCELLED"
+  | "REFUNDED"
+  | "PARTIALLY_REFUNDED";
 
 // ==========================================
 // 2. Product Catalog Types
@@ -17,6 +36,8 @@ export interface CatalogProduct {
   category: string;
   retailPrice?: number;
   wholesalePrice?: number;
+  unit_of_measure?: UnitOfMeasure | string;
+  current_quantity?: number;
 }
 
 export interface BackendProduct {
@@ -26,6 +47,9 @@ export interface BackendProduct {
   retail_price?: number | string | null;
   wholesale_price?: number | string | null;
   category?: { name: string } | string | null;
+  base_uom?: UnitOfMeasure | string | null;
+  pricing_uom?: UnitOfMeasure | string | null;
+  current_quantity?: number | string | null;
 }
 
 // ==========================================
@@ -80,6 +104,7 @@ export interface CheckoutCartItem {
   quantity: number;
   unitPrice: number;
   subtotal: number;
+  unit_of_measure?: UnitOfMeasure | string;
 }
 
 export interface PaymentDetails {
@@ -89,6 +114,7 @@ export interface PaymentDetails {
   changeDue?: number;
   referenceNumber?: string;
   mobileNumber?: string;
+  gcash_mobile_number?: string;
   customerId?: string;
   customerName?: string;
   creditLimit?: number;
@@ -107,6 +133,7 @@ export interface CheckoutPayload {
     quantity: number;
     unit_price: number;
     subtotal: number;
+    unit_of_measure?: UnitOfMeasure | string;
   }>;
   customer_id?: string | number | null;
   customer_name?: string | null;
@@ -118,6 +145,7 @@ export interface CheckoutPayload {
     change_given?: number;
     reference_number?: string;
     mobile_number?: string;
+    gcash_mobile_number?: string;
     credit_due_date?: string;
     po_number?: string;
   };
@@ -132,9 +160,14 @@ export interface CheckoutResponse {
 }
 
 export interface BackendCheckoutResponse {
+  id?: number;
   receipt?: Receipt;
   transactionId?: number;
   invoice_number?: string | null;
+  date?: string | Date;
+  grand_total?: number;
+  transaction_type?: TransactionType;
+  status?: TransactionStatus;
   [key: string]: unknown;
 }
 
@@ -154,6 +187,7 @@ export interface ReceiptItem {
   discounted_price: number;
   net_price: number;
   type: TransactionType;
+  unit_of_measure?: UnitOfMeasure | string;
 }
 
 export interface ReceiptPayment {
@@ -162,6 +196,8 @@ export interface ReceiptPayment {
   cash_tendered?: number;
   change_given?: number;
   reference_number?: string;
+  mobile_number?: string;
+  gcash_mobile_number?: string;
 }
 
 export interface Receipt {
@@ -170,6 +206,7 @@ export interface Receipt {
   date: Date | string;
   grand_total: number;
   transaction_type: TransactionType;
+  status?: TransactionStatus;
   cashier_name: string;
   customer: ReceiptCustomer | null;
   items: ReceiptItem[];
@@ -181,6 +218,7 @@ export interface TransactionSummary {
   invoice_number?: string;
   transactionId?: string;
   date: string;
+  status?: TransactionStatus;
   customerName: string;
   paymentMethod: "CASH" | "GCASH" | "CREDIT";
   totalAmount: number;

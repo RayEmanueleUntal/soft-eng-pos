@@ -182,6 +182,7 @@ export default function PaymentModal({
               ? creditPayment?.poNumber
               : undefined,
           mobile_number: activeTab === "gcash" ? gcashPayment?.mobileNumber : undefined,
+          gcash_mobile_number: activeTab === "gcash" ? gcashPayment?.mobileNumber : undefined,
           credit_due_date: activeTab === "credit" ? creditPayment?.dueDate : undefined,
           po_number: activeTab === "credit" ? creditPayment?.poNumber : undefined,
         },
@@ -292,6 +293,7 @@ export default function PaymentModal({
           {/* Action Footer */}
           <div className="flex justify-end gap-2.5 mt-3 border-t border-border pt-4">
             <Button
+              type="button"
               variant="outline"
               onClick={onClose}
               disabled={isSubmitting}
@@ -300,6 +302,7 @@ export default function PaymentModal({
               Cancel
             </Button>
             <Button
+              type="button"
               onClick={handleCompleteSale}
               disabled={!isPaymentValid || isSubmitting}
               className="bg-primary hover:bg-primary/80 text-white min-w-[140px] rounded-[4px] text-xs uppercase font-bold tracking-wider"
