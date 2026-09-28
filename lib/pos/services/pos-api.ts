@@ -112,7 +112,7 @@ export async function submitCheckout(payload: CheckoutPayload): Promise<Checkout
         quantity_sold: Number(item.quantity),
         current_uom: item.unit_of_measure || "PCS",
         transaction_type: payload.transaction_type || "RETAIL",
-        line_discount: 0,
+        line_discount: Number(item.line_discount ?? 0),
       })),
       payments: [
         {
@@ -134,6 +134,7 @@ export async function submitCheckout(payload: CheckoutPayload): Promise<Checkout
                 },
         },
       ],
+      override: payload.override ?? false,
     };
 
     const response = await apiClient.post<BackendCheckoutResponse>("/pos/checkout", backendDto, {
@@ -242,8 +243,17 @@ export async function submitCheckout(payload: CheckoutPayload): Promise<Checkout
  * Fetches historical POS transaction logs from backend (GET /pos/transactions).
  */
 export async function fetchTransactionsApi(): Promise<TransactionSummary[]> {
-  const res = await apiClient.get<TransactionSummary[]>("/pos/transactions");
-  return res.data || [];
+  try {
+    const res = await apiClient.get<TransactionSummary[]>("/pos/transactions");
+    return res.data || [];
+  } catch {
+    try {
+      const res = await apiClient.get<TransactionSummary[]>("/transactions");
+      return res.data || [];
+    } catch {
+      return [];
+    }
+  }
 }
 
 /**

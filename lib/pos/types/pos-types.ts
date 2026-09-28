@@ -134,6 +134,7 @@ export interface CheckoutPayload {
     unit_price: number;
     subtotal: number;
     unit_of_measure?: UnitOfMeasure | string;
+    line_discount?: number;
   }>;
   customer_id?: string | number | null;
   customer_name?: string | null;
@@ -149,6 +150,7 @@ export interface CheckoutPayload {
     credit_due_date?: string;
     po_number?: string;
   };
+  override?: boolean;
 }
 
 export interface CheckoutResponse {

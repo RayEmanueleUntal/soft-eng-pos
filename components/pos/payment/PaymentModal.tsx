@@ -35,6 +35,8 @@ export interface PaymentModalItem {
   quantity: number;
   unitPrice: number;
   subtotal: number;
+  unit_of_measure?: string;
+  line_discount?: number;
 }
 
 export interface PaymentModalCustomer {
@@ -152,6 +154,8 @@ export default function PaymentModal({
             quantity: item.quantity,
             unit_price: item.unitPrice,
             subtotal: item.subtotal,
+            unit_of_measure: item.unit_of_measure,
+            line_discount: item.line_discount ?? 0,
           }))
         : [
             {
@@ -160,6 +164,7 @@ export default function PaymentModal({
               quantity: 1,
               unit_price: cartTotal,
               subtotal: cartTotal,
+              line_discount: 0,
             },
           ];
 
@@ -186,6 +191,7 @@ export default function PaymentModal({
           credit_due_date: activeTab === "credit" ? creditPayment?.dueDate : undefined,
           po_number: activeTab === "credit" ? creditPayment?.poNumber : undefined,
         },
+        override: false,
       };
 
       // Submit checkout payload to backend API
