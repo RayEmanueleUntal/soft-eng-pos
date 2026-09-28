@@ -29,7 +29,7 @@ export function PosCart({
         {cart.length > 0 && (
           <button
             onClick={onClearCart}
-            className="text-[11px] text-destructive hover:text-destructive flex items-center gap-0.5 cursor-pointer font-bold uppercase font-mono"
+            className="text-[11px] text-[#DC2626] bg-[#FEF2F2] hover:bg-[#FEE2E2] border border-[#F87171] px-2 py-0.5 rounded-[2px] flex items-center gap-1 cursor-pointer font-bold uppercase font-mono transition-colors"
           >
             <Trash2 className="h-3 w-3" /> Void
           </button>

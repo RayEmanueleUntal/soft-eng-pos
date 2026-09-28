@@ -7,6 +7,7 @@ import { PrintableInvoice } from "@/components/pos";
 import { apiClient } from "@/lib/api";
 import type { Receipt } from "@/lib/pos";
 import { ArrowLeft, Printer, Loader2, AlertCircle } from "lucide-react";
+import { getErrorMessage } from "@/lib/utils";
 
 export default function ReceiptPage() {
   const params = useParams();
@@ -26,18 +27,8 @@ export default function ReceiptPage() {
         // Try to fetch from API first
         const response = await apiClient.get<Receipt>(`/pos/receipt/${id}`);
         setReceipt(response.data);
-      } catch (err: any) {
-        if (err.response?.status === 401) {
-          setError("Authentication required. Please log in to view receipts.");
-        } else if (err.response?.status === 403) {
-          setError("Access denied. You don't have permission to view this receipt.");
-        } else if (err.response?.status === 404) {
-          setError("Receipt not found");
-        } else if (err.code === 'ERR_NETWORK') {
-          setError("Unable to connect to server. Please check if the backend is running.");
-        } else {
-          setError("Failed to load receipt. Please try again.");
-        }
+      } catch (err: unknown) {
+        setError(getErrorMessage(err, "Receipt not found"));
       } finally {
         setLoading(false);
       }

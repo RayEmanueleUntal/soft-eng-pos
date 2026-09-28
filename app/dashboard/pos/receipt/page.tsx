@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -61,29 +61,50 @@ const MOCK_TRANSACTIONS: TransactionSummary[] = [
   },
 ];
 
+async function fetchTransactionsApi(): Promise<TransactionSummary[]> {
+  try {
+    const res = await apiClient.get<TransactionSummary[]>("/pos/transactions");
+    return res.data || [];
+  } catch {
+    console.warn("Backend /pos/transactions offline, using mock transaction logs.");
+    return MOCK_TRANSACTIONS;
+  }
+}
+
 export default function TransactionHistoryPage() {
   const router = useRouter();
   const [transactions, setTransactions] = useState<TransactionSummary[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const fetchTransactions = async () => {
+  const handleRefresh = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const res = await apiClient.get<TransactionSummary[]>("/pos/transactions");
-      if (res.data) {
-        setTransactions(res.data);
-      }
-    } catch (error) {
-      console.warn("Backend /pos/transactions offline, using mock transaction logs.");
-      setTransactions(MOCK_TRANSACTIONS);
+      const data = await fetchTransactionsApi();
+      setTransactions(data);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchTransactions();
+    let ignore = false;
+
+    fetchTransactionsApi()
+      .then((data) => {
+        if (!ignore) {
+          setTransactions(data);
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const filteredTransactions = transactions.filter((tx) => {
@@ -126,7 +147,7 @@ export default function TransactionHistoryPage() {
           </p>
         </div>
 
-        <Button variant="outline" size="sm" onClick={fetchTransactions} className="gap-2">
+        <Button variant="outline" size="sm" onClick={handleRefresh} className="gap-2">
           <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Refresh
         </Button>
       </div>

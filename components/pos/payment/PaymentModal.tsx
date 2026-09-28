@@ -207,20 +207,20 @@ export default function PaymentModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto rounded-[4px] border border-input shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-center">POS Checkout</DialogTitle>
-            <DialogDescription className="text-center text-xs text-muted-foreground">
+            <DialogTitle className="text-2xl font-bold font-heading text-center">POS Checkout</DialogTitle>
+            <DialogDescription className="text-center text-xs text-muted-foreground font-sans">
               Select payment method and finalize customer transaction
             </DialogDescription>
           </DialogHeader>
 
           {/* Cart Total Summary Banner */}
-          <div className="bg-foreground text-white p-5 rounded-lg text-center my-2 shadow-sm">
+          <div className="bg-foreground text-white p-5 rounded-[4px] text-center my-2 shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
             <p className="text-xs text-muted-foreground/80 uppercase tracking-wider font-medium">
               Total Amount Due
             </p>
-            <p className="text-3xl font-extrabold mt-1 text-white">
+            <p className="text-3xl font-extrabold mt-1 text-white font-mono">
               {formatPeso(cartTotal)}
             </p>
             {customer && (
@@ -232,7 +232,7 @@ export default function PaymentModal({
 
           {/* Checkout Error Banner */}
           {checkoutError && (
-            <div className="flex items-center gap-2 text-xs font-medium text-destructive bg-destructive/10 border border-destructive/30 p-2.5 rounded-md">
+            <div className="flex items-center gap-2 text-xs font-medium text-destructive bg-destructive/10 border border-destructive/30 p-2.5 rounded-[4px]">
               <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
               <span>{checkoutError}</span>
             </div>
@@ -245,16 +245,16 @@ export default function PaymentModal({
             onValueChange={setActiveTab}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="cash" className="flex items-center gap-0.5.5 py-2">
+            <TabsList className="grid w-full grid-cols-3 rounded-[4px] bg-muted p-1">
+              <TabsTrigger value="cash" className="flex items-center gap-1.5 py-2 rounded-[2px] text-xs font-medium">
                 <Banknote className="h-4 w-4" />
                 <span>Cash</span>
               </TabsTrigger>
-              <TabsTrigger value="gcash" className="flex items-center gap-0.5.5 py-2">
+              <TabsTrigger value="gcash" className="flex items-center gap-1.5 py-2 rounded-[2px] text-xs font-medium">
                 <QrCode className="h-4 w-4" />
                 <span>GCash</span>
               </TabsTrigger>
-              <TabsTrigger value="credit" className="flex items-center gap-0.5.5 py-2">
+              <TabsTrigger value="credit" className="flex items-center gap-1.5 py-2 rounded-[2px] text-xs font-medium">
                 <CreditCard className="h-4 w-4" />
                 <span>Credit (AR)</span>
               </TabsTrigger>
@@ -285,24 +285,25 @@ export default function PaymentModal({
 
           {/* Validation Notice if not ready to submit */}
           {!isPaymentValid && validationMessage && (
-            <p className="text-xs text-amber-600 text-right">
+            <p className="text-xs text-amber-600 text-right font-medium">
               {validationMessage}
             </p>
           )}
 
           {/* Action Footer */}
-          <div className="flex justify-end gap-2.5 mt-3 border-t pt-4">
+          <div className="flex justify-end gap-2.5 mt-3 border-t border-border pt-4">
             <Button
               variant="outline"
               onClick={onClose}
               disabled={isSubmitting}
+              className="rounded-[4px] text-xs"
             >
               Cancel
             </Button>
             <Button
               onClick={handleCompleteSale}
               disabled={!isPaymentValid || isSubmitting}
-              className="bg-primary hover:bg-primary/80 text-white min-w-[140px]"
+              className="bg-primary hover:bg-primary/80 text-white min-w-[140px] rounded-[4px] text-xs uppercase font-bold tracking-wider"
             >
               {isSubmitting ? (
                 <>
