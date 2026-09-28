@@ -3,129 +3,24 @@
 
 import { apiClient } from "@/lib/api";
 import { getErrorMessage } from "@/lib/utils";
-import type { Receipt, PaymentMethod, TransactionType } from "../types/receipt-types";
-import type { CatalogProduct } from "../hooks/use-pos-catalog";
-import type { PosCustomer } from "../hooks/use-pos-customers";
+import type {
+  Receipt,
+  BackendProduct,
+  CatalogProduct,
+  RawBackendCustomer,
+  PosCustomer,
+  CustomerApiResponse,
+  CheckoutPayload,
+  CheckoutResponse,
+  BackendCheckoutResponse,
+  TransactionSummary,
+} from "../types/pos-types";
+
+// Re-export all types so consumers can import types and service functions together
+export type * from "../types/pos-types";
 
 // ==========================================
-// 1. Types & Interfaces
-// ==========================================
-
-export interface BackendProduct {
-  id: number;
-  sku?: string | null;
-  name: string;
-  retail_price?: number | string | null;
-  wholesale_price?: number | string | null;
-  category?: { name: string } | string | null;
-}
-
-export interface RawBackendCustomer {
-  id: number;
-  name: string;
-  contact_number?: string;
-  type: "RETAIL" | "WHOLESALE" | string;
-  wholesale?: {
-    customerId: number;
-    company_name: string;
-    credit_limit: number | string;
-    outstanding_balance: number | string;
-  } | null;
-}
-
-export interface CustomerApiResponse {
-  data: RawBackendCustomer[];
-  total?: number;
-}
-
-export interface WholesaleCustomerCredit {
-  id: string;
-  name: string;
-  contactInfo: string;
-  credit_limit: number;
-  outstanding_balance: number;
-  available_credit: number;
-  isActive: boolean;
-}
-
-export interface PaymentDetails {
-  type: PaymentMethod;
-  amount: number;
-  cashTendered?: number;
-  changeDue?: number;
-  referenceNumber?: string;
-  mobileNumber?: string;
-  customerId?: string;
-  customerName?: string;
-  creditLimit?: number;
-  outstandingBalance?: number;
-  availableCredit?: number;
-  dueDate?: string;
-  poNumber?: string;
-  isValid?: boolean;
-}
-
-export interface CheckoutCartItem {
-  id?: string | number;
-  productId?: string | number;
-  name: string;
-  quantity: number;
-  unitPrice: number;
-  subtotal: number;
-}
-
-export interface CheckoutPayload {
-  transaction_type: TransactionType;
-  items: Array<{
-    product_id: string | number;
-    product_name: string;
-    quantity: number;
-    unit_price: number;
-    subtotal: number;
-  }>;
-  customer_id?: string | number | null;
-  customer_name?: string | null;
-  grand_total: number;
-  payment: {
-    payment_method: PaymentMethod;
-    amount_paid: number;
-    cash_tendered?: number;
-    change_given?: number;
-    reference_number?: string;
-    mobile_number?: string;
-    credit_due_date?: string;
-    po_number?: string;
-  };
-}
-
-export interface CheckoutResponse {
-  success: boolean;
-  message?: string;
-  transactionId?: number;
-  invoice_number?: string | null;
-  receipt?: Receipt;
-}
-
-interface BackendCheckoutResponse {
-  receipt?: Receipt;
-  transactionId?: number;
-  invoice_number?: string | null;
-  [key: string]: unknown;
-}
-
-export interface TransactionSummary {
-  id: string;
-  invoice_number?: string;
-  transactionId?: string;
-  date: string;
-  customerName: string;
-  paymentMethod: "CASH" | "GCASH" | "CREDIT";
-  totalAmount: number;
-  cashierName?: string;
-}
-
-// ==========================================
-// 2. Data Adapters (Pure Mapping)
+// 1. Data Adapters (Pure Mapping)
 // ==========================================
 
 export function toCatalogProduct(item: BackendProduct): CatalogProduct {
@@ -167,7 +62,7 @@ export function toPosCustomer(item: RawBackendCustomer): PosCustomer {
 }
 
 // ==========================================
-// 3. API Functions
+// 2. API Functions
 // ==========================================
 
 /**
@@ -245,4 +140,3 @@ export const posApi = {
   fetchTransactions: fetchTransactionsApi,
   fetchReceipt: fetchReceiptApi,
 };
-

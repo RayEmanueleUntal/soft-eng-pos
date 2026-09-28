@@ -2,25 +2,19 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getErrorMessage } from "@/lib/utils";
-import {
-  fetchCustomersApi,
+import { fetchCustomersApi, toPosCustomer } from "../services/pos-api";
+import type {
+  PosCustomer,
+  RawBackendCustomer,
+  CustomerApiResponse,
+} from "../types/pos-types";
+
+export {
   toPosCustomer,
+  type PosCustomer,
   type RawBackendCustomer,
   type CustomerApiResponse,
-} from "../services/pos-api";
-
-export { toPosCustomer, type RawBackendCustomer, type CustomerApiResponse };
-
-export interface PosCustomer {
-  id: number;
-  name: string;
-  contactNumber: string;
-  type: "RETAIL" | "WHOLESALE";
-  companyName?: string;
-  creditLimit: number;
-  outstandingBalance: number;
-  availableCredit: number;
-}
+};
 
 export function usePosCustomers() {
   const [customers, setCustomers] = useState<PosCustomer[]>([]);

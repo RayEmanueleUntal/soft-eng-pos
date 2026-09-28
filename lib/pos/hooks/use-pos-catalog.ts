@@ -2,19 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getErrorMessage } from "@/lib/utils";
-import { fetchProductsApi, toCatalogProduct, type BackendProduct } from "../services/pos-api";
+import { fetchProductsApi, toCatalogProduct } from "../services/pos-api";
+import type { CatalogProduct, BackendProduct } from "../types/pos-types";
 
-export { toCatalogProduct, type BackendProduct };
-
-export interface CatalogProduct {
-  id: number;
-  name: string;
-  sku: string;
-  price: number;
-  category: string;
-  retailPrice?: number;
-  wholesalePrice?: number;
-}
+export { toCatalogProduct, type CatalogProduct, type BackendProduct };
 
 export function usePosCatalog() {
   const [products, setProducts] = useState<CatalogProduct[]>([]);
