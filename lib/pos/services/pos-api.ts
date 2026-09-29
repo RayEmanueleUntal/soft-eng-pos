@@ -14,6 +14,7 @@ import type {
   CheckoutResponse,
   BackendCheckoutResponse,
   TransactionSummary,
+  TransactionStatus,
 } from "../types/pos-types";
 
 // Re-export all types so consumers can import types and service functions together
@@ -239,34 +240,99 @@ export async function submitCheckout(payload: CheckoutPayload): Promise<Checkout
   }
 }
 
+interface BackendTransactionItem {
+  id: number;
+  invoice_number?: string | null;
+  date?: string | Date;
+  status?: TransactionStatus;
+  transaction_type?: string;
+  grand_total?: number;
+  cashier_name?: string;
+  customer?: { name?: string; number?: string } | null;
+  payments?: Array<{ payment_method?: string; amount_paid?: number }>;
+}
+
+interface BackendTransactionsListResponse {
+  data: BackendTransactionItem[];
+  meta?: { total?: number; page?: number; limit?: number; totalPages?: number };
+}
+
 /**
- * Fetches historical POS transaction logs from backend (GET /pos/transactions).
+ * Fetches historical POS transaction logs from backend (GET /transactions).
  */
 export async function fetchTransactionsApi(): Promise<TransactionSummary[]> {
   try {
-    const res = await apiClient.get<TransactionSummary[]>("/pos/transactions");
-    return res.data || [];
-  } catch {
-    try {
-      const res = await apiClient.get<TransactionSummary[]>("/transactions");
-      return res.data || [];
-    } catch {
-      return [];
-    }
+    const response = await apiClient.get<BackendTransactionsListResponse | BackendTransactionItem[]>("/transactions", {
+      params: { limit: 100 },
+    });
+    const payload = response.data;
+    const rawList: BackendTransactionItem[] = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.data)
+      ? payload.data
+      : [];
+
+    return rawList.map((item) => {
+      const paymentMethod = (item.payments?.[0]?.payment_method || "CASH") as "CASH" | "GCASH" | "CREDIT";
+      let formattedDate = "N/A";
+      if (item.date) {
+        try {
+          formattedDate = new Date(item.date).toLocaleString("en-PH", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          });
+        } catch {
+          formattedDate = String(item.date);
+        }
+      }
+
+      return {
+        id: item.id,
+        transactionId: item.id,
+        invoice_number: item.invoice_number ?? `INV-${item.id}`,
+        date: formattedDate,
+        status: item.status,
+        customerName: item.customer?.name || "Walk-in Retail Customer",
+        paymentMethod,
+        totalAmount: Number(item.grand_total ?? 0),
+        cashierName: item.cashier_name || "Cashier",
+      };
+    });
+  } catch (error) {
+    console.error("Failed to fetch transactions:", error);
+    return [];
   }
 }
 
 /**
- * Fetches a single receipt by transaction/receipt ID (GET /transactions/receipt/:id or /pos/receipt/:id).
+ * Fetches a single receipt by transaction/receipt ID (GET /transactions/receipt/:id).
  */
 export async function fetchReceiptApi(id: string | number): Promise<Receipt> {
-  try {
-    const response = await apiClient.get<Receipt>(`/transactions/receipt/${id}`);
-    return response.data;
-  } catch {
-    const response = await apiClient.get<Receipt>(`/pos/receipt/${id}`);
-    return response.data;
+  let numericId = Number(id);
+
+  // If id is not a number (e.g. "INV-2026-0004"), search transactions to find its numeric ID
+  if (isNaN(numericId)) {
+    try {
+      const searchRes = await apiClient.get<BackendTransactionsListResponse>("/transactions", {
+        params: { search: String(id) },
+      });
+      const match = searchRes.data?.data?.find(
+        (tx) => tx.invoice_number === id || String(tx.id) === id
+      );
+      if (match) {
+        numericId = match.id;
+      }
+    } catch {
+      // Fallback
+    }
   }
+
+  const endpoint = isNaN(numericId)
+    ? `/transactions/receipt/${id}`
+    : `/transactions/receipt/${numericId}`;
+
+  const response = await apiClient.get<Receipt>(endpoint);
+  return response.data;
 }
 
 // Convenient namespace bundle

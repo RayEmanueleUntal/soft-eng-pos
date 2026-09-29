@@ -64,10 +64,11 @@ export default function TransactionHistoryPage() {
     };
   }, []);
 
-  const filteredTransactions = transactions.filter((tx) => {
+  const safeTransactions = Array.isArray(transactions) ? transactions : [];
+  const filteredTransactions = safeTransactions.filter((tx) => {
     const search = searchTerm.toLowerCase();
-    const idMatch = (tx.invoice_number || tx.id || tx.transactionId || "").toLowerCase().includes(search);
-    const customerMatch = tx.customerName.toLowerCase().includes(search);
+    const idMatch = (tx.invoice_number || String(tx.id || "") || String(tx.transactionId || "")).toLowerCase().includes(search);
+    const customerMatch = (tx.customerName || "").toLowerCase().includes(search);
     return idMatch || customerMatch;
   });
 

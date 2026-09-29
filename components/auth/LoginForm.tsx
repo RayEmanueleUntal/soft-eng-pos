@@ -36,6 +36,7 @@ export default function LoginForm() {
       if (!token) {
         throw new Error("No access token returned");
       }
+      localStorage.setItem("access_token", token);
 
       const sessionResponse = await fetch("/api/auth/session", {
         method: "POST",

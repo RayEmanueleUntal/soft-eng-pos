@@ -216,9 +216,9 @@ export interface Receipt {
 }
 
 export interface TransactionSummary {
-  id: string;
+  id: string | number;
   invoice_number?: string;
-  transactionId?: string;
+  transactionId?: string | number;
   date: string;
   status?: TransactionStatus;
   customerName: string;
