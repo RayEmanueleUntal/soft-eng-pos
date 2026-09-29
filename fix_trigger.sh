@@ -1,3 +1,5 @@
+#!/bin/bash
+cat << 'INNER_EOF' > components/inventory/StockAdjustmentModal.tsx
 "use client";
 
 import { useState } from "react";
@@ -190,3 +192,4 @@ export function StockAdjustmentModal({ item, onSuccess, trigger }: StockAdjustme
     </Dialog>
   );
 }
+INNER_EOF
