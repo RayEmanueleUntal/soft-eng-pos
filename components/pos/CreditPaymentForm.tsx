@@ -134,7 +134,7 @@ export default function CreditPaymentForm({
   return (
     <div className="space-y-4 py-3">
       {/* Customer Selection */}
-      <div className="grid gap-1.5">
+      <div className="grid gap-0.5.5">
         <div className="flex items-center justify-between">
           <Label htmlFor="wholesale-customer" className="font-semibold text-foreground">
             Wholesale Customer Account
@@ -162,13 +162,13 @@ export default function CreditPaymentForm({
 
       {/* Credit Balance Card */}
       {selectedCustomer && (
-        <div className={`rounded-lg border p-3.5 space-y-3 transition-colors ${
+        <div className={`rounded-lg border p-2.5.5 space-y-3 transition-colors ${
           isExceeded || isInactive
             ? "bg-destructive/10 border-destructive/30"
             : "bg-muted border-border"
         }`}>
           <div className="flex items-center justify-between text-xs font-medium text-muted-foreground border-b pb-2">
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-0.5.5">
               <CreditCard className="h-3.5 w-3.5" />
               Accounts Receivable Status
             </span>
@@ -236,7 +236,7 @@ export default function CreditPaymentForm({
       {/* Payment Due Date Setting */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="due-date" className="font-semibold text-foreground flex items-center gap-1.5">
+          <Label htmlFor="due-date" className="font-semibold text-foreground flex items-center gap-0.5.5">
             <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
             Payment Due Date
           </Label>
@@ -280,7 +280,7 @@ export default function CreditPaymentForm({
       </div>
 
       {/* PO / Reference Number (Optional) */}
-      <div className="grid gap-1.5">
+      <div className="grid gap-0.5.5">
         <Label htmlFor="po-number" className="text-xs text-muted-foreground">
           Purchase Order (PO) / Credit Ref # <span className="text-muted-foreground/80">(Optional)</span>
         </Label>

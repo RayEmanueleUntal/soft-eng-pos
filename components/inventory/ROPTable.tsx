@@ -55,7 +55,7 @@ export function ROPTable({ ropItems, onEdit }: ROPTableProps) {
     }
     
     return (
-      <Badge className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100">
+      <Badge className="bg-[#eff4ff] border-blue-200 text-blue-700 hover:bg-blue-100">
         ADEQUATE STOCK
       </Badge>
     )
@@ -69,10 +69,10 @@ export function ROPTable({ ropItems, onEdit }: ROPTableProps) {
           <button className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-500 text-white hover:bg-primary">
             All ({ropItems.length})
           </button>
-          <button className="px-4 py-2 text-sm font-medium rounded-lg bg-card text-foreground border border-border hover:bg-blue-50">
+          <button className="px-4 py-2 text-sm font-medium rounded-lg bg-card text-foreground border border-border hover:bg-[#eff4ff]">
             Low Stock ({lowStockCount})
           </button>
-          <button className="px-4 py-2 text-sm font-medium rounded-lg bg-card text-foreground border border-border hover:bg-blue-50">
+          <button className="px-4 py-2 text-sm font-medium rounded-lg bg-card text-foreground border border-border hover:bg-[#eff4ff]">
             Adequate Stock ({adequateStockCount})
           </button>
         </div>
@@ -91,7 +91,7 @@ export function ROPTable({ ropItems, onEdit }: ROPTableProps) {
       <div className="rounded-lg border border-border bg-card">
         <Table>
           <TableHeader>
-            <TableRow className="bg-blue-50 hover:bg-blue-50">
+            <TableRow className="bg-[#eff4ff] hover:bg-[#eff4ff]">
               <TableHead className="text-foreground font-semibold">SKU</TableHead>
               <TableHead className="text-foreground font-semibold">Name</TableHead>
               <TableHead className="text-foreground font-semibold">Category</TableHead>
@@ -106,7 +106,7 @@ export function ROPTable({ ropItems, onEdit }: ROPTableProps) {
           </TableHeader>
           <TableBody>
             {sortedItems.map((item) => (
-              <TableRow key={item.id} className="hover:bg-blue-50/50">
+              <TableRow key={item.id} className="hover:bg-[#eff4ff]/50">
                 <TableCell className="font-medium text-foreground">{item.sku || '-'}</TableCell>
                 <TableCell className="font-medium text-foreground">{item.name}</TableCell>
                 <TableCell>Category {item.categoryId}</TableCell>

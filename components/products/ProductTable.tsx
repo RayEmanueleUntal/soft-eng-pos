@@ -105,7 +105,7 @@ export function ProductTable() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <ProductSearch
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -230,7 +230,7 @@ export function ProductTable() {
                   </TableCell>
 
                   <TableCell>
-                    <div className="flex gap-1">
+                    <div className="flex gap-0.5">
                       <Button
                         variant="ghost"
                         size="icon"

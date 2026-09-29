@@ -122,7 +122,7 @@ export function CustomerForm({ mode, customer, onSaved }: CustomerFormProps) {
         </DialogDescription>
       </DialogHeader>
 
-      <div className="grid gap-4 py-4">
+      <div className="grid gap-3 py-4">
         <div className="grid gap-2">
           <label className="text-sm font-medium">Customer Name</label>
 

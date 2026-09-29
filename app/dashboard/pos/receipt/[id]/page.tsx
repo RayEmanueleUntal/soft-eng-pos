@@ -59,7 +59,7 @@ export default function ReceiptPage() {
     <div className="flex-1 space-y-6 p-8 bg-muted min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             onClick={handleBack}
@@ -78,7 +78,7 @@ export default function ReceiptPage() {
       {/* Loading State */}
       {loading && (
         <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="h-12 w-12 text-[#6366f1] animate-spin mb-4" />
+          <Loader2 className="h-9 w-12 text-[#6366f1] animate-spin mb-4" />
           <p className="text-muted-foreground">Loading receipt...</p>
         </div>
       )}
@@ -87,7 +87,7 @@ export default function ReceiptPage() {
       {error && (
         <div className="flex flex-col items-center justify-center py-20">
           <div className="bg-card rounded-lg border border-border p-8 max-w-md text-center">
-            <AlertCircle className="h-16 w-16 text-[#6366f1] mx-auto mb-4" />
+            <AlertCircle className="h-12 w-16 text-[#6366f1] mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-foreground mb-2">
               {error === "Receipt not found" ? "Receipt Not Found" : "Error Loading Receipt"}
             </h2>
@@ -128,7 +128,7 @@ export default function ReceiptPage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-border">
+            <div className="flex justify-end gap-2.5 pt-4 border-t border-border">
               <Button
                 variant="outline"
                 onClick={handleBack}

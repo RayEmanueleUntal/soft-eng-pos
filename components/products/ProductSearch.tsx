@@ -33,8 +33,8 @@ export function ProductSearch({
   onCategoryChange,
 }: ProductSearchProps) {
   return (
-    <div className="rounded-lg border bg-background p-4">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+    <div className="rounded-lg border bg-background p-3">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
         <div className="space-y-2 lg:col-span-2">
           <Label>Search</Label>
           <Input

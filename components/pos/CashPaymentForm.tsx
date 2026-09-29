@@ -102,7 +102,7 @@ export default function CashPaymentForm({ amountDue, onPaymentChange }: CashPaym
         </div>
       )}
 
-      <div className="flex justify-between items-center rounded-lg bg-muted p-4 border">
+      <div className="flex justify-between items-center rounded-lg bg-muted p-3 border">
         <span className="font-medium text-foreground">Change Due:</span>
         <span className="text-xl font-bold text-green-600">₱{changeDue.toFixed(2)}</span>
       </div>

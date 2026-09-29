@@ -40,7 +40,7 @@ export function SupplierTable() {
   return (
     <div className="space-y-4">
       {/* Search and Action Row */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-3">
         <div className="relative w-72">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input 
@@ -63,7 +63,7 @@ export function SupplierTable() {
                 Register procurement details and lead times for hardware suppliers.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
+            <div className="grid gap-3 py-4">
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Company Name</label>
                 <Input placeholder="e.g. Manila Industrial Fasteners" />
