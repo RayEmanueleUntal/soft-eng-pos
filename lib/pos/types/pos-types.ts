@@ -125,6 +125,54 @@ export interface PaymentDetails {
   isValid?: boolean;
 }
 
+export type PaymentTabDetails =
+  | {
+      type: "CASH";
+      amount: number;
+      cashTendered: number;
+      changeDue?: number;
+      isValid?: boolean;
+      errorMessage?: string;
+    }
+  | {
+      type: "GCASH";
+      amount: number;
+      referenceNumber: string;
+      mobileNumber: string;
+      isValid?: boolean;
+      errorMessage?: string;
+    }
+  | {
+      type: "CREDIT";
+      amount: number;
+      customerId?: string | number;
+      customerName?: string;
+      creditLimit?: number;
+      outstandingBalance?: number;
+      availableCredit?: number;
+      dueDate?: string;
+      poNumber?: string;
+      isValid: boolean;
+      errorMessage?: string;
+    };
+
+export interface PaymentModalItem {
+  id?: string | number;
+  productId?: string | number;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+  unit_of_measure?: string;
+  line_discount?: number;
+}
+
+export interface PaymentModalCustomer {
+  id: string | number;
+  name: string;
+  type?: "Retail" | "Wholesale" | "RETAIL" | "WHOLESALE";
+}
+
 export interface CheckoutPayload {
   transaction_type: TransactionType;
   items: Array<{

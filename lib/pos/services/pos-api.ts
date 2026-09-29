@@ -15,6 +15,10 @@ import type {
   BackendCheckoutResponse,
   TransactionSummary,
   TransactionStatus,
+  PaymentModalItem,
+  PaymentModalCustomer,
+  PaymentTabDetails,
+  PaymentMethod,
 } from "../types/pos-types";
 
 // Re-export all types so consumers can import types and service functions together
@@ -96,6 +100,61 @@ export async function fetchCustomersApi(): Promise<PosCustomer[]> {
     : response.data?.data || [];
 
   return rawList.map(toPosCustomer);
+}
+
+/**
+ * Pure helper to build the standardized CheckoutPayload required by submitCheckout.
+ */
+export function buildCheckoutPayload(
+  method: string,
+  details: PaymentTabDetails | undefined,
+  items: PaymentModalItem[],
+  total: number,
+  customer: PaymentModalCustomer | null
+): CheckoutPayload {
+  const isWholesale = method === "credit" || customer?.type?.toUpperCase() === "WHOLESALE";
+  const cash = details?.type === "CASH" ? details : undefined;
+  const gcash = details?.type === "GCASH" ? details : undefined;
+  const credit = details?.type === "CREDIT" ? details : undefined;
+
+  return {
+    transaction_type: isWholesale ? "WHOLESALE" : "RETAIL",
+    items: items.length > 0
+      ? items.map((i) => ({
+          product_id: i.productId ?? i.id ?? 1,
+          product_name: i.name,
+          quantity: i.quantity,
+          unit_price: i.unitPrice,
+          subtotal: i.subtotal,
+          unit_of_measure: i.unit_of_measure,
+          line_discount: i.line_discount ?? 0,
+        }))
+      : [
+          {
+            product_id: 1,
+            product_name: "POS Transaction Item",
+            quantity: 1,
+            unit_price: total,
+            subtotal: total,
+            line_discount: 0,
+          },
+        ],
+    customer_id: method === "credit" ? credit?.customerId : customer?.id ?? null,
+    customer_name: method === "credit" ? credit?.customerName : customer?.name ?? null,
+    grand_total: total,
+    payment: {
+      payment_method: method.toUpperCase() as PaymentMethod,
+      amount_paid: total,
+      cash_tendered: cash?.cashTendered,
+      change_given: cash?.changeDue,
+      reference_number: gcash?.referenceNumber || credit?.poNumber,
+      mobile_number: gcash?.mobileNumber,
+      gcash_mobile_number: gcash?.mobileNumber,
+      credit_due_date: credit?.dueDate,
+      po_number: credit?.poNumber,
+    },
+    override: false,
+  };
 }
 
 /**

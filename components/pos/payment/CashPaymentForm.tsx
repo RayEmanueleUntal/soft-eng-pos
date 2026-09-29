@@ -10,6 +10,7 @@ export interface CashPaymentDetails {
   cashTendered: number;
   changeDue?: number;
   isValid?: boolean;
+  errorMessage?: string;
 }
 
 interface CashPaymentFormProps {
@@ -33,6 +34,7 @@ export default function CashPaymentForm({ amountDue, onPaymentChange }: CashPaym
       cashTendered: numValue,
       changeDue: change,
       isValid,
+      errorMessage: numValue < amountDue ? "Insufficient cash tendered." : undefined,
     });
   };
 
