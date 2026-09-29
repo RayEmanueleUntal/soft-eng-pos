@@ -1,3 +1,6 @@
+// Inventory table for the Inventory Management module of the POS system.
+// Lists inventory items with their bin locations and lets staff assign bins.
+// Notifies its parent page to refetch data after a bin is saved.
 "use client";
 
 import * as React from "react";
@@ -16,9 +19,15 @@ import { BinAssignmentModal } from "./BinAssignmentModal";
 interface InventoryTableProps {
   inventory: InventoryItem[];
   categories: Record<number, string>;
+  onRefresh: () => void;
 }
 
-export function InventoryTable({ inventory, categories }: InventoryTableProps) {
+// Renders the inventory list and manages the bin assignment modal.
+export function InventoryTable({
+  inventory,
+  categories,
+  onRefresh,
+}: InventoryTableProps) {
   const [selectedItem, setSelectedItem] = React.useState<InventoryItem | null>(
     null,
   );
@@ -35,14 +44,10 @@ export function InventoryTable({ inventory, categories }: InventoryTableProps) {
     setIsModalOpen(false);
   };
 
-  const handleSave = async () => {
-    try {
-      handleCloseModal();
-
-      window.location.reload();
-    } catch (error) {
-      console.error("Failed to save:", error);
-    }
+  // Closes the bin modal and asks the page to refetch the inventory list.
+  const handleSave = () => {
+    handleCloseModal();
+    onRefresh();
   };
 
   return (

@@ -1,3 +1,6 @@
+// Inventory page for the Inventory Management module of the POS system.
+// Fetches live inventory with parametric filters and pagination from the API.
+// Renders the filter bar and the inventory table.
 "use client";
 
 import * as React from "react";
@@ -188,7 +191,11 @@ export default function InventoryPage() {
         </div>
       ) : (
         <>
-          <InventoryTable inventory={inventory} categories={categories} />
+          <InventoryTable
+            inventory={inventory}
+            categories={categories}
+            onRefresh={fetchInventory}
+          />
 
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
@@ -220,5 +227,3 @@ export default function InventoryPage() {
     </div>
   );
 }
-
-//testing my github pus
