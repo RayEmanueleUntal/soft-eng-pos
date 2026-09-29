@@ -67,7 +67,7 @@ export function PosHeader({
                 ? "default"
                 : "secondary"
             }
-            className="rounded-sm"
+            className="rounded-[2px] font-mono text-[11px]"
           >
             {selectedCustomerData.type === "WHOLESALE" ? "Wholesale" : "Retail"}
           </Badge>

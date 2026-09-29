@@ -57,7 +57,7 @@ export function PosCatalog({ searchInputRef, onAddToCart }: PosCatalogProps) {
             <AlertCircle className="h-6 w-6 text-destructive" />
             <p className="text-foreground font-medium">Failed to load product catalog</p>
             <p className="text-muted-foreground">{error}</p>
-            <Button variant="outline" size="sm" onClick={refetch} className="mt-2 gap-1.5 text-xs">
+            <Button variant="outline" size="sm" onClick={refetch} className="mt-2 gap-1.5 text-xs rounded-[4px]">
               <RefreshCw className="h-3.5 w-3.5" /> Retry
             </Button>
           </div>

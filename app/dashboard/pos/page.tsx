@@ -57,10 +57,12 @@ export default function PosPage() {
 
       {/* Success Notification Banner */}
       {lastCompletedSale && (
-        <div className="mx-4 mt-4 flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 p-2.5 rounded-[4px] shrink-0">
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+        <div className="mx-4 mt-4 flex items-center gap-2 text-xs font-sans font-medium text-emerald-800 bg-emerald-50 border border-emerald-300 p-2.5 rounded-[4px] shrink-0">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
           <span>
-            Last transaction ({lastCompletedSale}) completed successfully!
+            Last transaction (
+            <span className="font-mono font-semibold">{lastCompletedSale}</span>
+            ) completed successfully!
           </span>
         </div>
       )}
