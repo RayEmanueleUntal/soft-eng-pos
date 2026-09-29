@@ -82,27 +82,9 @@ export default function PaymentModal({
   const isPaymentValid = Boolean(currentPayment?.isValid);
   const validationMessage = currentPayment?.errorMessage ?? (!isPaymentValid ? "Please complete payment details." : "");
 
-  // Stable callback to prevent subform effect re-render loops
+  // Stable callback for child payment forms
   const handleTabDetailChange = useCallback((details: PaymentTabDetails) => {
-    setDetailsMap((prev) => {
-      const key = details.type.toLowerCase();
-      const existing = prev[key];
-      if (
-        existing &&
-        existing.type === details.type &&
-        existing.amount === details.amount &&
-        existing.isValid === details.isValid &&
-        existing.errorMessage === details.errorMessage &&
-        ("cashTendered" in existing && "cashTendered" in details ? existing.cashTendered === details.cashTendered : true) &&
-        ("referenceNumber" in existing && "referenceNumber" in details ? existing.referenceNumber === details.referenceNumber : true) &&
-        ("mobileNumber" in existing && "mobileNumber" in details ? existing.mobileNumber === details.mobileNumber : true) &&
-        ("customerId" in existing && "customerId" in details ? existing.customerId === details.customerId : true) &&
-        ("dueDate" in existing && "dueDate" in details ? existing.dueDate === details.dueDate : true)
-      ) {
-        return prev;
-      }
-      return { ...prev, [key]: details };
-    });
+    setDetailsMap((prev) => ({ ...prev, [details.type.toLowerCase()]: details }));
   }, []);
 
   const handleCompleteSale = async () => {
