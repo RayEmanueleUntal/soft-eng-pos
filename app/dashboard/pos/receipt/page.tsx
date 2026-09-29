@@ -91,21 +91,21 @@ export default function TransactionHistoryPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Link href="/dashboard/pos">
-              <Button variant="ghost" size="sm" className="gap-1 pl-0 text-muted-foreground">
+              <Button variant="ghost" size="sm" className="gap-1 pl-0 text-muted-foreground hover:text-foreground text-xs font-sans rounded-[4px]">
                 <ArrowLeft className="w-4 h-4" /> Back to Terminal
               </Button>
             </Link>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2 text-foreground">
+          <h1 className="text-2xl font-bold font-heading tracking-tight flex items-center gap-2 text-foreground">
             <FileText className="w-6 h-6 text-primary" /> Historical Transaction Logs
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs text-muted-foreground font-sans mt-0.5">
             Browse completed sales, search past receipts, and view detailed printable invoices.
           </p>
         </div>
 
-        <Button variant="outline" size="sm" onClick={handleRefresh} className="gap-2">
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Refresh
+        <Button variant="outline" size="sm" onClick={handleRefresh} className="gap-2 rounded-[4px] text-xs border-input hover:bg-muted font-sans">
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
         </Button>
       </div>
 
@@ -117,42 +117,42 @@ export default function TransactionHistoryPage() {
             placeholder="Search by Invoice #, Receipt ID or Customer..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-9 rounded-[4px] border-input text-xs font-mono"
           />
         </div>
       </div>
 
       {/* Error Alert */}
       {error && (
-        <div className="flex items-center gap-2 p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-[4px]">
-          <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+        <div className="flex items-center gap-2 p-3 text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-[4px] font-sans font-medium">
+          <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {/* Logs Table */}
-      <div className="border rounded-lg bg-card shadow-sm">
+      <div className="border border-input rounded-[4px] bg-card shadow-[0px_4px_0px_rgba(15,23,42,0.08)] overflow-hidden">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-muted border-b border-border">
             <TableRow>
-              <TableHead>Receipt / Invoice #</TableHead>
-              <TableHead>Date & Time</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Payment Method</TableHead>
-              <TableHead className="text-right">Total Amount</TableHead>
-              <TableHead className="text-center">Action</TableHead>
+              <TableHead className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">Receipt / Invoice #</TableHead>
+              <TableHead className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">Date & Time</TableHead>
+              <TableHead className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">Customer</TableHead>
+              <TableHead className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">Payment Method</TableHead>
+              <TableHead className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold text-right">Total Amount</TableHead>
+              <TableHead className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold text-center">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground text-xs font-sans">
                   Loading transaction logs...
                 </TableCell>
               </TableRow>
             ) : filteredTransactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground text-xs font-sans">
                   No matching transactions found.
                 </TableCell>
               </TableRow>
@@ -160,18 +160,18 @@ export default function TransactionHistoryPage() {
               filteredTransactions.map((tx) => {
                 const receiptId = tx.id || tx.invoice_number || tx.transactionId || "";
                 return (
-                  <TableRow key={tx.id}>
-                    <TableCell className="font-mono font-semibold">
+                  <TableRow key={tx.id} className="h-[36px] border-b border-border hover:bg-accent hover:border-l-[2px] hover:border-l-primary transition-colors">
+                    <TableCell className="font-mono text-xs font-semibold text-foreground">
                       {tx.invoice_number || tx.id}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{tx.date}</TableCell>
-                    <TableCell className="font-medium">{tx.customerName}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs font-sans">{tx.date}</TableCell>
+                    <TableCell className="font-medium text-foreground text-xs font-sans">{tx.customerName}</TableCell>
                     <TableCell>
-                      <Badge variant={getBadgeVariant(tx.paymentMethod)}>
+                      <Badge variant={getBadgeVariant(tx.paymentMethod)} className="rounded-[2px] font-mono text-[11px] font-semibold uppercase">
                         {tx.paymentMethod}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right font-semibold font-mono">
+                    <TableCell className="text-right font-semibold font-mono text-xs tabular-nums text-foreground">
                       ₱{tx.totalAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-center">
@@ -179,7 +179,7 @@ export default function TransactionHistoryPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => router.push(`/dashboard/pos/receipt/${receiptId}`)}
-                        className="gap-1.5"
+                        className="gap-1.5 rounded-[4px] text-xs border-input hover:bg-muted font-sans"
                       >
                         <Eye className="w-3.5 h-3.5" /> View Receipt
                       </Button>

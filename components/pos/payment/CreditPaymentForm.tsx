@@ -151,11 +151,11 @@ export default function CreditPaymentForm({
       {/* Customer Selection */}
       <div className="grid gap-1.5">
         <div className="flex items-center justify-between">
-          <Label htmlFor="wholesale-customer" className="font-semibold text-foreground">
+          <Label htmlFor="wholesale-customer" className="font-sans text-xs font-semibold text-foreground">
             Wholesale Customer Account
           </Label>
           {selectedCustomer && (
-            <Badge variant={selectedCustomer.isActive ? "default" : "destructive"} className="text-xs">
+            <Badge variant={selectedCustomer.isActive ? "default" : "destructive"} className="rounded-[2px] font-mono text-[11px]">
               {selectedCustomer.isActive ? "Active Account" : "Account Inactive"}
             </Badge>
           )}
@@ -165,7 +165,7 @@ export default function CreditPaymentForm({
           id="wholesale-customer"
           value={effectiveCustomerId}
           onChange={(e) => setSelectedCustomerId(e.target.value)}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          className="flex h-9 w-full rounded-[4px] border border-input bg-card px-3 py-1 text-sm font-sans text-foreground shadow-none focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
         >
           {isCustomersLoading ? (
             <option value="">Loading wholesale accounts...</option>
@@ -183,37 +183,37 @@ export default function CreditPaymentForm({
 
       {/* Credit Balance Card */}
       {selectedCustomer && (
-        <div className={`rounded-lg border p-3.5 space-y-3 transition-colors ${
+        <div className={`rounded-[4px] border p-3.5 space-y-3 shadow-[0px_4px_0px_rgba(15,23,42,0.08)] transition-colors ${
           isExceeded || isInactive
             ? "bg-destructive/10 border-destructive/30"
-            : "bg-muted border-border"
+            : "bg-muted/50 border-input"
         }`}>
-          <div className="flex items-center justify-between text-xs font-medium text-muted-foreground border-b pb-2">
-            <span className="flex items-center gap-1.5">
-              <CreditCard className="h-3.5 w-3.5" />
+          <div className="flex items-center justify-between text-xs font-mono text-muted-foreground border-b border-border pb-2">
+            <span className="flex items-center gap-1.5 font-semibold text-foreground font-sans">
+              <CreditCard className="h-3.5 w-3.5 text-primary" />
               Accounts Receivable Status
             </span>
-            <span className="text-foreground">{selectedCustomer.contactInfo}</span>
+            <span className="text-foreground font-mono">{selectedCustomer.contactInfo}</span>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div>
-              <p className="text-xs text-muted-foreground">Credit Limit</p>
-              <p className="font-semibold text-foreground">{formatPeso(creditLimit)}</p>
+              <p className="text-xs text-muted-foreground font-sans">Credit Limit</p>
+              <p className="font-semibold text-foreground font-mono">{formatPeso(creditLimit)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Outstanding Balance</p>
-              <p className="font-semibold text-amber-700">{formatPeso(outstandingBalance)}</p>
+              <p className="text-xs text-muted-foreground font-sans">Outstanding Balance</p>
+              <p className="font-semibold text-amber-700 font-mono">{formatPeso(outstandingBalance)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Available Credit</p>
-              <p className={`font-bold ${availableCredit >= amountDue ? "text-green-600" : "text-destructive"}`}>
+              <p className="text-xs text-muted-foreground font-sans">Available Credit</p>
+              <p className={`font-bold font-mono ${availableCredit >= amountDue ? "text-emerald-600" : "text-destructive"}`}>
                 {formatPeso(availableCredit)}
               </p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Remaining After Sale</p>
-              <p className={`font-semibold ${remainingCreditAfterPurchase >= 0 ? "text-foreground" : "text-destructive"}`}>
+              <p className="text-xs text-muted-foreground font-sans">Remaining After Sale</p>
+              <p className={`font-semibold font-mono ${remainingCreditAfterPurchase >= 0 ? "text-foreground" : "text-destructive"}`}>
                 {formatPeso(remainingCreditAfterPurchase)}
               </p>
             </div>
@@ -221,20 +221,20 @@ export default function CreditPaymentForm({
 
           {/* Credit Limit Usage Progress Bar */}
           <div className="space-y-1 pt-1">
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Credit Utilization (incl. current)</span>
+            <div className="flex justify-between text-xs font-mono">
+              <span className="text-muted-foreground font-sans">Credit Utilization (incl. current)</span>
               <span className={`font-medium ${creditUsagePercent >= 90 ? "text-destructive" : "text-foreground"}`}>
                 {creditUsagePercent}%
               </span>
             </div>
-            <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+            <div className="h-2 w-full bg-muted rounded-[2px] overflow-hidden border border-border/50">
               <div
-                className={`h-full transition-all duration-300 ${
+                className={`h-full rounded-[2px] transition-all duration-300 ${
                   isExceeded
                     ? "bg-destructive"
                     : creditUsagePercent >= 80
                     ? "bg-amber-500"
-                    : "bg-green-600"
+                    : "bg-emerald-600"
                 }`}
                 style={{ width: `${Math.min(creditUsagePercent, 100)}%` }}
               />
@@ -245,14 +245,14 @@ export default function CreditPaymentForm({
 
       {/* Warning / Error Notifications */}
       {isInactive && (
-        <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 p-2.5 rounded-md border border-destructive/20">
+        <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 p-2.5 rounded-[4px] border border-destructive/20 font-sans">
           <ShieldAlert className="h-4 w-4 shrink-0" />
           <span>This account has been flagged as inactive. Contact the manager or finance team to reactivate.</span>
         </div>
       )}
 
       {isExceeded && !isInactive && (
-        <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 p-2.5 rounded-md border border-destructive/20">
+        <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 p-2.5 rounded-[4px] border border-destructive/20 font-sans">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>
             Sale exceeds available credit by {formatPeso(Math.abs(remainingCreditAfterPurchase))}.
@@ -263,7 +263,7 @@ export default function CreditPaymentForm({
 
       {/* Payment Terms & Due Date */}
       <div className="space-y-2 pt-1">
-        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <Label className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider">
           Payment Terms
         </Label>
         <div className="grid grid-cols-4 gap-2">
@@ -277,9 +277,9 @@ export default function CreditPaymentForm({
               key={term.days}
               type="button"
               onClick={() => handleTermPreset(term.days)}
-              className={`py-1.5 text-xs rounded-md border transition-all ${
+              className={`py-1.5 text-xs rounded-[4px] border transition-all font-mono font-medium ${
                 selectedTermDays === term.days
-                  ? "bg-primary text-primary-foreground border-primary font-medium shadow-sm"
+                  ? "bg-primary text-primary-foreground border-primary font-bold shadow-sm"
                   : "bg-background hover:bg-muted text-foreground border-input"
               }`}
             >
@@ -292,7 +292,7 @@ export default function CreditPaymentForm({
       {/* Custom Due Date & PO Number Fields */}
       <div className="grid grid-cols-2 gap-3 pt-1">
         <div className="grid gap-1.5">
-          <Label htmlFor="due-date" className="text-xs text-muted-foreground flex items-center gap-1">
+          <Label htmlFor="due-date" className="text-xs text-muted-foreground flex items-center gap-1 font-sans">
             <Calendar className="h-3.5 w-3.5" /> Due Date
           </Label>
           <Input
@@ -301,12 +301,12 @@ export default function CreditPaymentForm({
             value={dueDate}
             min={formatDateToInput(new Date())}
             onChange={handleCustomDateChange}
-            className={`text-sm ${isDateInvalid ? "border-destructive focus-visible:ring-destructive" : ""}`}
+            className={`h-9 rounded-[4px] border-input font-mono text-sm ${isDateInvalid ? "border-destructive focus-visible:ring-destructive" : ""}`}
           />
         </div>
 
         <div className="grid gap-1.5">
-          <Label htmlFor="po-number" className="text-xs text-muted-foreground">
+          <Label htmlFor="po-number" className="text-xs text-muted-foreground font-sans">
             Customer PO # (Optional)
           </Label>
           <Input
@@ -315,7 +315,7 @@ export default function CreditPaymentForm({
             placeholder="e.g. PO-8921"
             value={poNumber}
             onChange={(e) => setPoNumber(e.target.value)}
-            className="text-sm"
+            className="h-9 rounded-[4px] border-input font-mono text-sm"
           />
         </div>
       </div>

@@ -67,8 +67,10 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
   return (
     <div className="space-y-4 py-4">
       {/* Amount Field */}
-      <div className="grid gap-0.5.5">
-        <Label htmlFor="gcash-amount">Amount Paid via GCash (₱)</Label>
+      <div className="grid gap-1.5">
+        <Label htmlFor="gcash-amount" className="font-sans text-xs font-semibold text-foreground">
+          Amount Paid via GCash (₱)
+        </Label>
         <Input
           id="gcash-amount"
           type="number"
@@ -79,19 +81,22 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
             const val = e.target.value === "" ? "" : Number(e.target.value);
             setAmount(val);
           }}
+          className="h-9 rounded-[4px] border-input font-mono text-sm"
         />
         {amountDue !== undefined && typeof amount === "number" && amount < amountDue && (
-          <p className="text-xs text-amber-600">
+          <p className="text-xs font-sans text-amber-600">
             Note: Entered amount is less than total due (₱{amountDue.toFixed(2)}).
           </p>
         )}
       </div>
 
       {/* Reference Number Field */}
-      <div className="grid gap-0.5.5">
+      <div className="grid gap-1.5">
         <div className="flex justify-between items-center">
-          <Label htmlFor="gcash-ref">GCash Reference Number *</Label>
-          <span className="text-[11px] text-muted-foreground/80">From customer receipt</span>
+          <Label htmlFor="gcash-ref" className="font-sans text-xs font-semibold text-foreground">
+            GCash Reference Number *
+          </Label>
+          <span className="text-[11px] font-mono text-muted-foreground">From customer receipt</span>
         </div>
         <Input
           id="gcash-ref"
@@ -100,20 +105,22 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
           value={referenceNumber}
           onBlur={() => setTouched((prev) => ({ ...prev, ref: true }))}
           onChange={(e) => setReferenceNumber(e.target.value)}
-          className={touched.ref && !isRefValid ? "border-red-500" : ""}
+          className={`h-9 rounded-[4px] border-input font-mono text-sm ${touched.ref && !isRefValid ? "border-destructive text-destructive" : ""}`}
         />
         {touched.ref && !isRefValid && (
-          <p className="text-xs text-destructive">
+          <p className="text-xs font-sans text-destructive">
             Reference Number is required (min 6 alphanumeric characters).
           </p>
         )}
       </div>
 
       {/* Mobile Number Field */}
-      <div className="grid gap-0.5.5">
+      <div className="grid gap-1.5">
         <div className="flex justify-between items-center">
-          <Label htmlFor="gcash-mobile">GCash Mobile Number *</Label>
-          <span className="text-[11px] text-muted-foreground/80">09XXXXXXXXX</span>
+          <Label htmlFor="gcash-mobile" className="font-sans text-xs font-semibold text-foreground">
+            GCash Mobile Number *
+          </Label>
+          <span className="text-[11px] font-mono text-muted-foreground">09XXXXXXXXX</span>
         </div>
         <Input
           id="gcash-mobile"
@@ -127,10 +134,10 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
             const clean = e.target.value.replace(/\D/g, "");
             setMobileNumber(clean);
           }}
-          className={touched.mobile && !isMobileValid ? "border-red-500" : ""}
+          className={`h-9 rounded-[4px] border-input font-mono text-sm ${touched.mobile && !isMobileValid ? "border-destructive text-destructive" : ""}`}
         />
         {touched.mobile && !isMobileValid && (
-          <p className="text-xs text-destructive">
+          <p className="text-xs font-sans text-destructive">
             Enter a valid 11-digit mobile number starting with 09.
           </p>
         )}
