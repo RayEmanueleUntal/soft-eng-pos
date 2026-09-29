@@ -134,7 +134,7 @@ export function BinAssignmentModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
+      <DialogContent className="rounded-lg border border-foreground ring-0">
         <DialogHeader>
           <DialogTitle>Assign Bin Location for {item.name}</DialogTitle>
         </DialogHeader>
@@ -142,14 +142,18 @@ export function BinAssignmentModal({
         <div className="space-y-4 py-4">
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
             <dt className="text-muted-foreground">Current bin</dt>
-            <dd className="font-medium">{getCurrentBinLabel(item)}</dd>
+            <dd className="font-mono font-medium">
+              {getCurrentBinLabel(item)}
+            </dd>
 
             <dt className="text-muted-foreground">New bin</dt>
-            <dd className="font-medium">{newBinLabel}</dd>
+            <dd className="font-mono font-medium">{newBinLabel}</dd>
           </dl>
 
           <div className="space-y-2">
-            <label htmlFor="binId">New Bin ID</label>
+            <label htmlFor="binId" className="text-sm font-medium">
+              New Bin ID
+            </label>
 
             <Input
               id="binId"

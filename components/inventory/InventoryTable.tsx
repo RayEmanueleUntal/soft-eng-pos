@@ -60,7 +60,7 @@ export function InventoryTable({
             <TableHead>Thread Type</TableHead>
             <TableHead>Material</TableHead>
             <TableHead>Size</TableHead>
-            <TableHead>Current Quantity</TableHead>
+            <TableHead className="text-right">Current Quantity</TableHead>
             <TableHead>Bin Location</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
@@ -83,9 +83,11 @@ export function InventoryTable({
 
                 <TableCell>{item.size_dimensions ?? "-"}</TableCell>
 
-                <TableCell>{item.current_quantity}</TableCell>
+                <TableCell className="text-right font-mono tabular-nums">
+                  {item.current_quantity}
+                </TableCell>
 
-                <TableCell>
+                <TableCell className="font-mono">
                   {item.bin_aisle_number || item.bin_shelf_location
                     ? `${item.bin_aisle_number ?? "-"} - ${
                         item.bin_shelf_location ?? "-"
@@ -94,7 +96,12 @@ export function InventoryTable({
                 </TableCell>
 
                 <TableCell>
-                  <Button onClick={() => handleOpenModal(item)}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="rounded-lg border-input"
+                    onClick={() => handleOpenModal(item)}
+                  >
                     Assign Bin
                   </Button>
                 </TableCell>
@@ -102,7 +109,10 @@ export function InventoryTable({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={8} className="text-center">
+              <TableCell
+                colSpan={8}
+                className="py-6 text-center text-muted-foreground"
+              >
                 No inventory items found.
               </TableCell>
             </TableRow>
