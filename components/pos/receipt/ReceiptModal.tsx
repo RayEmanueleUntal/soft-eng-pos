@@ -12,9 +12,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { PrintableInvoice } from "@/components/pos/PrintableInvoice";
-import type { PaymentMethod, Receipt } from "@/lib/pos/receipt-types";
-import { formatPeso } from "@/lib/pos/format-currency";
+import { PrintableInvoice } from "./PrintableInvoice";
+import { formatPeso, type PaymentMethod, type Receipt } from "@/lib/pos";
 
 interface ReceiptModalProps {
   open: boolean;
@@ -64,25 +63,25 @@ export function ReceiptModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[440px] bg-card print:hidden">
+        <DialogContent className="sm:max-w-[440px] bg-card print:hidden rounded-[4px] border border-input shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Sale completed</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
+            <DialogTitle className="text-foreground font-heading font-bold text-xl">Sale Completed</DialogTitle>
+            <DialogDescription className="text-muted-foreground font-sans text-xs">
               Transaction saved successfully. You can print the receipt or start a
               new sale.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="rounded-lg border bg-muted p-3 space-y-2 text-sm">
+          <div className="rounded-[4px] border border-border bg-muted p-3 space-y-2 text-sm">
             <div className="flex justify-between gap-3">
               <span className="text-muted-foreground">Invoice</span>
-              <span className="font-medium text-foreground">
+              <span className="font-mono font-medium text-foreground">
                 {getInvoiceLabel(receipt)}
               </span>
             </div>
             <div className="flex justify-between gap-3">
               <span className="text-muted-foreground">Total</span>
-              <span className="font-semibold text-foreground">
+              <span className="font-mono font-bold text-primary">
                 {formatPeso(receipt.grand_total)}
               </span>
             </div>
@@ -98,7 +97,7 @@ export function ReceiptModal({
                 primaryPayment.change_given !== undefined ? (
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">Change</span>
-                    <span className="font-medium text-foreground">
+                    <span className="font-mono font-medium text-foreground">
                       {formatPeso(primaryPayment.change_given)}
                     </span>
                   </div>
@@ -107,18 +106,18 @@ export function ReceiptModal({
             ) : null}
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={handlePrint}>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={handlePrint} className="rounded-[4px] text-xs">
               Print Receipt
             </Button>
-            <Button type="button" onClick={handleNewSale}>
+            <Button type="button" onClick={handleNewSale} className="bg-primary hover:bg-primary/80 text-white rounded-[4px] text-xs font-bold uppercase tracking-wider">
               New Sale
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <div aria-hidden="true" className="hidden print:block">
+      <div className="print-only">
         <PrintableInvoice receipt={receipt} />
       </div>
     </>

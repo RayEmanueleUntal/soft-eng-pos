@@ -1,17 +1,14 @@
 // Thermal-printer-friendly receipt layout for POS transactions.
 // Renders store details, line items, totals, and payment info from a Receipt prop.
 
-import type {
-  PaymentMethod,
-  Receipt,
-  ReceiptPayment,
-} from "@/lib/pos/receipt-types";
 import {
   formatPeso,
   formatReceiptDate,
-  hasAmount,
-} from "@/lib/pos/format-currency";
-import { STORE_CONFIG } from "@/lib/pos/store-config";
+  STORE_CONFIG,
+  type PaymentMethod,
+  type Receipt,
+  type ReceiptPayment,
+} from "@/lib/pos";
 import { cn } from "@/lib/utils";
 
 interface PrintableInvoiceProps {
