@@ -9,7 +9,6 @@ import {
   PosCommandBar,
   PaymentModal,
   ReceiptModal,
-  type PaymentModalCustomer,
 } from "@/components/pos";
 import { usePosCart, usePosShortcuts, usePosCustomers, type Receipt } from "@/lib/pos";
 
@@ -26,16 +25,8 @@ export default function PosPage() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const selectedCustomerData = customers.find(
-    (c) => String(c.id) === String(selectedCustomerId)
-  );
-  const selectedCustomer: PaymentModalCustomer | null = selectedCustomerData
-    ? {
-        id: selectedCustomerData.id,
-        name: selectedCustomerData.name,
-        type: selectedCustomerData.type,
-      }
-    : null;
+  const selectedCustomer =
+    customers.find((c) => String(c.id) === selectedCustomerId) ?? null;
 
   usePosShortcuts({
     onFocusSearch: () => searchInputRef.current?.focus(),
