@@ -10,10 +10,15 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ROPItem } from "@/lib/inventory/mock-rop";
+import { InventoryItem } from "@/lib/inventory/types";
+
+// TODO: Backend endpoint required for ROP editing
+// Expected endpoint: PATCH /inventory/:id/rop or PUT /inventory/:id
+// Request body: { reorder_point_ROP: number }
+// This will enable persistence of ROP changes
 
 interface EditROPModalProps {
-  item: ROPItem | null;
+  item: InventoryItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (itemId: number, newROP: number) => void;
@@ -48,8 +53,12 @@ export function EditROPModal({ item, open, onOpenChange, onSave }: EditROPModalP
     <Dialog open={open} onOpenChange={onOpenChange} key={item?.id || "none"}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Edit Reorder Point</DialogTitle>
+          <DialogTitle className="font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Edit Reorder Point</DialogTitle>
         </DialogHeader>
+        
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          ⚠️ Changes will not persist until backend endpoint is implemented
+        </div>
         <form onSubmit={handleSubmit} className="grid gap-3 py-4">
           <div className="space-y-2">
             <p className="text-sm font-medium text-muted-foreground">Product Information</p>
