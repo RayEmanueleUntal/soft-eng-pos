@@ -1,3 +1,6 @@
+// Filter bar for the Inventory Management module of the POS system.
+// Provides search, size, thread, material and category filters with a clear button.
+// Used by the inventory page, which owns the filter state.
 "use client";
 
 import * as React from "react";
@@ -37,6 +40,7 @@ interface InventoryFilterBarProps {
   categories: CategoryOption[];
 }
 
+// Renders the filter inputs and reports every change to the parent page.
 export function InventoryFilterBar({
   search,
   setSearch,
@@ -50,6 +54,7 @@ export function InventoryFilterBar({
   setCategory,
   categories,
 }: InventoryFilterBarProps) {
+  // Resets every filter at once.
   const handleClearFilters = () => {
     setSearch("");
     setSize(null);

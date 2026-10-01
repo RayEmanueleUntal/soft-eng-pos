@@ -36,6 +36,9 @@ interface InventoryTableProps {
   canEditROP: boolean;
 }
 
+const HEAD_CLASS =
+  "text-foreground font-semibold font-mono text-[11px] uppercase tracking-wider";
+
 type RowAction = "in" | "out" | "adjust" | "bin" | "rop";
 
 interface ActiveAction {
@@ -66,129 +69,131 @@ export function InventoryTable({
 
   return (
     <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>SKU</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Thread Type</TableHead>
-            <TableHead>Material</TableHead>
-            <TableHead>Size</TableHead>
-            <TableHead className="text-right">Current Qty</TableHead>
-            <TableHead className="text-right">ROP</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Bin Location</TableHead>
-            {showActions && <TableHead className="w-12">Actions</TableHead>}
-          </TableRow>
-        </TableHeader>
-
-        <TableBody>
-          {inventory.length > 0 ? (
-            inventory.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell className="font-mono">{item.sku ?? "-"}</TableCell>
-
-                <TableCell>{item.name}</TableCell>
-
-                <TableCell>
-                  {categories[item.categoryId] ??
-                    `Category #${item.categoryId}`}
-                </TableCell>
-
-                <TableCell>{item.thread_type ?? "-"}</TableCell>
-
-                <TableCell>{item.material_grade ?? "-"}</TableCell>
-
-                <TableCell>{item.size_dimensions ?? "-"}</TableCell>
-
-                <TableCell className="text-right font-mono tabular-nums">
-                  {item.current_quantity}
-                </TableCell>
-
-                <TableCell className="text-right font-mono tabular-nums">
-                  {item.reorder_point_ROP}
-                </TableCell>
-
-                <TableCell>
-                  <StockStatusBadge status={getStockStatus(item)} />
-                </TableCell>
-
-                <TableCell className="font-mono">
-                  {item.bin_aisle_number || item.bin_shelf_location
-                    ? `${item.bin_aisle_number ?? "-"} - ${
-                        item.bin_shelf_location ?? "-"
-                      }`
-                    : "-"}
-                </TableCell>
-
-                {showActions && (
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={`Actions for ${item.name}`}
-                          />
-                        }
-                      >
-                        <MoreHorizontal />
-                      </DropdownMenuTrigger>
-
-                      <DropdownMenuContent align="end" className="w-44">
-                        {canManageStock && (
-                          <>
-                            <DropdownMenuItem
-                              onClick={() => setActive({ type: "in", item })}
-                            >
-                              Stock In
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => setActive({ type: "out", item })}
-                            >
-                              Stock Out
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                setActive({ type: "adjust", item })
-                              }
-                            >
-                              Adjust Stock
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => setActive({ type: "bin", item })}
-                            >
-                              Assign Bin
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                        {canEditROP && (
-                          <DropdownMenuItem
-                            onClick={() => setActive({ type: "rop", item })}
-                          >
-                            Edit ROP
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell
-                colSpan={columnCount}
-                className="py-6 text-center text-muted-foreground"
-              >
-                No inventory items found.
-              </TableCell>
+      <div className="overflow-hidden rounded-[4px] border border-border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-[#F1F5F9] hover:bg-[#F1F5F9]">
+              <TableHead className={HEAD_CLASS}>SKU</TableHead>
+              <TableHead className={HEAD_CLASS}>Name</TableHead>
+              <TableHead className={HEAD_CLASS}>Category</TableHead>
+              <TableHead className={HEAD_CLASS}>Thread Type</TableHead>
+              <TableHead className={HEAD_CLASS}>Material</TableHead>
+              <TableHead className={HEAD_CLASS}>Size</TableHead>
+              <TableHead className={`${HEAD_CLASS} text-right`}>Current Qty</TableHead>
+              <TableHead className={`${HEAD_CLASS} text-right`}>ROP</TableHead>
+              <TableHead className={HEAD_CLASS}>Status</TableHead>
+              <TableHead className={HEAD_CLASS}>Bin Location</TableHead>
+              {showActions && <TableHead className={`${HEAD_CLASS} w-12`}>Actions</TableHead>}
             </TableRow>
-          )}
-        </TableBody>
-      </Table>
+          </TableHeader>
+
+          <TableBody>
+            {inventory.length > 0 ? (
+              inventory.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="font-mono">{item.sku ?? "-"}</TableCell>
+
+                  <TableCell>{item.name}</TableCell>
+
+                  <TableCell>
+                    {categories[item.categoryId] ??
+                      `Category #${item.categoryId}`}
+                  </TableCell>
+
+                  <TableCell>{item.thread_type ?? "-"}</TableCell>
+
+                  <TableCell>{item.material_grade ?? "-"}</TableCell>
+
+                  <TableCell>{item.size_dimensions ?? "-"}</TableCell>
+
+                  <TableCell className="text-right font-mono tabular-nums">
+                    {item.current_quantity}
+                  </TableCell>
+
+                  <TableCell className="text-right font-mono tabular-nums">
+                    {item.reorder_point_ROP}
+                  </TableCell>
+
+                  <TableCell>
+                    <StockStatusBadge status={getStockStatus(item)} />
+                  </TableCell>
+
+                  <TableCell className="font-mono">
+                    {item.bin_aisle_number || item.bin_shelf_location
+                      ? `${item.bin_aisle_number ?? "-"} - ${
+                          item.bin_shelf_location ?? "-"
+                        }`
+                      : "-"}
+                  </TableCell>
+
+                  {showActions && (
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label={`Actions for ${item.name}`}
+                            />
+                          }
+                        >
+                          <MoreHorizontal />
+                        </DropdownMenuTrigger>
+
+                        <DropdownMenuContent align="end" className="w-44">
+                          {canManageStock && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => setActive({ type: "in", item })}
+                              >
+                                Stock In
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setActive({ type: "out", item })}
+                              >
+                                Stock Out
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setActive({ type: "adjust", item })
+                                }
+                              >
+                                Adjust Stock
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setActive({ type: "bin", item })}
+                              >
+                                Assign Bin
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {canEditROP && (
+                            <DropdownMenuItem
+                              onClick={() => setActive({ type: "rop", item })}
+                            >
+                              Edit ROP
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columnCount}
+                  className="py-6 text-center text-muted-foreground"
+                >
+                  No inventory items found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       {active && (active.type === "in" || active.type === "out") && (
         <StockMovementModal
