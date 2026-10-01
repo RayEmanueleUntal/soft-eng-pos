@@ -26,15 +26,17 @@ import { StockStatusBadge } from "./StockStatusBadge";
 import { BinAssignmentModal } from "./BinAssignmentModal";
 import { StockMovementModal } from "./StockMovementModal";
 import { StockAdjustmentModal } from "./StockAdjustmentModal";
+import { EditROPModal } from "./EditROPModal";
 
 interface InventoryTableProps {
   inventory: InventoryItem[];
   categories: Record<number, string>;
   onRefresh: () => void;
   canManageStock: boolean;
+  canEditROP: boolean;
 }
 
-type RowAction = "in" | "out" | "adjust" | "bin";
+type RowAction = "in" | "out" | "adjust" | "bin" | "rop";
 
 interface ActiveAction {
   type: RowAction;
@@ -47,10 +49,12 @@ export function InventoryTable({
   categories,
   onRefresh,
   canManageStock,
+  canEditROP,
 }: InventoryTableProps) {
   const [active, setActive] = React.useState<ActiveAction | null>(null);
 
-  const columnCount = canManageStock ? 11 : 10;
+  const showActions = canManageStock || canEditROP;
+  const columnCount = showActions ? 11 : 10;
 
   // Closes the open modal.
   const handleClose = () => setActive(null);
@@ -75,7 +79,7 @@ export function InventoryTable({
             <TableHead className="text-right">ROP</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Bin Location</TableHead>
-            {canManageStock && <TableHead className="w-12">Actions</TableHead>}
+            {showActions && <TableHead className="w-12">Actions</TableHead>}
           </TableRow>
         </TableHeader>
 
@@ -118,7 +122,7 @@ export function InventoryTable({
                     : "-"}
                 </TableCell>
 
-                {canManageStock && (
+                {showActions && (
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger
@@ -134,26 +138,39 @@ export function InventoryTable({
                       </DropdownMenuTrigger>
 
                       <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuItem
-                          onClick={() => setActive({ type: "in", item })}
-                        >
-                          Stock In
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setActive({ type: "out", item })}
-                        >
-                          Stock Out
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setActive({ type: "adjust", item })}
-                        >
-                          Adjust Stock
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setActive({ type: "bin", item })}
-                        >
-                          Assign Bin
-                        </DropdownMenuItem>
+                        {canManageStock && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => setActive({ type: "in", item })}
+                            >
+                              Stock In
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setActive({ type: "out", item })}
+                            >
+                              Stock Out
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                setActive({ type: "adjust", item })
+                              }
+                            >
+                              Adjust Stock
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setActive({ type: "bin", item })}
+                            >
+                              Assign Bin
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        {canEditROP && (
+                          <DropdownMenuItem
+                            onClick={() => setActive({ type: "rop", item })}
+                          >
+                            Edit ROP
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -198,6 +215,15 @@ export function InventoryTable({
           onClose={handleClose}
           onSaved={handleSaved}
           item={active.item}
+        />
+      )}
+
+      {active?.type === "rop" && (
+        <EditROPModal
+          item={active.item}
+          open
+          onOpenChange={(open) => !open && handleClose()}
+          onSaved={handleSaved}
         />
       )}
     </>

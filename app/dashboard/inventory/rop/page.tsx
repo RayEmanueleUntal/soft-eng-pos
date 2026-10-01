@@ -1,58 +1,18 @@
+// Reorder Point page for the Inventory Management module of the POS system.
+// Shows live items at or below their reorder point so staff can restock or adjust the ROP.
+// Row actions depend on the signed-in role (stock managers restock, managers/secretaries edit ROP).
 "use client"
 
-import { useState, useEffect } from "react"
-import { InventoryItem } from "@/lib/inventory/types"
 import { ROPTable } from "@/components/inventory/ROPTable"
-import { EditROPModal } from "@/components/inventory/EditROPModal"
-import { fetchROPItems } from "@/lib/inventory/stock-rop-api"
+import { Button } from "@/components/ui/button"
+import { canEditROP, canManageStock } from "@/lib/auth/permissions"
+import { useCurrentRole } from "@/lib/auth/use-current-role"
+import { useROPItems } from "@/lib/inventory/useROPItems"
 
+// Renders the ROP alert list with loading, error and empty states.
 export default function ROPPage() {
-  const [ropItems, setRopItems] = useState<InventoryItem[]>([])
-  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const loadROPItems = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const data = await fetchROPItems()
-        setRopItems(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load ROP data")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadROPItems()
-  }, [])
-
-  const handleEdit = (item: InventoryItem) => {
-    setEditingItem(item)
-    setIsModalOpen(true)
-  }
-
-  const handleSave = async (itemId: number, newROP: number) => {
-    // Update local state immediately for responsiveness
-    setRopItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === itemId
-          ? { ...item, reorder_point_ROP: newROP, updatedAt: new Date().toISOString() }
-          : item
-      )
-    )
-    
-    // Note: This won't persist to backend until endpoint is implemented
-    // TODO: Add backend endpoint for PATCH /inventory/:id/rop
-  }
-
-  const handleModalClose = () => {
-    setIsModalOpen(false)
-    setEditingItem(null)
-  }
+  const { ropItems, categories, loading, error, refetch } = useROPItems()
+  const role = useCurrentRole()
 
   return (
     <div className="p-6 space-y-4">
@@ -64,27 +24,24 @@ export default function ROPPage() {
       </div>
 
       {error ? (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
+        <div className="flex items-center justify-between gap-3 rounded-[4px] border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+          <span>{error}</span>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Retry
+          </Button>
         </div>
       ) : loading ? (
         <div className="py-8 text-center text-muted-foreground">
           Loading ROP data...
         </div>
       ) : (
-        <>
-          <ROPTable 
-            ropItems={ropItems} 
-            onEdit={handleEdit}
-          />
-
-          <EditROPModal
-            item={editingItem}
-            open={isModalOpen}
-            onOpenChange={handleModalClose}
-            onSave={handleSave}
-          />
-        </>
+        <ROPTable
+          ropItems={ropItems}
+          categories={categories}
+          onRefresh={refetch}
+          canManageStock={canManageStock(role)}
+          canEditROP={canEditROP(role)}
+        />
       )}
     </div>
   )

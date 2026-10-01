@@ -8,7 +8,7 @@ import { InventoryFilterBar } from "@/components/inventory/InventoryFilterBar";
 import { InventoryTable } from "@/components/inventory/InventoryTable";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { canManageStock } from "@/lib/auth/permissions";
+import { canEditROP, canManageStock } from "@/lib/auth/permissions";
 import { useCurrentRole } from "@/lib/auth/use-current-role";
 import { getStockStatus } from "@/lib/inventory/stock-status";
 import { useInventory } from "@/lib/inventory/useInventory";
@@ -121,6 +121,7 @@ export default function InventoryPage() {
             categories={categories}
             onRefresh={refetch}
             canManageStock={canManageStock(role)}
+            canEditROP={canEditROP(role)}
           />
 
           <div className="flex items-center justify-between">

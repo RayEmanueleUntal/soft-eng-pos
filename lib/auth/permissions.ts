@@ -9,7 +9,18 @@ export const STOCK_MANAGEMENT_ROLES: Role[] = [
   ROLES.STOCK_MANAGEMENT,
 ];
 
+export const ROP_EDIT_ROLES: Role[] = [
+  ROLES.ADMIN,
+  ROLES.MANAGER,
+  ROLES.SECRETARY,
+];
+
 // Returns true if the role may change stock levels or bin assignments.
 export function canManageStock(role: string | null | undefined): boolean {
   return !!role && STOCK_MANAGEMENT_ROLES.includes(role as Role);
+}
+
+// Returns true if the role may edit a product's reorder point (backend: PATCH /products/{id}).
+export function canEditROP(role: string | null | undefined): boolean {
+  return !!role && ROP_EDIT_ROLES.includes(role as Role);
 }
