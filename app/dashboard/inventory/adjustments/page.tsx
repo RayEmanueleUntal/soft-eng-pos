@@ -1,33 +1,38 @@
+// Stock Adjustments page of the Inventory Management module of the POS system.
+// Lets stock managers correct a product's counted quantity and shows this session's movement log.
+// The log is session-only because the backend has no endpoint that lists stock movements.
 "use client"
 
 import { useState } from "react"
-import { mockMovements, StockMovement } from "@/lib/inventory/mock-adjustments"
 import { StockMovementHistoryTable } from "@/components/inventory/StockMovementHistoryTable"
 import { StockAdjustmentModal } from "@/components/inventory/StockAdjustmentModal"
-import { InventoryItem } from "@/lib/inventory/types"
+import { InventoryItem, MovementType, StockMovementLogEntry } from "@/lib/inventory/types"
 import { StockMovementResponse } from "@/lib/inventory/stock-movement-api"
 
+// Renders the page header, the adjust button and the session movement log.
 export default function InventoryAdjustmentsPage() {
-  const [movements, setMovements] = useState<StockMovement[]>(mockMovements)
+  const [movements, setMovements] = useState<StockMovementLogEntry[]>([])
 
+  // Adds a movement returned by the API to the top of the session log.
   const handleAddAdjustment = (
     movement: StockMovementResponse,
     item: InventoryItem,
   ) => {
-    const when = new Date(movement.date);
-    const formattedDate = `${when.getFullYear()}-${String(when.getMonth() + 1).padStart(2, '0')}-${String(when.getDate()).padStart(2, '0')} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-
-    const newLog: StockMovement = {
-      id: `MOV-${movement.id}`,
-      date: formattedDate,
-      productId: `${item.sku ?? item.id} (${item.name})`,
-      adjustmentType: movement.quantity_changed >= 0 ? "STOCK_IN" : "STOCK_OUT",
-      quantity: Math.abs(movement.quantity_changed),
+    const entry: StockMovementLogEntry = {
+      id: movement.id,
+      date: new Date(movement.date).toISOString(),
+      sku: item.sku,
+      productName: item.name,
+      type: movement.type as MovementType,
+      uom: movement.current_uom,
+      quantityChanged: movement.quantity_changed,
+      previousQuantity: movement.previous_quantity,
+      newQuantity: movement.new_quantity,
       reason: movement.reason,
-      staffId: String(movement.staffId),
-    };
-    
-    setMovements((prev) => [newLog, ...prev])
+      staffId: movement.staffId,
+    }
+
+    setMovements((prev) => [entry, ...prev])
   }
 
   return (
@@ -36,14 +41,19 @@ export default function InventoryAdjustmentsPage() {
         <div>
           <h1 className="text-[24px] font-bold font-heading tracking-tight text-foreground">Stock Adjustments</h1>
           <p className="text-[13px] text-muted-foreground mt-1">
-            Process manual stock-in/stock-out logs and track inventory history.
+            Correct a product&apos;s stock to a newly counted quantity.
           </p>
         </div>
         <StockAdjustmentModal onSuccess={handleAddAdjustment} />
       </div>
 
       <div className="rounded-[4px] border border-border bg-card shadow-sm overflow-hidden flex-1 p-4">
-        <h2 className="text-[16px] font-heading font-semibold mb-4 text-foreground">Recent Movements</h2>
+        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-[16px] font-heading font-semibold text-foreground">Movements This Session</h2>
+          <p className="font-mono text-xs text-muted-foreground">
+            Session only: the server has no movement-history endpoint yet, so earlier movements are not listed.
+          </p>
+        </div>
         <StockMovementHistoryTable movements={movements} />
       </div>
     </div>

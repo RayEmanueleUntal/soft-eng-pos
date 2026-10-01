@@ -46,6 +46,23 @@ export interface ProductCategory {
   categoryName: string;
 }
 
+export type MovementType = "IN" | "OUT" | "SALE" | "RETURN" | "ADJUSTMENT";
+
+// One row of the session-only movement log shown on the adjustments page.
+export interface StockMovementLogEntry {
+  id: number;
+  date: string;
+  sku: string | null;
+  productName: string;
+  type: MovementType;
+  uom: string;
+  quantityChanged: number;
+  previousQuantity: number;
+  newQuantity: number;
+  reason: string;
+  staffId: number;
+}
+
 export interface BinLocation {
   id: number;
   aisle_number: string;

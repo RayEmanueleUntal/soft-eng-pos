@@ -13,3 +13,4 @@
 2026-10-01: Phase 3: inventory table SKU/ROP/Status, row actions menu with role gating, status tabs, sidebar sub-links, sub-path permissions, useInventory fixes.
 2026-10-01: Fixed stock-in/out 500s: login now saves the token for API calls, and the dev mock-role header is sent only when logged out.
 2026-10-01: Phase 4: ROP page live with search, category names, polling, role-gated Stock In/Out and Edit ROP saved via PATCH /products/{id}.
+2026-10-01: Phase 5: adjustments page drops mock rows, logs real API movements (session only) with type, before/after and staff; removed mock-adjustments.
