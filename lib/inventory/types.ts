@@ -1,3 +1,6 @@
+// Shared TypeScript types for the Inventory Management module of the POS system.
+// Mirrors the backend inventory, category and bin-location response DTOs.
+// Used by the inventory, ROP and adjustments pages and their components.
 export interface InventoryItem {
   id: number;
   sku: string | null;
@@ -41,4 +44,20 @@ export interface InventoryResponse {
 export interface ProductCategory {
   id: number;
   categoryName: string;
+}
+
+export interface BinLocation {
+  id: number;
+  aisle_number: string;
+  shelf_location: string;
+}
+
+export interface BinLocationsResponse {
+  data: BinLocation[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }

@@ -4,28 +4,27 @@ import { useState } from "react"
 import { mockMovements, StockMovement } from "@/lib/inventory/mock-adjustments"
 import { StockMovementHistoryTable } from "@/components/inventory/StockMovementHistoryTable"
 import { StockAdjustmentModal } from "@/components/inventory/StockAdjustmentModal"
+import { InventoryItem } from "@/lib/inventory/types"
+import { StockMovementResponse } from "@/lib/inventory/stock-movement-api"
 
 export default function InventoryAdjustmentsPage() {
   const [movements, setMovements] = useState<StockMovement[]>(mockMovements)
 
-  const handleAddAdjustment = (details: {
-    productId: string;
-    adjustmentType: string;
-    quantity: number;
-    reason: string;
-    staffId: string;
-  }) => {
-    const now = new Date();
-    const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  const handleAddAdjustment = (
+    movement: StockMovementResponse,
+    item: InventoryItem,
+  ) => {
+    const when = new Date(movement.date);
+    const formattedDate = `${when.getFullYear()}-${String(when.getMonth() + 1).padStart(2, '0')}-${String(when.getDate()).padStart(2, '0')} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
     const newLog: StockMovement = {
-      id: `LOG-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: `MOV-${movement.id}`,
       date: formattedDate,
-      productId: details.productId,
-      adjustmentType: details.adjustmentType as "STOCK_IN" | "STOCK_OUT",
-      quantity: details.quantity,
-      reason: details.reason,
-      staffId: details.staffId,
+      productId: `${item.sku ?? item.id} (${item.name})`,
+      adjustmentType: movement.quantity_changed >= 0 ? "STOCK_IN" : "STOCK_OUT",
+      quantity: Math.abs(movement.quantity_changed),
+      reason: movement.reason,
+      staffId: String(movement.staffId),
     };
     
     setMovements((prev) => [newLog, ...prev])

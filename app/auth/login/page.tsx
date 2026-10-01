@@ -51,6 +51,9 @@ function LoginForm() {
         throw new Error("Failed to create session");
       }
 
+      // lib/api.ts reads this to send the Authorization header with API calls.
+      localStorage.setItem("access_token", token);
+
       router.replace(redirect);
       router.refresh();
     } catch (err: unknown) {

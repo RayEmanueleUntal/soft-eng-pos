@@ -12,16 +12,15 @@ export const apiClient = axios.create({
 
 // Add auth token and idempotency key interceptors
 apiClient.interceptors.request.use((config) => {
-  if (process.env.NODE_ENV !== "production") {
-    config.headers["x-mock-role"] =
-      process.env.NEXT_PUBLIC_MOCK_ROLE || "ADMIN";
-  }
-
   // 1. Attach JWT token from storage if available
   const token =
     typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  } else if (process.env.NODE_ENV !== "production") {
+    // The mock role overrides the real user on the backend, so use it only when logged out.
+    config.headers["x-mock-role"] =
+      process.env.NEXT_PUBLIC_MOCK_ROLE || "ADMIN";
   }
 
   // 2. Attach Idempotency-Key for all mutating routes

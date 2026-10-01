@@ -1,10 +1,9 @@
 // Bin assignment modal for the Inventory Management module of the POS system.
-// Lets staff move an inventory item to a different digital storage bin.
+// Lets staff move an inventory item to a different digital storage bin, picked from GET /bin-location.
 // Sends PATCH /inventory/{id}/bin and reports success to the parent table.
 "use client";
 
 import * as React from "react";
-import axios from "axios";
 import {
   Dialog,
   DialogContent,
@@ -14,8 +13,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { InventoryItem } from "@/lib/inventory/types";
+import {
+  BinLocation,
+  BinLocationsResponse,
+  InventoryItem,
+} from "@/lib/inventory/types";
 import { apiClient } from "@/lib/api";
+import { getApiErrorMessage } from "@/lib/inventory/api-error";
 
 interface BinAssignmentModalProps {
   isOpen: boolean;
@@ -23,6 +27,15 @@ interface BinAssignmentModalProps {
   onSaved: () => void;
   item: InventoryItem;
 }
+
+interface BinSearchResult {
+  query: string;
+  bins: BinLocation[];
+  total: number;
+  failed: boolean;
+}
+
+const BIN_PAGE_SIZE = 20;
 
 // Builds a readable label for the bin an item is currently in.
 function getCurrentBinLabel(item: InventoryItem): string {
@@ -38,59 +51,98 @@ function getCurrentBinLabel(item: InventoryItem): string {
   return `Bin #${item.binId}${location}`;
 }
 
-// Extracts a readable message from an API error, falling back to a default.
-function getApiErrorMessage(error: unknown): string {
-  const fallback = "Failed to assign the bin. Please try again.";
-
-  if (!axios.isAxiosError(error)) {
-    return fallback;
-  }
-
-  if (!error.response) {
-    return "Cannot reach the server. Check your connection and try again.";
-  }
-
-  const message = error.response.data?.message;
-
-  if (Array.isArray(message)) {
-    return message.join(", ");
-  }
-
-  return typeof message === "string" && message ? message : fallback;
+// Builds a readable label for a bin from the bin-location endpoint.
+function getBinLabel(bin: BinLocation): string {
+  return `${bin.aisle_number} - ${bin.shelf_location} (Bin #${bin.id})`;
 }
 
-export function BinAssignmentModal({
-  isOpen,
-  onClose,
-  onSaved,
-  item,
-}: BinAssignmentModalProps) {
-  const [binId, setBinId] = React.useState(item.binId?.toString() ?? "");
+interface BinFormProps {
+  item: InventoryItem;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+// Form body; it unmounts when the dialog closes, so its state resets on every open.
+function BinForm({ item, onClose, onSaved }: BinFormProps) {
+  const [search, setSearch] = React.useState("");
+  const [debouncedSearch, setDebouncedSearch] = React.useState("");
+  const [result, setResult] = React.useState<BinSearchResult | null>(null);
+  const [selectedBin, setSelectedBin] = React.useState<BinLocation | null>(null);
+  const [manualBinId, setManualBinId] = React.useState("");
   const [isSaving, setIsSaving] = React.useState(false);
   const [error, setError] = React.useState("");
 
-  // Update the input when a different inventory item is selected
   React.useEffect(() => {
-    setBinId(item.binId?.toString() ?? "");
-    setError("");
-  }, [item]);
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-  const trimmedBinId = binId.trim();
-  const parsedBinId = Number(trimmedBinId);
-  const isWholeNumber = /^\d+$/.test(trimmedBinId) && parsedBinId > 0;
-  const newBinLabel = isWholeNumber ? `Bin #${parsedBinId}` : "-";
+  React.useEffect(() => {
+    let cancelled = false;
 
-  // Checks the entered Bin ID and returns an error message, or null if valid.
+    apiClient
+      .get<BinLocationsResponse>("/bin-location", {
+        params: { search: debouncedSearch || undefined, limit: BIN_PAGE_SIZE },
+      })
+      .then((response) => {
+        if (!cancelled) {
+          setResult({
+            query: debouncedSearch,
+            bins: response.data.data,
+            total: response.data.meta.total,
+            failed: false,
+          });
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load bin locations:", err);
+        if (!cancelled) {
+          setResult({ query: debouncedSearch, bins: [], total: 0, failed: true });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearch]);
+
+  const binsLoading = result === null || result.query !== debouncedSearch;
+  const pickerFailed = result?.failed === true;
+  const bins = !binsLoading && result ? result.bins : [];
+
+  const trimmedManual = manualBinId.trim();
+  const manualId = Number(trimmedManual);
+  const manualIsValid = /^\d+$/.test(trimmedManual) && manualId > 0;
+
+  const newBinId = pickerFailed
+    ? manualIsValid
+      ? manualId
+      : null
+    : (selectedBin?.id ?? null);
+
+  const newBinLabel = pickerFailed
+    ? newBinId
+      ? `Bin #${newBinId}`
+      : "-"
+    : selectedBin
+      ? getBinLabel(selectedBin)
+      : "-";
+
+  // Checks the chosen bin and returns an error message, or null if valid.
   const getValidationError = (): string | null => {
-    if (!trimmedBinId) {
-      return "Please enter a Bin ID.";
+    if (pickerFailed) {
+      if (!trimmedManual) {
+        return "Please enter a Bin ID.";
+      }
+
+      if (!manualIsValid) {
+        return "Bin ID must be a positive whole number.";
+      }
+    } else if (!selectedBin) {
+      return "Select a bin to assign.";
     }
 
-    if (!isWholeNumber) {
-      return "Bin ID must be a positive whole number.";
-    }
-
-    if (parsedBinId === item.binId) {
+    if (newBinId === item.binId) {
       return "This item is already assigned to that bin.";
     }
 
@@ -98,20 +150,15 @@ export function BinAssignmentModal({
   };
 
   const validationError = getValidationError();
-  const showValidationError = trimmedBinId !== "" && validationError !== null;
+  const showValidationError =
+    validationError !== null && (pickerFailed ? trimmedManual !== "" : false);
 
-  // Updates the input and clears any previous API error.
-  const handleBinIdChange = (value: string) => {
-    setBinId(value);
-    setError("");
-  };
-
-  // Validates the Bin ID, then sends the PATCH request to assign the bin.
+  // Sends the PATCH request that assigns the chosen bin to the item.
   const handleSave = async () => {
     setError("");
 
-    if (validationError) {
-      setError(validationError);
+    if (validationError || newBinId === null) {
+      setError(validationError ?? "Select a bin to assign.");
       return;
     }
 
@@ -119,38 +166,38 @@ export function BinAssignmentModal({
       setIsSaving(true);
 
       await apiClient.patch(`/inventory/${item.id}/bin`, {
-        binId: parsedBinId,
+        binId: newBinId,
       });
 
       onSaved();
       onClose();
     } catch (err) {
       console.error("Failed to assign bin:", err);
-      setError(getApiErrorMessage(err));
+      setError(
+        getApiErrorMessage(err, "Failed to assign the bin. Please try again."),
+      );
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="rounded-lg border border-foreground ring-0">
-        <DialogHeader>
-          <DialogTitle>Assign Bin Location for {item.name}</DialogTitle>
-        </DialogHeader>
+    <>
+      <div className="space-y-4 py-4">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+          <dt className="text-muted-foreground">Current bin</dt>
+          <dd className="font-mono font-medium">{getCurrentBinLabel(item)}</dd>
 
-        <div className="space-y-4 py-4">
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-            <dt className="text-muted-foreground">Current bin</dt>
-            <dd className="font-mono font-medium">
-              {getCurrentBinLabel(item)}
-            </dd>
+          <dt className="text-muted-foreground">New bin</dt>
+          <dd className="font-mono font-medium">{newBinLabel}</dd>
+        </dl>
 
-            <dt className="text-muted-foreground">New bin</dt>
-            <dd className="font-mono font-medium">{newBinLabel}</dd>
-          </dl>
-
+        {pickerFailed ? (
           <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Could not load the bin list. Enter a Bin ID manually instead.
+            </p>
+
             <label htmlFor="binId" className="text-sm font-medium">
               New Bin ID
             </label>
@@ -161,34 +208,116 @@ export function BinAssignmentModal({
               min="1"
               step="1"
               placeholder="Enter Bin ID"
-              value={binId}
-              onChange={(e) => handleBinIdChange(e.target.value)}
+              value={manualBinId}
+              onChange={(e) => {
+                setManualBinId(e.target.value);
+                setError("");
+              }}
               disabled={isSaving}
               aria-invalid={showValidationError}
+              className="rounded-[2px] font-mono"
             />
 
             {showValidationError && (
               <p className="text-sm text-destructive">{validationError}</p>
             )}
           </div>
+        ) : (
+          <div className="space-y-2">
+            <label htmlFor="binSearch" className="text-sm font-medium">
+              New bin
+            </label>
 
-          {error && !showValidationError && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
-        </div>
+            <Input
+              id="binSearch"
+              placeholder="Search by aisle or shelf..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              disabled={isSaving}
+              className="rounded-[2px]"
+            />
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isSaving}>
-            Cancel
-          </Button>
+            {binsLoading ? (
+              <p className="text-xs text-muted-foreground">Loading bins...</p>
+            ) : bins.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No bins found.</p>
+            ) : (
+              <ul className="max-h-44 divide-y overflow-y-auto rounded-[2px] border border-border">
+                {bins.map((bin) => {
+                  const isCurrent = bin.id === item.binId;
+                  const isSelected = bin.id === selectedBin?.id;
 
-          <Button
-            onClick={handleSave}
-            disabled={isSaving || validationError !== null}
-          >
-            {isSaving ? "Saving..." : "Save"}
-          </Button>
-        </DialogFooter>
+                  return (
+                    <li key={bin.id}>
+                      <button
+                        type="button"
+                        disabled={isCurrent || isSaving}
+                        onClick={() => {
+                          setSelectedBin(bin);
+                          setError("");
+                        }}
+                        className={`flex w-full items-center justify-between gap-3 px-2 py-1.5 text-left text-xs disabled:cursor-not-allowed disabled:opacity-50 ${
+                          isSelected
+                            ? "bg-primary/10 font-medium"
+                            : "hover:bg-accent"
+                        }`}
+                      >
+                        <span className="font-mono">
+                          {bin.aisle_number} - {bin.shelf_location}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {isCurrent ? "Current" : `Bin #${bin.id}`}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {!binsLoading && result && result.total > bins.length && (
+              <p className="text-xs text-muted-foreground">
+                Showing {bins.length} of {result.total} bins. Refine the search
+                to see others.
+              </p>
+            )}
+          </div>
+        )}
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+      </div>
+
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose} disabled={isSaving}>
+          Cancel
+        </Button>
+
+        <Button
+          onClick={handleSave}
+          disabled={isSaving || validationError !== null}
+        >
+          {isSaving ? "Saving..." : "Save"}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+// Renders the bin assignment dialog for one inventory item.
+export function BinAssignmentModal({
+  isOpen,
+  onClose,
+  onSaved,
+  item,
+}: BinAssignmentModalProps) {
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="rounded-[4px] border border-[#0F172A] shadow-[0px_4px_0px_rgba(15,23,42,0.08)] ring-0">
+        <DialogHeader>
+          <DialogTitle>Assign Bin Location for {item.name}</DialogTitle>
+        </DialogHeader>
+
+        <BinForm item={item} onClose={onClose} onSaved={onSaved} />
       </DialogContent>
     </Dialog>
   );

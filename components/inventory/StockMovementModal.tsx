@@ -1,3 +1,6 @@
+// Stock movement modal for the Inventory Management module of the POS system.
+// Records stock received (POST /inventory/stock-in) or dispatched (POST /inventory/stock-out) for one item.
+// Controlled by its parent via open/onOpenChange and reports the created movement on success.
 "use client"
 
 import { useState } from "react"
@@ -13,16 +16,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { InventoryItem } from "@/lib/inventory/types"
-import { stockIn, stockOut, StockInParams, StockOutParams } from "@/lib/inventory/stock-movement-api"
+import { stockIn, stockOut, StockInParams, StockOutParams, StockMovementResponse } from "@/lib/inventory/stock-movement-api"
+import { allowsDecimals, roundQty } from "@/lib/inventory/uom"
 
 interface StockMovementModalProps {
   item: InventoryItem | null
   type: "in" | "out"
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSuccess: () => void
+  onSuccess: (movement: StockMovementResponse) => void
 }
 
+// Renders the stock-in or stock-out dialog for the given item.
 export function StockMovementModal({ item, type, open, onOpenChange, onSuccess }: StockMovementModalProps) {
   const [quantity, setQuantity] = useState<string>("")
   const [reason, setReason] = useState<string>("")
@@ -30,8 +35,10 @@ export function StockMovementModal({ item, type, open, onOpenChange, onSuccess }
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const isStockIn = type === "in"
-  const projectedQuantity = item ? (isStockIn ? item.current_quantity + (parseFloat(quantity) || 0) : item.current_quantity - (parseFloat(quantity) || 0)) : 0
+  const decimals = item ? allowsDecimals(item.base_uom) : false
+  const projectedQuantity = item ? roundQty(isStockIn ? item.current_quantity + (parseFloat(quantity) || 0) : item.current_quantity - (parseFloat(quantity) || 0)) : 0
 
+  // Validates the quantity, then records the stock movement through the API.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
@@ -59,21 +66,23 @@ export function StockMovementModal({ item, type, open, onOpenChange, onSuccess }
         reason: reason || undefined,
       }
 
+      let movement: StockMovementResponse
+
       if (isStockIn) {
         const params: StockInParams = {
           ...baseParams,
           added_qty: qty,
         }
-        await stockIn(params)
+        movement = await stockIn(params)
       } else {
         const params: StockOutParams = {
           ...baseParams,
           taken_qty: qty,
         }
-        await stockOut(params)
+        movement = await stockOut(params)
       }
 
-      onSuccess()
+      onSuccess(movement)
       onOpenChange(false)
       setQuantity("")
       setReason("")
@@ -84,6 +93,7 @@ export function StockMovementModal({ item, type, open, onOpenChange, onSuccess }
     }
   }
 
+  // Closes the dialog and clears the form.
   const handleCancel = () => {
     onOpenChange(false)
     setQuantity("")
@@ -95,7 +105,7 @@ export function StockMovementModal({ item, type, open, onOpenChange, onSuccess }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="rounded-[4px] border border-[#0F172A] shadow-[0px_4px_0px_rgba(15,23,42,0.08)] ring-0 sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
             {isStockIn ? "Stock In" : "Stock Out"} - {item.name}
@@ -116,8 +126,8 @@ export function StockMovementModal({ item, type, open, onOpenChange, onSuccess }
             <Input
               id="quantity"
               type="number"
-              min="1"
-              step="1"
+              min={decimals ? "0" : "1"}
+              step={decimals ? "any" : "1"}
               placeholder="Enter quantity"
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
