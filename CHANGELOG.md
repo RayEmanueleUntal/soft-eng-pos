@@ -15,3 +15,4 @@
 2026-10-01: Phase 4: ROP page live with search, category names, polling, role-gated Stock In/Out and Edit ROP saved via PATCH /products/{id}.
 2026-10-01: Phase 5: adjustments page drops mock rows, logs real API movements (session only) with type, before/after and staff; removed mock-adjustments.
 2026-10-01: Phase 6: design pass - inventory table header/border per design.md, file headers and function comments added to remaining inventory files.
+2026-10-01: Cleanup: fixed textarea empty-interface lint error and removed unused mock-inventory.ts (fix_trigger.sh already removed).
