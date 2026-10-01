@@ -19,7 +19,8 @@ export default function InventoryPage() {
     setPage,
     totalPages,
     loading,
-    error
+    error,
+    refetch
   } = useInventory();
 
   const categoryOptions = React.useMemo(
@@ -75,7 +76,7 @@ export default function InventoryPage() {
           <InventoryTable
             inventory={inventory}
             categories={categories}
-            onRefresh={fetchInventory}
+            onRefresh={refetch}
           />
 
           <div className="flex items-center justify-between">

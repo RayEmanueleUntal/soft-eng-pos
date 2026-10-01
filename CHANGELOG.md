@@ -6,3 +6,4 @@
 2026-09-29: Replaced window.location.reload() in InventoryTable with an onRefresh prop wired to the inventory page refetch.
 2026-09-29: Improved BinAssignmentModal with current/new bin display, stricter Bin ID validation, and clearer API error messages.
 2026-09-29: Restyled InventoryTable and BinAssignmentModal to design.md (mono/right-aligned numbers, secondary button, slate modal border).
+2026-10-01: Fixed inventory page crash by passing the useInventory refetch function to InventoryTable's onRefresh prop.
