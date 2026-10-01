@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 
 interface AddStaffModalProps {
   open: boolean;
@@ -78,21 +77,21 @@ export function AddStaffModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] bg-card">
+      <DialogContent className="sm:max-w-[500px] bg-card border-border rounded-[4px] shadow-lg">
         <DialogHeader>
-          <DialogTitle className="text-foreground">
+          <DialogTitle className="text-lg font-heading font-bold text-foreground tracking-tight">
             {editStaff ? "Edit Staff Profile" : "Add New Staff"}
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
+          <DialogDescription className="text-xs font-sans text-muted-foreground">
             {editStaff
-              ? "Update the staff member's information below."
-              : "Fill in the details to add a new staff member."}
+              ? "Update the staff member's credentials, roles, and status."
+              : "Fill in the details to register a new staff member profile."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-3 py-4">
-            <div className="grid gap-2">
-              <label htmlFor="username" className="text-sm font-medium">
+            <div className="grid gap-1.5">
+              <label htmlFor="username" className="text-xs font-sans font-medium text-foreground">
                 Username
               </label>
               <Input
@@ -101,13 +100,14 @@ export function AddStaffModal({
                 onChange={(e) =>
                   setFormData({ ...formData, username: e.target.value })
                 }
+                className="h-8 rounded-[2px] text-xs font-sans border-border bg-card placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary"
                 required
               />
             </div>
 
             {!editStaff && (
-              <div className="grid gap-2">
-                <label htmlFor="password" className="text-sm font-medium">
+              <div className="grid gap-1.5">
+                <label htmlFor="password" className="text-xs font-sans font-medium text-foreground">
                   Password
                 </label>
                 <Input
@@ -117,14 +117,15 @@ export function AddStaffModal({
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
+                  className="h-8 rounded-[2px] text-xs font-sans border-border bg-card placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary"
                   required
                 />
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <label htmlFor="first_name" className="text-sm font-medium">
+              <div className="grid gap-1.5">
+                <label htmlFor="first_name" className="text-xs font-sans font-medium text-foreground">
                   First Name
                 </label>
                 <Input
@@ -133,11 +134,12 @@ export function AddStaffModal({
                   onChange={(e) =>
                     setFormData({ ...formData, first_name: e.target.value })
                   }
+                  className="h-8 rounded-[2px] text-xs font-sans border-border bg-card placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary"
                   required
                 />
               </div>
-              <div className="grid gap-2">
-                <label htmlFor="last_name" className="text-sm font-medium">
+              <div className="grid gap-1.5">
+                <label htmlFor="last_name" className="text-xs font-sans font-medium text-foreground">
                   Last Name
                 </label>
                 <Input
@@ -146,16 +148,17 @@ export function AddStaffModal({
                   onChange={(e) =>
                     setFormData({ ...formData, last_name: e.target.value })
                   }
+                  className="h-8 rounded-[2px] text-xs font-sans border-border bg-card placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary"
                   required
                 />
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <label className="text-sm font-medium text-foreground">
+            <div className="grid gap-1.5">
+              <label className="text-xs font-sans font-medium text-foreground">
                 Roles
               </label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {Object.values(AssignedRole).map((role) => {
                   const isSelected = formData.roles.includes(role);
                   return (
@@ -163,10 +166,10 @@ export function AddStaffModal({
                       key={role}
                       type="button"
                       onClick={() => handleRoleToggle(role)}
-                      className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                      className={`px-2.5 py-1 text-xs font-mono rounded-[2px] border transition-colors ${
                         isSelected
-                          ? "bg-blue-500 text-white border-blue-500 hover:bg-primary"
-                          : "bg-card text-foreground border-border hover:bg-[#eff4ff]"
+                          ? "bg-primary text-primary-foreground border-primary font-semibold shadow-2xs"
+                          : "bg-card text-foreground border-border hover:bg-muted"
                       }`}
                     >
                       {formatRole(role)}
@@ -174,40 +177,50 @@ export function AddStaffModal({
                   );
                 })}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[11px] font-sans text-muted-foreground">
                 Select at least one role
               </p>
             </div>
 
-            <div className="grid gap-2">
-              <label className="text-sm font-medium text-foreground">Account Status</label>
+            <div className="grid gap-1.5">
+              <label className="text-xs font-sans font-medium text-foreground">Account Status</label>
               <div className="flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[2px] border transition-colors focus-visible:outline-none ${
                     formData.is_active
-                      ? "bg-green-500"
-                      : "bg-border"
+                      ? "bg-primary border-primary"
+                      : "bg-muted border-border"
                   }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${
-                      formData.is_active ? "translate-x-6" : "translate-x-1"
+                    className={`inline-block h-3.5 w-3.5 transform rounded-[2px] bg-primary-foreground shadow-xs transition-transform ${
+                      formData.is_active ? "translate-x-4.5" : "translate-x-0.5"
                     }`}
                   />
                 </button>
-                <span className="text-sm text-foreground">
+                <span className="text-xs font-mono font-medium text-foreground uppercase">
                   {formData.is_active ? "Active" : "Inactive"}
                 </span>
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleCancel}>
+          <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t border-border">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCancel}
+              className="rounded-[2px] h-8 text-xs font-sans border-border text-foreground hover:bg-muted"
+            >
               Cancel
             </Button>
-            <Button type="submit">
+            <Button
+              type="submit"
+              size="sm"
+              className="rounded-[2px] h-8 text-xs font-sans font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
+            >
               {editStaff ? "Save Changes" : "Add Staff"}
             </Button>
           </DialogFooter>

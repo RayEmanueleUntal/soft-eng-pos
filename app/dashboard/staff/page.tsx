@@ -44,9 +44,14 @@ export default function StaffPage() {
   };
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Staff Profiling</h1>
+    <div className="p-6 max-w-7xl mx-auto space-y-6 bg-background min-h-[calc(100vh-4rem)]">
+      <div className="flex flex-col gap-1 border-b border-border pb-4">
+        <h1 className="text-[24px] font-heading font-bold tracking-tight text-foreground">
+          Staff Management
+        </h1>
+        <p className="text-xs font-sans text-muted-foreground">
+          Manage employee profiles, assigned system roles, and account access status.
+        </p>
       </div>
 
       <StaffTable
