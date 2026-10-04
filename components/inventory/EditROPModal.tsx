@@ -1,3 +1,6 @@
+// Modal for editing a product's reorder point (ROP) in the POS inventory module.
+// Saves the new value through PATCH /products/{id} so stock status updates everywhere.
+// Mount it only while an item is being edited so the input starts from that item's ROP.
 "use client";
 
 import { useState } from "react";
@@ -10,34 +13,50 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ROPItem } from "@/lib/inventory/mock-rop";
+import { InventoryItem } from "@/lib/inventory/types";
+import { updateReorderPoint } from "@/lib/inventory/stock-rop-api";
 
 interface EditROPModalProps {
-  item: ROPItem | null;
+  item: InventoryItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (itemId: number, newROP: number) => void;
+  onSaved: () => void;
 }
 
-export function EditROPModal({ item, open, onOpenChange, onSave }: EditROPModalProps) {
+// Renders the edit form, validates the number and persists it through the API.
+export function EditROPModal({ item, open, onOpenChange, onSaved }: EditROPModalProps) {
   const [ropValue, setRopValue] = useState<string>(item?.reorder_point_ROP.toString() || "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Validates the input, saves it and reports success to the parent.
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!item) return;
-    
-    const newROP = parseInt(ropValue, 10);
-    
-    if (isNaN(newROP) || newROP < 0) {
-      alert("Please enter a valid positive number for the reorder point");
+
+    const newROP = Number(ropValue);
+
+    if (!Number.isInteger(newROP) || newROP < 0) {
+      setError("Enter a whole number that is 0 or higher.");
       return;
     }
-    
-    onSave(item.id, newROP);
-    onOpenChange(false);
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      await updateReorderPoint(item.id, newROP);
+      onSaved();
+      onOpenChange(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update the reorder point.");
+    } finally {
+      setSaving(false);
+    }
   };
 
+  // Closes the modal without saving.
   const handleCancel = () => {
     onOpenChange(false);
   };
@@ -46,20 +65,21 @@ export function EditROPModal({ item, open, onOpenChange, onSave }: EditROPModalP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} key={item?.id || "none"}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="rounded-[4px] border border-[#0F172A] shadow-[0px_4px_0px_rgba(15,23,42,0.08)] ring-0 sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Edit Reorder Point</DialogTitle>
+          <DialogTitle className="font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Edit Reorder Point</DialogTitle>
         </DialogHeader>
+
         <form onSubmit={handleSubmit} className="grid gap-3 py-4">
           <div className="space-y-2">
             <p className="text-sm font-medium text-muted-foreground">Product Information</p>
             <div className="bg-muted/50 p-2.5 rounded-lg space-y-1">
               <p className="text-sm"><span className="font-medium">Name:</span> {item.name}</p>
-              <p className="text-sm"><span className="font-medium">Current Quantity:</span> {item.current_quantity}</p>
-              <p className="text-sm"><span className="font-medium">Current ROP:</span> {item.reorder_point_ROP}</p>
+              <p className="text-sm"><span className="font-medium">Current Quantity:</span> <span className="font-mono">{item.current_quantity}</span></p>
+              <p className="text-sm"><span className="font-medium">Current ROP:</span> <span className="font-mono">{item.reorder_point_ROP}</span></p>
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <label htmlFor="rop" className="text-sm font-medium">
               New Reorder Point
@@ -79,11 +99,19 @@ export function EditROPModal({ item, open, onOpenChange, onSave }: EditROPModalP
             </p>
           </div>
 
+          {error && (
+            <p role="alert" className="rounded-[4px] border border-destructive/50 bg-destructive/10 p-2 text-sm text-destructive">
+              {error}
+            </p>
+          )}
+
           <DialogFooter className="mt-4">
-            <Button type="button" variant="outline" onClick={handleCancel}>
+            <Button type="button" variant="outline" onClick={handleCancel} disabled={saving}>
               Cancel
             </Button>
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

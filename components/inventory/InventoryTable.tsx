@@ -1,6 +1,10 @@
+// Inventory table for the Inventory Management module of the POS system.
+// Lists items with SKU, ROP, stock status and bin, plus a per-row actions menu for authorised staff.
+// Opens the stock movement, adjustment and bin modals and asks the page to refetch after each save.
 "use client";
 
 import * as React from "react";
+import { MoreHorizontal } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -10,107 +14,221 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { InventoryItem } from "@/lib/inventory/types";
+import { getStockStatus } from "@/lib/inventory/stock-status";
+import { StockStatusBadge } from "./StockStatusBadge";
 import { BinAssignmentModal } from "./BinAssignmentModal";
+import { StockMovementModal } from "./StockMovementModal";
+import { StockAdjustmentModal } from "./StockAdjustmentModal";
+import { EditROPModal } from "./EditROPModal";
 
 interface InventoryTableProps {
   inventory: InventoryItem[];
   categories: Record<number, string>;
+  onRefresh: () => void;
+  canManageStock: boolean;
+  canEditROP: boolean;
 }
 
-export function InventoryTable({ inventory, categories }: InventoryTableProps) {
-  const [selectedItem, setSelectedItem] = React.useState<InventoryItem | null>(
-    null,
-  );
+const HEAD_CLASS =
+  "text-foreground font-semibold font-mono text-[11px] uppercase tracking-wider";
 
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
+type RowAction = "in" | "out" | "adjust" | "bin" | "rop";
 
-  const handleOpenModal = (item: InventoryItem) => {
-    setSelectedItem(item);
-    setIsModalOpen(true);
-  };
+interface ActiveAction {
+  type: RowAction;
+  item: InventoryItem;
+}
 
-  const handleCloseModal = () => {
-    setSelectedItem(null);
-    setIsModalOpen(false);
-  };
+// Renders the inventory list and manages whichever row-action modal is open.
+export function InventoryTable({
+  inventory,
+  categories,
+  onRefresh,
+  canManageStock,
+  canEditROP,
+}: InventoryTableProps) {
+  const [active, setActive] = React.useState<ActiveAction | null>(null);
 
-  const handleSave = async () => {
-    try {
-      handleCloseModal();
+  const showActions = canManageStock || canEditROP;
+  const columnCount = showActions ? 11 : 10;
 
-      window.location.reload();
-    } catch (error) {
-      console.error("Failed to save:", error);
-    }
+  // Closes the open modal.
+  const handleClose = () => setActive(null);
+
+  // Asks the page to refetch after any modal saves successfully.
+  const handleSaved = () => {
+    onRefresh();
   };
 
   return (
     <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Thread Type</TableHead>
-            <TableHead>Material</TableHead>
-            <TableHead>Size</TableHead>
-            <TableHead>Current Quantity</TableHead>
-            <TableHead>Bin Location</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
+      <div className="overflow-hidden rounded-[4px] border border-border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-[#F1F5F9] hover:bg-[#F1F5F9]">
+              <TableHead className={HEAD_CLASS}>SKU</TableHead>
+              <TableHead className={HEAD_CLASS}>Name</TableHead>
+              <TableHead className={HEAD_CLASS}>Category</TableHead>
+              <TableHead className={HEAD_CLASS}>Thread Type</TableHead>
+              <TableHead className={HEAD_CLASS}>Material</TableHead>
+              <TableHead className={HEAD_CLASS}>Size</TableHead>
+              <TableHead className={`${HEAD_CLASS} text-right`}>Current Qty</TableHead>
+              <TableHead className={`${HEAD_CLASS} text-right`}>ROP</TableHead>
+              <TableHead className={HEAD_CLASS}>Status</TableHead>
+              <TableHead className={HEAD_CLASS}>Bin Location</TableHead>
+              {showActions && <TableHead className={`${HEAD_CLASS} w-12`}>Actions</TableHead>}
+            </TableRow>
+          </TableHeader>
 
-        <TableBody>
-          {inventory.length > 0 ? (
-            inventory.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell>{item.name}</TableCell>
+          <TableBody>
+            {inventory.length > 0 ? (
+              inventory.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="font-mono">{item.sku ?? "-"}</TableCell>
 
-                <TableCell>
-                  {categories[item.categoryId] ??
-                    `Category #${item.categoryId}`}
-                </TableCell>
+                  <TableCell>{item.name}</TableCell>
 
-                <TableCell>{item.thread_type ?? "-"}</TableCell>
+                  <TableCell>
+                    {categories[item.categoryId] ??
+                      `Category #${item.categoryId}`}
+                  </TableCell>
 
-                <TableCell>{item.material_grade ?? "-"}</TableCell>
+                  <TableCell>{item.thread_type ?? "-"}</TableCell>
 
-                <TableCell>{item.size_dimensions ?? "-"}</TableCell>
+                  <TableCell>{item.material_grade ?? "-"}</TableCell>
 
-                <TableCell>{item.current_quantity}</TableCell>
+                  <TableCell>{item.size_dimensions ?? "-"}</TableCell>
 
-                <TableCell>
-                  {item.bin_aisle_number || item.bin_shelf_location
-                    ? `${item.bin_aisle_number ?? "-"} - ${
-                        item.bin_shelf_location ?? "-"
-                      }`
-                    : "-"}
-                </TableCell>
+                  <TableCell className="text-right font-mono tabular-nums">
+                    {item.current_quantity}
+                  </TableCell>
 
-                <TableCell>
-                  <Button onClick={() => handleOpenModal(item)}>
-                    Assign Bin
-                  </Button>
+                  <TableCell className="text-right font-mono tabular-nums">
+                    {item.reorder_point_ROP}
+                  </TableCell>
+
+                  <TableCell>
+                    <StockStatusBadge status={getStockStatus(item)} />
+                  </TableCell>
+
+                  <TableCell className="font-mono">
+                    {item.bin_aisle_number || item.bin_shelf_location
+                      ? `${item.bin_aisle_number ?? "-"} - ${
+                          item.bin_shelf_location ?? "-"
+                        }`
+                      : "-"}
+                  </TableCell>
+
+                  {showActions && (
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label={`Actions for ${item.name}`}
+                            />
+                          }
+                        >
+                          <MoreHorizontal />
+                        </DropdownMenuTrigger>
+
+                        <DropdownMenuContent align="end" className="w-44">
+                          {canManageStock && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => setActive({ type: "in", item })}
+                              >
+                                Stock In
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setActive({ type: "out", item })}
+                              >
+                                Stock Out
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setActive({ type: "adjust", item })
+                                }
+                              >
+                                Adjust Stock
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setActive({ type: "bin", item })}
+                              >
+                                Assign Bin
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {canEditROP && (
+                            <DropdownMenuItem
+                              onClick={() => setActive({ type: "rop", item })}
+                            >
+                              Edit ROP
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columnCount}
+                  className="py-6 text-center text-muted-foreground"
+                >
+                  No inventory items found.
                 </TableCell>
               </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={8} className="text-center">
-                No inventory items found.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-      {isModalOpen && selectedItem && (
+      {active && (active.type === "in" || active.type === "out") && (
+        <StockMovementModal
+          item={active.item}
+          type={active.type}
+          open
+          onOpenChange={(open) => !open && handleClose()}
+          onSuccess={handleSaved}
+        />
+      )}
+
+      {active?.type === "adjust" && (
+        <StockAdjustmentModal
+          item={active.item}
+          open
+          onOpenChange={(open) => !open && handleClose()}
+          onSuccess={handleSaved}
+        />
+      )}
+
+      {active?.type === "bin" && (
         <BinAssignmentModal
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          onSaved={handleSave}
-          item={selectedItem}
+          isOpen
+          onClose={handleClose}
+          onSaved={handleSaved}
+          item={active.item}
+        />
+      )}
+
+      {active?.type === "rop" && (
+        <EditROPModal
+          item={active.item}
+          open
+          onOpenChange={(open) => !open && handleClose()}
+          onSaved={handleSaved}
         />
       )}
     </>

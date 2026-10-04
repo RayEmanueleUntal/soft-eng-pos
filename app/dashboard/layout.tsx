@@ -1,7 +1,11 @@
+// Dashboard shell for the POS system: sidebar, mobile navigation and top bar.
+// Shows main modules and the Inventory sub-links (ROP, Adjustments), hiding stock-only links by role.
+// Wraps every /dashboard page and handles sign-out.
 "use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import * as React from "react";
 import { ReactNode } from "react";
 
 import {
@@ -19,12 +23,27 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { canManageStock } from "@/lib/auth/permissions";
+import { useCurrentRole } from "@/lib/auth/use-current-role";
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-const navigation = [
+interface NavChild {
+  name: string;
+  href: string;
+  requiresStockRole?: boolean;
+}
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: typeof Boxes;
+  children?: NavChild[];
+}
+
+const navigation: NavItem[] = [
   {
     name: "Dashboard",
     href: "/dashboard",
@@ -39,6 +58,14 @@ const navigation = [
     name: "Inventory",
     href: "/dashboard/inventory",
     icon: Boxes,
+    children: [
+      { name: "ROP", href: "/dashboard/inventory/rop" },
+      {
+        name: "Adjustments",
+        href: "/dashboard/inventory/adjustments",
+        requiresStockRole: true,
+      },
+    ],
   },
   {
     name: "Products",
@@ -65,8 +92,18 @@ const navigation = [
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const role = useCurrentRole();
+
+  // Returns the sub-links of a nav item that the current role may see.
+  function getVisibleChildren(item: NavItem): NavChild[] {
+    return (item.children ?? []).filter(
+      (child) => !child.requiresStockRole || canManageStock(role),
+    );
+  }
 
   async function handleLogout() {
+    localStorage.removeItem("access_token");
+
     await fetch("/api/auth/logout", {
       method: "POST",
     });
@@ -75,9 +112,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     router.refresh();
   }
 
-  function isActive(href: string) {
-    if (href === "/dashboard") {
-      return pathname === "/dashboard";
+  // Items with sub-links match exactly so the parent is not highlighted on its sub-pages.
+  function isActive(href: string, exact = false) {
+    if (href === "/dashboard" || exact) {
+      return pathname === href;
     }
 
     return pathname.startsWith(href);
@@ -113,24 +151,44 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {navigation.map((item) => {
             const Icon = item.icon;
-            const active = isActive(item.href);
+            const children = getVisibleChildren(item);
+            const active = isActive(item.href, !!item.children);
 
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`group flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                  active
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
+              <div key={item.href} className="space-y-1">
+                <Link
+                  href={item.href}
+                  className={`group flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    active
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
 
-                <span>{item.name}</span>
+                  <span>{item.name}</span>
 
-                {active && <ChevronRight className="ml-auto h-4 w-4" />}
-              </Link>
+                  {active && <ChevronRight className="ml-auto h-4 w-4" />}
+                </Link>
+
+                {children.map((child) => {
+                  const childActive = isActive(child.href, true);
+
+                  return (
+                    <Link
+                      key={child.href}
+                      href={child.href}
+                      className={`ml-6 flex items-center rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                        childActive
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      {child.name}
+                    </Link>
+                  );
+                })}
+              </div>
             );
           })}
         </nav>
@@ -189,21 +247,36 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <nav className="flex gap-0.5 overflow-x-auto border-t px-3 py-2">
           {navigation.map((item) => {
             const Icon = item.icon;
-            const active = isActive(item.href);
+            const active = isActive(item.href, !!item.children);
 
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs font-medium transition-colors ${
-                  active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {item.name}
-              </Link>
+              <React.Fragment key={item.href}>
+                <Link
+                  href={item.href}
+                  className={`flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs font-medium transition-colors ${
+                    active
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {item.name}
+                </Link>
+
+                {getVisibleChildren(item).map((child) => (
+                  <Link
+                    key={child.href}
+                    href={child.href}
+                    className={`flex shrink-0 items-center rounded-md px-3 py-2 text-xs font-medium transition-colors ${
+                      isActive(child.href, true)
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    {child.name}
+                  </Link>
+                ))}
+              </React.Fragment>
             );
           })}
         </nav>
