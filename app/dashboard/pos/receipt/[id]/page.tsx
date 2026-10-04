@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PrintableInvoice } from "@/components/pos";
+import { RefundModal } from "@/components/pos/receipt/return/RefundModal";
+import { ExchangeModal } from "@/components/pos/receipt/return/ExchangeModal";
 import { fetchReceiptApi, type Receipt } from "@/lib/pos";
 import { ArrowLeft, Printer, Loader2, AlertCircle } from "lucide-react";
 import { getErrorMessage } from "@/lib/utils";
@@ -16,6 +18,9 @@ export default function ReceiptPage() {
   const [loading, setLoading] = useState(true);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [refundModalOpen, setRefundModalOpen] = useState(false);
+  const [exchangeModalOpen, setExchangeModalOpen] = useState(false);
+  const [pendingReturnRequestId, setPendingReturnRequestId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchReceipt = async () => {
@@ -42,6 +47,14 @@ export default function ReceiptPage() {
 
   const handleBack = () => {
     router.push("/dashboard");
+  };
+
+  const handleRefundSuccess = (approvalRequestId: number) => {
+    setPendingReturnRequestId(approvalRequestId);
+  };
+
+  const handleExchangeSuccess = (approvalRequestId: number) => {
+    setPendingReturnRequestId(approvalRequestId);
   };
 
   return (
@@ -109,6 +122,11 @@ export default function ReceiptPage() {
               <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] text-xs font-mono font-bold border border-border bg-muted text-muted-foreground">
                 #{receipt.transactionId}
               </span>
+              {pendingReturnRequestId && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] text-xs font-mono font-bold border border-amber-500 bg-amber-500/10 text-amber-600 uppercase">
+                  Pending Return
+                </span>
+              )}
             </div>
 
             {/* Printable Invoice Display */}
@@ -127,6 +145,20 @@ export default function ReceiptPage() {
                 Back
               </Button>
               <Button
+                variant="outline"
+                onClick={() => setRefundModalOpen(true)}
+                className="rounded-[4px] text-xs border-input hover:bg-muted"
+              >
+                Process Refund
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setExchangeModalOpen(true)}
+                className="rounded-[4px] text-xs border-input hover:bg-muted"
+              >
+                Process Exchange
+              </Button>
+              <Button
                 onClick={handlePrint}
                 className="bg-primary hover:bg-primary/80 text-white rounded-[4px] text-xs font-bold uppercase tracking-wider"
               >
@@ -141,6 +173,24 @@ export default function ReceiptPage() {
             <PrintableInvoice receipt={receipt} id="printable-receipt" />
           </div>
         </div>
+      )}
+
+      {/* Return Modals */}
+      {receipt && (
+        <>
+          <RefundModal
+            open={refundModalOpen}
+            onOpenChange={setRefundModalOpen}
+            receipt={receipt}
+            onSuccess={handleRefundSuccess}
+          />
+          <ExchangeModal
+            open={exchangeModalOpen}
+            onOpenChange={setExchangeModalOpen}
+            receipt={receipt}
+            onSuccess={handleExchangeSuccess}
+          />
+        </>
       )}
     </div>
   );

@@ -19,6 +19,9 @@ import type {
   PaymentModalCustomer,
   PaymentTabDetails,
   PaymentMethod,
+  RefundRequest,
+  ExchangeRequest,
+  ReturnResponse,
 } from "../types/pos-types";
 
 // Re-export all types so consumers can import types and service functions together
@@ -392,6 +395,32 @@ export async function fetchReceiptApi(id: string | number): Promise<Receipt> {
 
   const response = await apiClient.get<Receipt>(endpoint);
   return response.data;
+}
+
+/**
+ * Process a refund request via backend API (POST /returns/refund).
+ */
+export async function processRefund(request: RefundRequest): Promise<ReturnResponse> {
+  try {
+    const response = await apiClient.post<ReturnResponse>('/returns/refund', request);
+    return response.data;
+  } catch (error) {
+    // Error handling will be done in the modal component
+    throw error;
+  }
+}
+
+/**
+ * Process an exchange request via backend API (POST /returns/exchange).
+ */
+export async function processExchange(request: ExchangeRequest): Promise<ReturnResponse> {
+  try {
+    const response = await apiClient.post<ReturnResponse>('/returns/exchange', request);
+    return response.data;
+  } catch (error) {
+    // Error handling will be done in the modal component
+    throw error;
+  }
 }
 
 // Convenient namespace bundle

@@ -230,6 +230,7 @@ export interface ReceiptCustomer {
 }
 
 export interface ReceiptItem {
+  productId?: number;
   product_name: string;
   quantity: number;
   applied_price: number;
@@ -273,4 +274,31 @@ export interface TransactionSummary {
   paymentMethod: "CASH" | "GCASH" | "CREDIT";
   totalAmount: number;
   cashierName?: string;
+}
+
+// ==========================================
+// 6. Returns & Exchanges Types
+// ==========================================
+export enum ItemCondition {
+  DEFECTIVE = "DEFECTIVE",
+  CHANGE_OF_MIND = "CHANGE_OF_MIND"
+}
+
+export interface RefundRequest {
+  transactionId: number;
+  productId: number;
+  quantity: number;
+  condition: ItemCondition;
+  reason: string;
+}
+
+export interface ExchangeRequest extends RefundRequest {
+  newProductId: number;
+  newQuantity: number;
+  allowStockOverride?: boolean;
+}
+
+export interface ReturnResponse {
+  message: string;
+  approvalRequestId: number;
 }
