@@ -1,5 +1,5 @@
 // Dashboard shell for the POS system: sidebar, mobile navigation and top bar.
-// Shows main modules and the Inventory sub-links (ROP, Adjustments), hiding stock-only links by role.
+// Shows main modules and the Inventory sub-links (ROP, Adjustments, Bin Locations), hiding stock-only links by role.
 // Wraps every /dashboard page and handles sign-out.
 "use client";
 
@@ -60,6 +60,7 @@ const navigation: NavItem[] = [
     icon: Boxes,
     children: [
       { name: "ROP", href: "/dashboard/inventory/rop" },
+      { name: "Bin Locations", href: "/dashboard/inventory/bins" }, // <-- Added Bin Locations subpage
       {
         name: "Adjustments",
         href: "/dashboard/inventory/adjustments",
