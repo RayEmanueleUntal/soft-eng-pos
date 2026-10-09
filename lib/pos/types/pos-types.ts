@@ -230,14 +230,17 @@ export interface ReceiptCustomer {
 }
 
 export interface ReceiptItem {
+  productId?: number;
   product_name: string;
   quantity: number;
   applied_price: number;
   subtotal: number;
   discounted_price: number;
   net_price: number;
+  pricing_uom?: string;
   type: TransactionType;
   unit_of_measure?: UnitOfMeasure | string;
+  already_returned_qty?: number;
 }
 
 export interface ReceiptPayment {
@@ -248,6 +251,36 @@ export interface ReceiptPayment {
   reference_number?: string;
   mobile_number?: string;
   gcash_mobile_number?: string;
+  due_date?: string;
+  remaining_credit_balance?: number;
+}
+
+export interface ReceiptReturn {
+  id: number;
+  productId: number;
+  product_name: string;
+  quantity: number;
+  date: string;
+  defect_reason: string;
+  refund_amount: number;
+  processed_by_staff: string;
+}
+
+export interface ReceiptExchange {
+  id: number;
+  productId: number;
+  product_name: string;
+  quantity: number;
+  date: string;
+  price_difference: number;
+  is_within_7_days: boolean;
+}
+
+export interface ReceiptShipment {
+  id: number;
+  forwarder_name: string;
+  dispatch_date: string;
+  tracking_status: string;
 }
 
 export interface Receipt {
@@ -261,6 +294,9 @@ export interface Receipt {
   customer: ReceiptCustomer | null;
   items: ReceiptItem[];
   payments: ReceiptPayment[];
+  returns?: ReceiptReturn[];
+  exchanges?: ReceiptExchange[];
+  shipments?: ReceiptShipment[];
 }
 
 export interface TransactionSummary {

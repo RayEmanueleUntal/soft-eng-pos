@@ -18,8 +18,8 @@ export default function ROPPage() {
     <div className="p-6 space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Reorder Point Management</h1>
-          <p className="text-sm text-muted-foreground mt-1">Monitor and manage reorder points for inventory items</p>
+          <h1 className="text-[24px] font-bold font-heading tracking-tight text-foreground">Reorder Point Management</h1>
+          <p className="text-[13px] text-muted-foreground mt-1">Monitor and manage reorder points for inventory items</p>
         </div>
       </div>
 

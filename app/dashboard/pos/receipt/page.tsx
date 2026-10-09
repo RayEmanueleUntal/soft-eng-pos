@@ -97,10 +97,10 @@ export default function TransactionHistoryPage() {
               </Button>
             </Link>
           </div>
-          <h1 className="text-2xl font-bold font-heading tracking-tight flex items-center gap-2 text-foreground">
+          <h1 className="text-[24px] font-bold font-heading tracking-tight flex items-center gap-2 text-foreground">
             <FileText className="w-6 h-6 text-primary" /> Historical Transaction Logs
           </h1>
-          <p className="text-xs text-muted-foreground font-sans mt-0.5">
+          <p className="text-[13px] text-muted-foreground mt-1">
             Browse completed sales, search past receipts, and view detailed printable invoices.
           </p>
         </div>

@@ -12,6 +12,68 @@ import {
 } from "@/components/pos";
 import { usePosCart, usePosShortcuts, usePosCustomers, type Receipt } from "@/lib/pos";
 
+const MOCK_SWAGGER_RECEIPT = {
+  "transactionId": 101,
+  "invoice_number": "INV-2026-0001",
+  "date": "2026-08-28T00:00:00.000Z",
+  "grand_total": 360,
+  "transaction_type": "RETAIL" as const,
+  "cashier_name": "Maria Santos",
+  "customer": {
+    "name": "Juan Dela Cruz",
+    "number": "09171234567"
+  },
+  "items": [
+    {
+      "productId": 1,
+      "product_name": "San Miguel Beer 330ml Can",
+      "quantity": 6,
+      "applied_price": 65,
+      "subtotal": 390,
+      "discounted_price": 360,
+      "net_price": 360,
+      "pricing_uom": "PCS",
+      "type": "RETAIL" as const,
+      "already_returned_qty": 2
+    }
+  ],
+  "payments": [
+    {
+      "payment_method": "CASH" as const,
+      "amount_paid": 500,
+      "cash_tendered": 500,
+      "change_given": 140,
+      "reference_number": "GC-987654321",
+      "gcash_mobile_number": "09123456789",
+      "due_date": "2026-12-24T06:22:33.444Z",
+      "remaining_credit_balance": 500
+    }
+  ],
+  "returns": [
+    {
+      "id": 1,
+      "productId": 12,
+      "product_name": "Hex Bolt M8-1.25 x 30mm",
+      "quantity": 2,
+      "date": "2026-09-02T14:15:00.000Z",
+      "defect_reason": "Damaged threads upon opening box",
+      "refund_amount": 120,
+      "processed_by_staff": "Juan Dela Cruz"
+    }
+  ],
+  "exchanges": [
+    {
+      "id": 1,
+      "productId": 15,
+      "product_name": "Hex Bolt M10-1.50 x 40mm",
+      "quantity": 2,
+      "date": "2026-09-03T09:00:00.000Z",
+      "price_difference": 45,
+      "is_within_7_days": true
+    }
+  ]
+};
+
 export default function PosPage() {
   const { cart, cartTotal, addItemToCart, updateQuantity, clearCart } =
     usePosCart();
@@ -38,6 +100,7 @@ export default function PosPage() {
 
   return (
     <div className="flex flex-col h-full bg-background min-h-[calc(100vh-4rem)]">
+      <button onClick={() => setCompletedReceipt(MOCK_SWAGGER_RECEIPT as any)} className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-destructive text-white px-4 py-2 rounded font-bold shadow-lg">PREVIEW REFUND MODAL</button>
       {/* 1. Top Header */}
       <PosHeader
         selectedCustomerId={selectedCustomerId}

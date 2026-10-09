@@ -58,7 +58,7 @@ export default function ReceiptPage() {
             Back to Dashboard
           </Button>
           <div className="h-6 w-px bg-border" />
-          <h1 className="text-2xl font-bold font-heading text-foreground">
+          <h1 className="text-[24px] font-bold font-heading tracking-tight text-foreground">
             Receipt #{id}
           </h1>
         </div>

@@ -64,8 +64,8 @@ export default function InventoryPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold">Inventory</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-[24px] font-bold font-heading tracking-tight text-foreground">Inventory</h1>
+        <p className="text-[13px] text-muted-foreground mt-1">
           Manage and monitor your inventory.
         </p>
       </div>
