@@ -21,3 +21,4 @@
 2026-10-09: Added SystemSettingsTable listing key, value, description and readable update date, with loading, empty and error states.
 2026-10-09: Added SettingFormDialog for creating (POST) and editing (PATCH) system settings, with Add/Edit buttons and success banners.
 2026-10-09: Added DeleteSettingDialog with a stronger warning for core business-rule keys, per-row Delete buttons and 404 refresh.
+2026-10-09: Limited /dashboard/admin/system-settings to Admin and Manager and added a role-filtered System Settings sidebar link.
