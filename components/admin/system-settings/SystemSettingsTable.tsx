@@ -1,10 +1,17 @@
 // Key-value table for the admin System Settings screen of the POS system.
 // Loads every store-wide setting from GET /system-settings and lists key, value, description and last update.
-// Shows loading, empty and error states; rows are sorted by key. Add and Edit open SettingFormDialog.
+// Shows loading, empty and error states; rows are sorted by key. Add/Edit open SettingFormDialog, Delete opens DeleteSettingDialog.
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertCircle, CheckCircle2, Loader2, PencilIcon, PlusIcon } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  PencilIcon,
+  PlusIcon,
+  Trash2Icon,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +29,7 @@ import {
   SystemSetting,
 } from "@/lib/admin/system-settings";
 
+import { DeleteSettingDialog } from "./DeleteSettingDialog";
 import { SettingFormDialog } from "./SettingFormDialog";
 
 const HEAD_CLASS =
@@ -44,6 +52,7 @@ export function SystemSettingsTable() {
   const [editingSetting, setEditingSetting] = useState<SystemSetting | null>(null);
   const [fetchingKey, setFetchingKey] = useState<string | null>(null);
   const [formSession, setFormSession] = useState(0);
+  const [deletingSetting, setDeletingSetting] = useState<SystemSetting | null>(null);
 
   useEffect(() => {
     if (!successMessage) return;
@@ -104,6 +113,20 @@ export function SystemSettingsTable() {
     setSuccessMessage(
       mode === "create" ? `Setting "${saved.key}" created.` : `Setting "${saved.key}" updated.`,
     );
+    await loadSettings();
+  }
+
+  // Closes the delete dialog, shows a success message and reloads the list.
+  async function handleDeleted(key: string) {
+    setDeletingSetting(null);
+    setSuccessMessage(`Setting "${key}" deleted.`);
+    await loadSettings();
+  }
+
+  // Closes the delete dialog when the setting was already gone, then reloads the list.
+  async function handleDeleteMissing(message: string) {
+    setDeletingSetting(null);
+    setError(message);
     await loadSettings();
   }
 
@@ -203,7 +226,7 @@ export function SystemSettingsTable() {
                   <TableCell className="font-mono text-[11px] text-muted-foreground py-2.5">
                     {formatUpdatedAt(setting.updatedAt)}
                   </TableCell>
-                  <TableCell className="py-2.5 text-right pr-4">
+                  <TableCell className="py-2.5 text-right pr-4 whitespace-nowrap">
                     <Button
                       variant="ghost"
                       size="icon-sm"
@@ -217,6 +240,15 @@ export function SystemSettingsTable() {
                       ) : (
                         <PencilIcon className="size-3.5" />
                       )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setDeletingSetting(setting)}
+                      title={`Delete ${setting.key}`}
+                      className="h-7 w-7 rounded-[2px] hover:bg-red-50 text-muted-foreground hover:text-red-700 inline-flex items-center justify-center"
+                    >
+                      <Trash2Icon className="size-3.5" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -232,6 +264,14 @@ export function SystemSettingsTable() {
         onOpenChange={setIsFormOpen}
         setting={editingSetting}
         onSaved={handleSaved}
+      />
+
+      <DeleteSettingDialog
+        key={deletingSetting?.key ?? "none"}
+        setting={deletingSetting}
+        onClose={() => setDeletingSetting(null)}
+        onDeleted={handleDeleted}
+        onMissing={handleDeleteMissing}
       />
     </div>
   );
