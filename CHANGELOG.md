@@ -17,3 +17,4 @@
 2026-10-01: Phase 6: design pass - inventory table header/border per design.md, file headers and function comments added to remaining inventory files.
 2026-10-01: Cleanup: fixed textarea empty-interface lint error and removed unused mock-inventory.ts (fix_trigger.sh already removed).
 2026-10-09: Added lib/admin/system-settings.ts with types, CRUD helpers, and status-aware error messages for /system-settings.
+2026-10-09: Added the /dashboard/admin/system-settings page shell and SystemSettingsHeader with title and business-rules subtitle.
