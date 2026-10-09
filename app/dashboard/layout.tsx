@@ -98,6 +98,7 @@ const navigation: NavItem[] = [
   },
 ];
 
+// Renders the dashboard shell with role-filtered navigation around the current page.
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -114,6 +115,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     );
   }
 
+  // Clears the stored token and session cookie, then returns to the login page.
   async function handleLogout() {
     localStorage.removeItem("access_token");
 

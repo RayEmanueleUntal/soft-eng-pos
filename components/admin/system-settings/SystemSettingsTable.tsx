@@ -60,11 +60,10 @@ export function SystemSettingsTable() {
     return () => clearTimeout(timer);
   }, [successMessage]);
 
-  // Loads all settings and sorts them by key.
+  // Loads all settings and sorts them by key. Leaves any existing error banner in place.
   const loadSettings = useCallback(async () => {
     try {
       setLoading(true);
-      setError("");
       const data = await fetchSystemSettings();
       setSettings([...data].sort((a, b) => a.key.localeCompare(b.key)));
     } catch (err) {
@@ -110,6 +109,7 @@ export function SystemSettingsTable() {
 
   // Shows a success message and reloads the list after a create or update.
   async function handleSaved(saved: SystemSetting, mode: "create" | "edit") {
+    setError("");
     setSuccessMessage(
       mode === "create" ? `Setting "${saved.key}" created.` : `Setting "${saved.key}" updated.`,
     );
@@ -119,6 +119,7 @@ export function SystemSettingsTable() {
   // Closes the delete dialog, shows a success message and reloads the list.
   async function handleDeleted(key: string) {
     setDeletingSetting(null);
+    setError("");
     setSuccessMessage(`Setting "${key}" deleted.`);
     await loadSettings();
   }
