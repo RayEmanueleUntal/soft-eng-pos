@@ -18,3 +18,4 @@
 2026-10-01: Cleanup: fixed textarea empty-interface lint error and removed unused mock-inventory.ts (fix_trigger.sh already removed).
 2026-10-09: Added lib/admin/system-settings.ts with types, CRUD helpers, and status-aware error messages for /system-settings.
 2026-10-09: Added the /dashboard/admin/system-settings page shell and SystemSettingsHeader with title and business-rules subtitle.
+2026-10-09: Added SystemSettingsTable listing key, value, description and readable update date, with loading, empty and error states.
