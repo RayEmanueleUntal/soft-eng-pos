@@ -12,12 +12,13 @@ export default function StaffPage() {
   
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 bg-background min-h-[calc(100vh-4rem)]">
+    <div className="flex-1 space-y-6 p-8">
       
       <StaffHeader />
 
-      <StaffTable />
-
+      <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
+        <StaffTable />
+      </div>
     </div>
   );
 }
