@@ -39,12 +39,11 @@ const quickActions = [
 
 export default function DashboardPage() {
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
+    <div className="flex-1 space-y-6 p-8">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+        <p className="text-muted-foreground text-sm mt-1">
           Welcome back. Here&apos;s an overview of your system.
         </p>
       </div>

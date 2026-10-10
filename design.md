@@ -139,14 +139,17 @@ Typography is split by utilitarian function:
 
 ## Layout & Spacing
 
-This layout uses a high-density, fixed-pane workspace model optimized for standard 1080p and touch POS displays (e.g., 1920x1080 and 1366x768 screens). 
+This layout uses a high-density workspace model optimized for standard 1080p and touch POS displays (e.g., 1920x1080 and 1366x768 screens). 
 
-- **Grid Architecture**: Split screen with a fixed 3-zone split: 
+- **Page Container**: Standard dashboard pages use a consistent wrapper (`<div className="flex-1 space-y-6 p-8">`) to ensure uniform margins and paddings.
+- **Page Headings**: Page titles use `text-2xl font-bold tracking-tight` (without `font-heading`) and descriptions use `text-muted-foreground text-sm mt-1`.
+- **Content Blocks**: Main content is wrapped in a standard card container: `<div className="bg-card p-6 rounded-lg shadow-sm border border-border">`.
+- **Grid Architecture**: Split screen with a fixed 3-zone split in the POS terminal: 
   - Left panel (60% width): Rapid item search, barcode input, catalog drill-down, and quick-pick fastener grids.
   - Right panel (40% width): Live cart ledger, running order breakdown, discount modifiers, and payment tender trigger.
   - Bottom command bar: 48px fixed bar displaying global function keys (`[F2] Search`, `[F8] Hold`, `[F12] Checkout`).
 - **Density Density**: Dense vertical cadence (28px to 36px table row heights) ensures up to 18 order lines are visible simultaneously without vertical scrolling.
-- **Gaps & Margins**: Minimal gaps (0.25rem to 0.625rem) preserve optical unity, preventing fragmented layouts.
+- **Gaps & Margins**: Minimal gaps (0.25rem to 0.625rem) preserve optical unity, preventing fragmented layouts inside tight components.
 
 ## Elevation & Depth
 

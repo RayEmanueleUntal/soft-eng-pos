@@ -15,34 +15,34 @@ export default function ROPPage() {
   const role = useCurrentRole()
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Reorder Point Management</h1>
-          <p className="text-sm text-muted-foreground mt-1">Monitor and manage reorder points for inventory items</p>
-        </div>
+    <div className="flex-1 space-y-6 p-8">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">Reorder Point Management</h2>
+        <p className="text-muted-foreground text-sm mt-1">Monitor and manage reorder points for inventory items</p>
       </div>
 
-      {error ? (
-        <div className="flex items-center justify-between gap-3 rounded-[4px] border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-          <span>{error}</span>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            Retry
-          </Button>
-        </div>
-      ) : loading ? (
-        <div className="py-8 text-center text-muted-foreground">
-          Loading ROP data...
-        </div>
-      ) : (
-        <ROPTable
-          ropItems={ropItems}
-          categories={categories}
-          onRefresh={refetch}
-          canManageStock={canManageStock(role)}
-          canEditROP={canEditROP(role)}
-        />
-      )}
+      <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
+        {error ? (
+          <div className="flex items-center justify-between gap-3 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+            <span>{error}</span>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              Retry
+            </Button>
+          </div>
+        ) : loading ? (
+          <div className="py-8 text-center text-muted-foreground">
+            Loading ROP data...
+          </div>
+        ) : (
+          <ROPTable
+            ropItems={ropItems}
+            categories={categories}
+            onRefresh={refetch}
+            canManageStock={canManageStock(role)}
+            canEditROP={canEditROP(role)}
+          />
+        )}
+      </div>
     </div>
   )
 }

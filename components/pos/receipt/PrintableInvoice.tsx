@@ -1,5 +1,5 @@
 // Thermal-printer-friendly receipt layout for POS transactions.
-// Renders store details, line items, totals, and payment info from a Receipt prop.
+// Renders store details, line items, totals, payment info, and refund/exchange history.
 
 import {
   formatPeso,
@@ -8,6 +8,13 @@ import {
   type PaymentMethod,
   type Receipt,
   type ReceiptPayment,
+  type ReceiptReturn,
+  type ReceiptExchange,
+  computeTotalRefunds,
+  computeTotalExchangeDifference,
+  computeAdjustedTotal,
+  hasAdjustments,
+  getReceiptDisplayStatus,
 } from "@/lib/pos";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +50,13 @@ function formatPaymentMethod(method: PaymentMethod): string {
     default:
       return method;
   }
+}
+
+/** Formats an exchange price_difference for thermal print display. */
+function formatPriceDifference(diff: number): string {
+  if (diff === 0) return "Even swap";
+  if (diff > 0) return `+${formatPeso(diff)}`;
+  return formatPeso(diff);
 }
 
 /** Renders payment-specific details below the payment method row. */
@@ -99,12 +113,27 @@ function ReceiptDivider() {
   return <div className="border-t border-dashed border-muted-foreground my-2" />;
 }
 
+/** Renders a double-line divider for totals emphasis. */
+function ReceiptDoubleDivider() {
+  return (
+    <div className="my-2 space-y-0.5">
+      <div className="border-t border-solid border-black" />
+      <div className="border-t border-solid border-black" />
+    </div>
+  );
+}
+
 export function PrintableInvoice({
   receipt,
   className,
   id = "printable-receipt",
 }: PrintableInvoiceProps) {
   const customerName = receipt.customer?.name ?? "Walk-in Customer";
+  const displayStatus = getReceiptDisplayStatus(receipt);
+  const showAdjustments = hasAdjustments(receipt);
+  const totalRefunds = computeTotalRefunds(receipt);
+  const totalExchangeDiff = computeTotalExchangeDifference(receipt);
+  const adjustedTotal = computeAdjustedTotal(receipt);
 
   return (
     <div
@@ -129,10 +158,21 @@ export function PrintableInvoice({
         <ReceiptRow label="Cashier" value={receipt.cashier_name} />
         <ReceiptRow label="Customer" value={customerName} />
         <ReceiptRow label="Type" value={receipt.transaction_type} />
+        {displayStatus === "FULL_REFUND" && (
+          <div className="text-center font-bold text-xs mt-1">
+            *** FULLY REFUNDED ***
+          </div>
+        )}
+        {displayStatus === "PARTIAL_RETURN" && (
+          <div className="text-center font-bold text-xs mt-1">
+            *** PARTIAL RETURN ***
+          </div>
+        )}
       </div>
 
       <ReceiptDivider />
 
+      {/* Line Items */}
       <div className="space-y-3">
         {receipt.items.map((item, index) => (
           <div key={`${item.product_name}-${index}`} className="space-y-0.5">
@@ -151,6 +191,11 @@ export function PrintableInvoice({
                 value={`-${formatPeso(item.subtotal - item.net_price)}`}
               />
             ) : null}
+            {(item.already_returned_qty ?? 0) > 0 && (
+              <p className="text-[10px]">
+                ({item.already_returned_qty} returned)
+              </p>
+            )}
           </div>
         ))}
       </div>
@@ -167,6 +212,7 @@ export function PrintableInvoice({
 
       <ReceiptDivider />
 
+      {/* Payment Section */}
       <div className="space-y-2">
         {receipt.payments.map((payment, index) => (
           <div key={`payment-${index}`} className="space-y-1">
@@ -183,7 +229,91 @@ export function PrintableInvoice({
         ))}
       </div>
 
-      <ReceiptDivider />
+      {/* Returns Section */}
+      {receipt.returns && receipt.returns.length > 0 && (
+        <>
+          <ReceiptDivider />
+          <div className="space-y-2">
+            <p className="font-semibold text-center">RETURNS</p>
+            {receipt.returns.map((ret: ReceiptReturn) => (
+              <div key={ret.id} className="space-y-0.5">
+                <p className="font-medium wrap-break-word">{ret.product_name}</p>
+                <ReceiptRow
+                  label={`Qty: ${ret.quantity}`}
+                  value={`Refund: ${formatPeso(ret.refund_amount)}`}
+                />
+                <p className="text-[10px]">Reason: {ret.defect_reason}</p>
+                <p className="text-[10px]">Staff: {ret.processed_by_staff}</p>
+                <p className="text-[10px]">Date: {formatReceiptDate(ret.date)}</p>
+              </div>
+            ))}
+            <ReceiptDivider />
+            <ReceiptRow
+              label="Total Refunds"
+              value={formatPeso(totalRefunds)}
+              bold
+            />
+          </div>
+        </>
+      )}
+
+      {/* Exchanges Section */}
+      {receipt.exchanges && receipt.exchanges.length > 0 && (
+        <>
+          <ReceiptDivider />
+          <div className="space-y-2">
+            <p className="font-semibold text-center">EXCHANGES</p>
+            {receipt.exchanges.map((exc: ReceiptExchange) => (
+              <div key={exc.id} className="space-y-0.5">
+                <p className="font-medium wrap-break-word">{exc.product_name}</p>
+                <ReceiptRow
+                  label={`Qty: ${exc.quantity}`}
+                  value={`Diff: ${formatPriceDifference(exc.price_difference)}`}
+                />
+                <p className="text-[10px]">Date: {formatReceiptDate(exc.date)}</p>
+                {exc.is_within_7_days && (
+                  <p className="text-[10px]">[Within 7-day window]</p>
+                )}
+              </div>
+            ))}
+            {totalExchangeDiff !== 0 && (
+              <>
+                <ReceiptDivider />
+                <ReceiptRow
+                  label="Total Exchange Diff"
+                  value={formatPriceDifference(totalExchangeDiff)}
+                  bold
+                />
+              </>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Adjusted Net Total */}
+      {showAdjustments && (
+        <>
+          <ReceiptDoubleDivider />
+          <div className="space-y-1">
+            {displayStatus === "FULL_REFUND" ? (
+              <ReceiptRow
+                label="FULLY REFUNDED"
+                value={formatPeso(0)}
+                bold
+              />
+            ) : (
+              <ReceiptRow
+                label="ADJUSTED NET TOTAL"
+                value={formatPeso(adjustedTotal)}
+                bold
+              />
+            )}
+          </div>
+          <ReceiptDoubleDivider />
+        </>
+      )}
+
+      {!showAdjustments && <ReceiptDivider />}
 
       <p className="text-center text-[10px]">{STORE_CONFIG.thankYouMessage}</p>
     </div>

@@ -62,97 +62,99 @@ export default function InventoryPage() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="flex-1 space-y-6 p-8">
       <div>
-        <h1 className="text-2xl font-bold">Inventory</h1>
-        <p className="text-muted-foreground">
+        <h2 className="text-2xl font-bold tracking-tight">Inventory</h2>
+        <p className="text-muted-foreground text-sm mt-1">
           Manage and monitor your inventory.
         </p>
       </div>
 
-      <InventoryFilterBar
-        search={filters.search}
-        setSearch={(v) => setFilter('search', v)}
-        size={filters.size}
-        setSize={(v) => setFilter('size', v)}
-        threadType={filters.threadType}
-        setThreadType={(v) => setFilter('threadType', v)}
-        material={filters.material}
-        setMaterial={(v) => setFilter('material', v)}
-        category={filters.category}
-        setCategory={(v) => setFilter('category', v)}
-        categories={categoryOptions}
-      />
+      <div className="bg-card p-6 rounded-lg shadow-sm border border-border flex flex-col gap-4">
+        <InventoryFilterBar
+          search={filters.search}
+          setSearch={(v) => setFilter('search', v)}
+          size={filters.size}
+          setSize={(v) => setFilter('size', v)}
+          threadType={filters.threadType}
+          setThreadType={(v) => setFilter('threadType', v)}
+          material={filters.material}
+          setMaterial={(v) => setFilter('material', v)}
+          category={filters.category}
+          setCategory={(v) => setFilter('category', v)}
+          categories={categoryOptions}
+        />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Tabs
-          value={statusTab}
-          onValueChange={(value) => setStatusTab(value as StatusTab)}
-        >
-          <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="low">Low Stock</TabsTrigger>
-            <TabsTrigger value="adequate">Adequate</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex flex-wrap items-center gap-3">
+          <Tabs
+            value={statusTab}
+            onValueChange={(value) => setStatusTab(value as StatusTab)}
+          >
+            <TabsList>
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="low">Low Stock</TabsTrigger>
+              <TabsTrigger value="adequate">Adequate</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-        {statusTab !== "all" && !loading && !error && (
-          <p className="font-mono text-xs text-muted-foreground">
-            {visibleInventory.length} of {inventory.length} items on this page
-          </p>
+          {statusTab !== "all" && !loading && !error && (
+            <p className="font-mono text-xs text-muted-foreground">
+              {visibleInventory.length} of {inventory.length} items on this page
+            </p>
+          )}
+        </div>
+
+        {error ? (
+          <div className="flex items-center justify-between gap-3 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+            <span>{error}</span>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              Retry
+            </Button>
+          </div>
+        ) : loading ? (
+          <div className="py-8 text-center text-muted-foreground">
+            Loading inventory...
+          </div>
+        ) : (
+          <>
+            <InventoryTable
+              inventory={visibleInventory}
+              categories={categories}
+              onRefresh={refetch}
+              canManageStock={canManageStock(role)}
+              canEditROP={canEditROP(role)}
+            />
+
+            <div className="flex items-center justify-between">
+              <p className="font-mono text-xs text-muted-foreground">
+                Page {page} of {totalPages}
+              </p>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviousPage}
+                  disabled={page === 1}
+                  className="rounded-md"
+                >
+                  Previous
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={page === totalPages}
+                  className="rounded-md"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          </>
         )}
       </div>
-
-      {error ? (
-        <div className="flex items-center justify-between gap-3 rounded-[4px] border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-          <span>{error}</span>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            Retry
-          </Button>
-        </div>
-      ) : loading ? (
-        <div className="py-8 text-center text-muted-foreground">
-          Loading inventory...
-        </div>
-      ) : (
-        <>
-          <InventoryTable
-            inventory={visibleInventory}
-            categories={categories}
-            onRefresh={refetch}
-            canManageStock={canManageStock(role)}
-            canEditROP={canEditROP(role)}
-          />
-
-          <div className="flex items-center justify-between">
-            <p className="font-mono text-xs text-muted-foreground">
-              Page {page} of {totalPages}
-            </p>
-
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePreviousPage}
-                disabled={page === 1}
-                className="rounded-[2px]"
-              >
-                Previous
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleNextPage}
-                disabled={page === totalPages}
-                className="rounded-[2px]"
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 }

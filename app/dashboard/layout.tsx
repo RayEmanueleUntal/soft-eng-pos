@@ -302,24 +302,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           Main Content
       ========================= */}
       <div className="md:pl-64">
-        {/* Desktop Top Bar */}
-        <header className="hidden h-12 items-center justify-between border-b bg-background px-8 md:flex">
-          <div>
-            <p className="text-sm text-muted-foreground">Management System</p>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <UserRound className="h-4 w-4" />
-            </div>
-
-            <div className="text-right">
-              <p className="text-sm font-medium">Staff User</p>
-              <p className="text-xs text-muted-foreground">Staff</p>
-            </div>
-          </div>
-        </header>
-
         <main className="min-h-[calc(100vh-4rem)] p-3 md:p-8">{children}</main>
       </div>
     </div>
