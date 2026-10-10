@@ -16,3 +16,11 @@
 2026-10-01: Phase 5: adjustments page drops mock rows, logs real API movements (session only) with type, before/after and staff; removed mock-adjustments.
 2026-10-01: Phase 6: design pass - inventory table header/border per design.md, file headers and function comments added to remaining inventory files.
 2026-10-01: Cleanup: fixed textarea empty-interface lint error and removed unused mock-inventory.ts (fix_trigger.sh already removed).
+2026-10-09: Added lib/admin/system-settings.ts with types, CRUD helpers, and status-aware error messages for /system-settings.
+2026-10-09: Added the /dashboard/admin/system-settings page shell and SystemSettingsHeader with title and business-rules subtitle.
+2026-10-09: Added SystemSettingsTable listing key, value, description and readable update date, with loading, empty and error states.
+2026-10-09: Added SettingFormDialog for creating (POST) and editing (PATCH) system settings, with Add/Edit buttons and success banners.
+2026-10-09: Added DeleteSettingDialog with a stronger warning for core business-rule keys, per-row Delete buttons and 404 refresh.
+2026-10-09: Limited /dashboard/admin/system-settings to Admin and Manager and added a role-filtered System Settings sidebar link.
+2026-10-09: Reviewed system settings files for header and function comments; added missing comments to the dashboard layout functions.
+2026-10-09: Fixed system settings "no longer exists" banner being wiped by the list reload after a stale edit or delete.

@@ -1,5 +1,5 @@
 // Dashboard shell for the POS system: sidebar, mobile navigation and top bar.
-// Shows main modules and the Inventory sub-links (ROP, Adjustments), hiding stock-only links by role.
+// Shows main modules and the Inventory sub-links (ROP, Adjustments), hiding stock-only and admin links by role.
 // Wraps every /dashboard page and handles sign-out.
 "use client";
 
@@ -16,6 +16,7 @@ import {
   LogOut,
   Menu,
   Package,
+  Settings,
   ShoppingCart,
   Users,
   UserRound,
@@ -24,6 +25,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { canManageStock } from "@/lib/auth/permissions";
+import { Role, ROLE_PERMISSIONS } from "@/lib/auth/roles";
 import { useCurrentRole } from "@/lib/auth/use-current-role";
 
 interface DashboardLayoutProps {
@@ -41,6 +43,7 @@ interface NavItem {
   href: string;
   icon: typeof Boxes;
   children?: NavChild[];
+  allowedRoles?: Role[];
 }
 
 const navigation: NavItem[] = [
@@ -87,12 +90,23 @@ const navigation: NavItem[] = [
     href: "/dashboard/staff",
     icon: UserRound,
   },
+  {
+    name: "System Settings",
+    href: "/dashboard/admin/system-settings",
+    icon: Settings,
+    allowedRoles: ROLE_PERMISSIONS["/dashboard/admin/system-settings"],
+  },
 ];
 
+// Renders the dashboard shell with role-filtered navigation around the current page.
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const role = useCurrentRole();
+
+  const visibleNavigation = navigation.filter(
+    (item) => !item.allowedRoles || (!!role && item.allowedRoles.includes(role as Role)),
+  );
 
   // Returns the sub-links of a nav item that the current role may see.
   function getVisibleChildren(item: NavItem): NavChild[] {
@@ -101,6 +115,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     );
   }
 
+  // Clears the stored token and session cookie, then returns to the login page.
   async function handleLogout() {
     localStorage.removeItem("access_token");
 
@@ -149,7 +164,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             Main Menu
           </p>
 
-          {navigation.map((item) => {
+          {visibleNavigation.map((item) => {
             const Icon = item.icon;
             const children = getVisibleChildren(item);
             const active = isActive(item.href, !!item.children);
@@ -245,7 +260,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Mobile Navigation */}
         <nav className="flex gap-0.5 overflow-x-auto border-t px-3 py-2">
-          {navigation.map((item) => {
+          {visibleNavigation.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href, !!item.children);
 
