@@ -51,7 +51,7 @@ export function PosHeader({
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 border-b border-border bg-card shrink-0">
       <div>
-        <h1 className="text-[24px] font-heading font-bold tracking-tight text-foreground flex items-center gap-2">
+        <h1 className="flex gap-2">
           <ShoppingCart className="h-6 w-6 text-primary" />
           POS Terminal
         </h1>
