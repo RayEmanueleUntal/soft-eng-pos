@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import axios from "axios";
 import {
   Dialog,
@@ -43,34 +43,44 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
   const [newProductId, setNewProductId] = useState<string>("");
   const [newQuantity, setNewQuantity] = useState<string>("1");
   const [allowStockOverride, setAllowStockOverride] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedItem = selectedItemIndex !== null ? receipt.items[selectedItemIndex] : null;
   const maxQuantity = selectedItem?.quantity ?? 1;
 
-  // Debounced search for products
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  // Helper function to format condition enum to readable text
+  const formatCondition = (condition: ItemCondition): string => {
+    return condition
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
 
-  // Filter products based on search query
-  const filteredProducts = useMemo(() => {
-    if (!debouncedSearchQuery) return products.slice(0, 50); // Limit to 50 for performance
-    const query = debouncedSearchQuery.toLowerCase();
-    return products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(query) ||
-        p.sku.toLowerCase().includes(query)
-    ).slice(0, 50);
-  }, [products, debouncedSearchQuery]);
+  // Helper function to get quantity step based on unit of measure
+  const getQuantityStep = (unitOfMeasure?: string): number => {
+    if (!unitOfMeasure) return 1;
+    const uom = unitOfMeasure.toUpperCase();
+    if (['KG', 'G', 'METER', 'M'].includes(uom)) {
+      return 0.01;
+    }
+    return 1; // Default to 1 for pieces and unknown units
+  };
+
+  // Limit products to 50 for performance
+  const availableProducts = useMemo(() => {
+    return products.slice(0, 50);
+  }, [products]);
 
   const selectedNewProduct = products.find((p) => String(p.id) === newProductId);
+
+  // Calculate price difference
+  const priceDifference = useMemo(() => {
+    if (!selectedItem || !selectedNewProduct) return null;
+    const originalTotal = selectedItem.applied_price * Number(quantity);
+    const newTotal = selectedNewProduct.price * Number(newQuantity);
+    return newTotal - originalTotal;
+  }, [selectedItem, selectedNewProduct, quantity, newQuantity]);
 
   const resetForm = () => {
     setSelectedItemIndex(null);
@@ -80,7 +90,6 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
     setNewProductId("");
     setNewQuantity("1");
     setAllowStockOverride(false);
-    setSearchQuery("");
     setError(null);
   };
 
@@ -128,8 +137,8 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
       return;
     }
 
-    if (reason.trim().length < 5) {
-      setError("Please provide a reason (minimum 5 characters).");
+    if (!reason.trim()) {
+      setError("Please provide a reason for the exchange.");
       return;
     }
 
@@ -199,9 +208,11 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
               }}
             >
               <SelectTrigger className="rounded-[4px] text-xs h-8">
-                <SelectValue placeholder="Choose an item from receipt" />
+                <SelectValue placeholder="Choose an item from receipt">
+                  {selectedItem && selectedItem.product_name}
+                </SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="w-full">
                 {receipt.items.map((item, index) => (
                   <SelectItem key={index} value={String(index)} className="text-xs">
                     {item.product_name} (Qty: {item.quantity})
@@ -220,7 +231,7 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
               id="quantity"
               type="number"
               min="0.01"
-              step="0.01"
+              step={getQuantityStep(selectedItem?.unit_of_measure)}
               max={maxQuantity}
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
@@ -242,7 +253,9 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
               onValueChange={(value) => setCondition(value as ItemCondition)}
             >
               <SelectTrigger id="condition" className="rounded-[4px] text-xs h-8">
-                <SelectValue placeholder="Select condition" />
+                <SelectValue placeholder="Select condition">
+                  {condition && formatCondition(condition)}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="DEFECTIVE" className="text-xs">
@@ -278,28 +291,22 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
             <Label className="text-xs font-medium mb-2 block">New Product Selection</Label>
           </div>
 
-          {/* New Product Search */}
+          {/* New Product Selection */}
           <div className="space-y-2">
-            <Label htmlFor="new-product-search" className="text-xs font-medium">
-              Search for New Product
+            <Label htmlFor="new-product-select" className="text-xs font-medium">
+              Select New Product
             </Label>
-            <Input
-              id="new-product-search"
-              type="text"
-              placeholder="Search by name or SKU..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="rounded-[4px] text-xs h-8"
-            />
             <Select
               value={newProductId}
               onValueChange={(value) => setNewProductId(value || "")}
             >
-              <SelectTrigger className="rounded-[4px] text-xs h-8">
-                <SelectValue placeholder="Select new product" />
+              <SelectTrigger id="new-product-select" className="rounded-[4px] text-xs h-8">
+                <SelectValue placeholder="Select new product">
+                  {selectedNewProduct && selectedNewProduct.name}
+                </SelectValue>
               </SelectTrigger>
-              <SelectContent>
-                {filteredProducts.map((product) => (
+              <SelectContent className="w-full">
+                {availableProducts.map((product) => (
                   <SelectItem key={product.id} value={String(product.id)} className="text-xs">
                     {product.name} - {product.sku} ({product.price})
                   </SelectItem>
@@ -317,12 +324,24 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
               id="new-quantity"
               type="number"
               min="0.01"
-              step="0.01"
+              step={getQuantityStep(selectedNewProduct?.unit_of_measure)}
               value={newQuantity}
               onChange={(e) => setNewQuantity(e.target.value)}
               className="rounded-[4px] text-xs h-8"
             />
           </div>
+
+          {/* Price Difference */}
+          {priceDifference !== null && (
+            <div className={`p-2 rounded-[4px] text-xs ${priceDifference < 0 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+              <p className="font-medium">
+                {priceDifference < 0 ? 'Refund to Customer' : 'Additional Payment Required'}
+              </p>
+              <p className="text-muted-foreground">
+                {priceDifference < 0 ? `-${Math.abs(priceDifference).toFixed(2)}` : `+${priceDifference.toFixed(2)}`}
+              </p>
+            </div>
+          )}
 
           {/* Stock Override Checkbox */}
           <div className="flex items-center space-x-2">
@@ -347,6 +366,11 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
               <p className="font-medium">{selectedNewProduct.name}</p>
               <p className="text-muted-foreground">SKU: {selectedNewProduct.sku}</p>
               <p className="text-muted-foreground">Price: {selectedNewProduct.price}</p>
+              {selectedNewProduct.current_quantity !== undefined && (
+                <p className={`text-muted-foreground ${selectedNewProduct.current_quantity < 0 ? 'text-red-600 font-medium' : ''}`}>
+                  Stock: {selectedNewProduct.current_quantity < 0 ? 'Needs Recount' : selectedNewProduct.current_quantity}
+                </p>
+              )}
             </div>
           )}
         </div>

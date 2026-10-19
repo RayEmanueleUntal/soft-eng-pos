@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PrintableInvoice } from "@/components/pos";
 import { RefundModal } from "@/components/pos/receipt/return/RefundModal";
 import { ExchangeModal } from "@/components/pos/receipt/return/ExchangeModal";
 import { fetchReceiptApi, type Receipt } from "@/lib/pos";
-import { ArrowLeft, Printer, Loader2, AlertCircle } from "lucide-react";
+import { getApprovalRequests, type ApprovalStatus, type ApprovalRequestResponseDto } from "@/lib/approval/approval-api";
+import { ArrowLeft, Printer, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { getErrorMessage } from "@/lib/utils";
 
 export default function ReceiptPage() {
@@ -20,7 +21,99 @@ export default function ReceiptPage() {
   const [error, setError] = useState<string | null>(null);
   const [refundModalOpen, setRefundModalOpen] = useState(false);
   const [exchangeModalOpen, setExchangeModalOpen] = useState(false);
-  const [pendingReturnRequestId, setPendingReturnRequestId] = useState<number | null>(null);
+  const [refundApprovalRequests, setRefundApprovalRequests] = useState<ApprovalRequestResponseDto[]>([]);
+  const [exchangeApprovalRequests, setExchangeApprovalRequests] = useState<ApprovalRequestResponseDto[]>([]);
+  const [refreshingStatus, setRefreshingStatus] = useState(false);
+
+  // Helper function to generate badge text for refunds
+  const getRefundBadgeText = () => {
+    if (refundApprovalRequests.length === 0) return null;
+    if (refundApprovalRequests.length === 1) {
+      const req = refundApprovalRequests[0];
+      const status = req.status === 'APPROVED' ? 'Refund Approved' : 
+                   req.status === 'REJECTED' ? 'Refund Rejected' : 'Pending Refund';
+      return status;
+    }
+    // Multiple refunds
+    const pendingCount = refundApprovalRequests.filter(r => r.status === 'PENDING').length;
+    const approvedCount = refundApprovalRequests.filter(r => r.status === 'APPROVED').length;
+    const rejectedCount = refundApprovalRequests.filter(r => r.status === 'REJECTED').length;
+    
+    if (pendingCount === refundApprovalRequests.length) return `${pendingCount} Pending Refunds`;
+    if (approvedCount === refundApprovalRequests.length) return `${approvedCount} Approved Refunds`;
+    if (rejectedCount === refundApprovalRequests.length) return `${rejectedCount} Rejected Refunds`;
+    
+    // Mixed statuses
+    const parts = [];
+    if (approvedCount > 0) parts.push(`${approvedCount} Approved`);
+    if (pendingCount > 0) parts.push(`${pendingCount} Pending`);
+    if (rejectedCount > 0) parts.push(`${rejectedCount} Rejected`);
+    return `${parts.join(', ')} Refunds`;
+  };
+
+  // Helper function to generate badge text for exchanges
+  const getExchangeBadgeText = () => {
+    if (exchangeApprovalRequests.length === 0) return null;
+    if (exchangeApprovalRequests.length === 1) {
+      const req = exchangeApprovalRequests[0];
+      const status = req.status === 'APPROVED' ? 'Exchange Approved' : 
+                   req.status === 'REJECTED' ? 'Exchange Rejected' : 'Pending Exchange';
+      return status;
+    }
+    // Multiple exchanges
+    const pendingCount = exchangeApprovalRequests.filter(r => r.status === 'PENDING').length;
+    const approvedCount = exchangeApprovalRequests.filter(r => r.status === 'APPROVED').length;
+    const rejectedCount = exchangeApprovalRequests.filter(r => r.status === 'REJECTED').length;
+    
+    if (pendingCount === exchangeApprovalRequests.length) return `${pendingCount} Pending Exchanges`;
+    if (approvedCount === exchangeApprovalRequests.length) return `${approvedCount} Approved Exchanges`;
+    if (rejectedCount === exchangeApprovalRequests.length) return `${rejectedCount} Rejected Exchanges`;
+    
+    // Mixed statuses
+    const parts = [];
+    if (approvedCount > 0) parts.push(`${approvedCount} Approved`);
+    if (pendingCount > 0) parts.push(`${pendingCount} Pending`);
+    if (rejectedCount > 0) parts.push(`${rejectedCount} Rejected`);
+    return `${parts.join(', ')} Exchanges`;
+  };
+
+  // Helper function to get badge color for refunds
+  const getRefundBadgeColor = () => {
+    if (refundApprovalRequests.length === 0) return null;
+    const allApproved = refundApprovalRequests.every(r => r.status === 'APPROVED');
+    const allRejected = refundApprovalRequests.every(r => r.status === 'REJECTED');
+    
+    if (allApproved) return 'border-green-500 bg-green-500/10 text-green-600';
+    if (allRejected) return 'border-red-500 bg-red-500/10 text-red-600';
+    return 'border-amber-500 bg-amber-500/10 text-amber-600';
+  };
+
+  // Helper function to get badge color for exchanges
+  const getExchangeBadgeColor = () => {
+    if (exchangeApprovalRequests.length === 0) return null;
+    const allApproved = exchangeApprovalRequests.every(r => r.status === 'APPROVED');
+    const allRejected = exchangeApprovalRequests.every(r => r.status === 'REJECTED');
+    
+    if (allApproved) return 'border-green-500 bg-green-500/10 text-green-600';
+    if (allRejected) return 'border-red-500 bg-red-500/10 text-red-600';
+    return 'border-amber-500 bg-amber-500/10 text-amber-600';
+  };
+
+  // Helper function to get rejection reasons
+  const getRejectionReasons = () => {
+    const reasons: string[] = [];
+    refundApprovalRequests.forEach(r => {
+      if (r.status === 'REJECTED' && r.rejectionReason) {
+        reasons.push(`Refund: ${r.rejectionReason}`);
+      }
+    });
+    exchangeApprovalRequests.forEach(r => {
+      if (r.status === 'REJECTED' && r.rejectionReason) {
+        reasons.push(`Exchange: ${r.rejectionReason}`);
+      }
+    });
+    return reasons;
+  };
 
   useEffect(() => {
     const fetchReceipt = async () => {
@@ -41,6 +134,13 @@ export default function ReceiptPage() {
     fetchReceipt();
   }, [id]);
 
+  // Fetch approval requests for this transaction on page load
+  useEffect(() => {
+    if (receipt) {
+      handleRefreshStatus();
+    }
+  }, [receipt]);
+
   const handlePrint = () => {
     window.print();
   };
@@ -50,12 +150,53 @@ export default function ReceiptPage() {
   };
 
   const handleRefundSuccess = (approvalRequestId: number) => {
-    setPendingReturnRequestId(approvalRequestId);
+    // Just trigger a refresh to fetch the latest approval requests from backend
+    handleRefreshStatus();
   };
 
   const handleExchangeSuccess = (approvalRequestId: number) => {
-    setPendingReturnRequestId(approvalRequestId);
+    // Just trigger a refresh to fetch the latest approval requests from backend
+    handleRefreshStatus();
   };
+
+  const handleRefreshStatus = useCallback(async () => {
+    setRefreshingStatus(true);
+    try {
+      console.log('Fetching approval requests...');
+      const allRequests = await getApprovalRequests();
+      console.log('All approval requests:', allRequests);
+      console.log('Receipt transaction ID:', receipt?.transactionId);
+      
+      // Filter by transaction ID and type if receipt exists
+      if (receipt) {
+        const transactionId = receipt.transactionId;
+        
+        const refunds = allRequests.filter(req => 
+          req.type === 'REFUND_TRANSACTION' && 
+          req.payload?.transactionId === transactionId
+        );
+        
+        const exchanges = allRequests.filter(req => 
+          req.type === 'EXCHANGE_TRANSACTION' && 
+          req.payload?.transactionId === transactionId
+        );
+        
+        console.log('Filtered refunds:', refunds);
+        console.log('Filtered exchanges:', exchanges);
+        
+        setRefundApprovalRequests(refunds);
+        setExchangeApprovalRequests(exchanges);
+      } else {
+        // If no receipt yet, just don't set anything
+        setRefundApprovalRequests([]);
+        setExchangeApprovalRequests([]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch approval status:", err);
+    } finally {
+      setRefreshingStatus(false);
+    }
+  }, [receipt]);
 
   return (
     <div className="flex-1 space-y-6 p-6 bg-background min-h-screen max-w-4xl mx-auto font-sans">
@@ -122,12 +263,51 @@ export default function ReceiptPage() {
               <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] text-xs font-mono font-bold border border-border bg-muted text-muted-foreground">
                 #{receipt.transactionId}
               </span>
-              {pendingReturnRequestId && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] text-xs font-mono font-bold border border-amber-500 bg-amber-500/10 text-amber-600 uppercase">
-                  Pending Return
+              {/* Debug: Show counts */}
+              {process.env.NODE_ENV === 'development' && (
+                <>
+                  {refundApprovalRequests.length > 0 && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] text-xs font-mono font-bold border border-blue-500 bg-blue-500/10 text-blue-600">
+                      Refunds: {refundApprovalRequests.length}
+                    </span>
+                  )}
+                  {exchangeApprovalRequests.length > 0 && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] text-xs font-mono font-bold border border-purple-500 bg-purple-500/10 text-purple-600">
+                      Exchanges: {exchangeApprovalRequests.length}
+                    </span>
+                  )}
+                </>
+              )}
+              {getRefundBadgeText() && (
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-[2px] text-xs font-mono font-bold border uppercase ${getRefundBadgeColor()}`}>
+                  {getRefundBadgeText()}
                 </span>
               )}
+              {getExchangeBadgeText() && (
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-[2px] text-xs font-mono font-bold border uppercase ${getExchangeBadgeColor()}`}>
+                  {getExchangeBadgeText()}
+                </span>
+              )}
+              {(refundApprovalRequests.length > 0 || exchangeApprovalRequests.length > 0) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRefreshStatus}
+                  disabled={refreshingStatus}
+                  className="text-xs h-6 px-2 rounded-[4px]"
+                >
+                  <RefreshCw className={`h-3 w-3 mr-1 ${refreshingStatus ? 'animate-spin' : ''}`} />
+                  Refresh Status
+                </Button>
+              )}
             </div>
+            {getRejectionReasons().length > 0 && (
+              <div className="mb-4 text-xs text-red-600 bg-red-50 border border-red-200 p-2 rounded-[4px]">
+                {getRejectionReasons().map((reason, idx) => (
+                  <div key={idx}><strong>Rejection Reason:</strong> {reason}</div>
+                ))}
+              </div>
+            )}
 
             {/* Printable Invoice Display */}
             <div className="mb-6 flex justify-center">

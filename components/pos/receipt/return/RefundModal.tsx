@@ -44,6 +44,24 @@ export function RefundModal({ open, onOpenChange, receipt, onSuccess }: RefundMo
   const selectedItem = selectedItemIndex !== null ? receipt.items[selectedItemIndex] : null;
   const maxQuantity = selectedItem?.quantity ?? 1;
 
+  // Helper function to format condition enum to readable text
+  const formatCondition = (condition: ItemCondition): string => {
+    return condition
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  // Helper function to get quantity step based on unit of measure
+  const getQuantityStep = (unitOfMeasure?: string): number => {
+    if (!unitOfMeasure) return 1;
+    const uom = unitOfMeasure.toUpperCase();
+    if (['KG', 'G', 'METER', 'M'].includes(uom)) {
+      return 0.01;
+    }
+    return 1; // Default to 1 for pieces and unknown units
+  };
+
   const resetForm = () => {
     setSelectedItemIndex(null);
     setQuantity("1");
@@ -96,8 +114,8 @@ export function RefundModal({ open, onOpenChange, receipt, onSuccess }: RefundMo
       return;
     }
 
-    if (reason.trim().length < 5) {
-      setError("Please provide a reason (minimum 5 characters).");
+    if (!reason.trim()) {
+      setError("Please provide a reason for the return.");
       return;
     }
 
@@ -155,9 +173,11 @@ export function RefundModal({ open, onOpenChange, receipt, onSuccess }: RefundMo
               }}
             >
               <SelectTrigger id="item-select" className="rounded-[4px] text-xs h-8">
-                <SelectValue placeholder="Choose an item from receipt" />
+                <SelectValue placeholder="Choose an item from receipt">
+                  {selectedItem && selectedItem.product_name}
+                </SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="w-full">
                 {receipt.items.map((item, index) => (
                   <SelectItem key={index} value={String(index)} className="text-xs">
                     {item.product_name} (Qty: {item.quantity})
@@ -176,7 +196,7 @@ export function RefundModal({ open, onOpenChange, receipt, onSuccess }: RefundMo
               id="quantity"
               type="number"
               min="0.01"
-              step="0.01"
+              step={getQuantityStep(selectedItem?.unit_of_measure)}
               max={maxQuantity}
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
@@ -198,7 +218,9 @@ export function RefundModal({ open, onOpenChange, receipt, onSuccess }: RefundMo
               onValueChange={(value) => setCondition(value as ItemCondition)}
             >
               <SelectTrigger id="condition" className="rounded-[4px] text-xs h-8">
-                <SelectValue placeholder="Select condition" />
+                <SelectValue placeholder="Select condition">
+                  {condition && formatCondition(condition)}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="DEFECTIVE" className="text-xs">
