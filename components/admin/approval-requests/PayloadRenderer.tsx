@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 interface PayloadRendererProps {
@@ -28,15 +27,15 @@ export const PayloadRenderer: React.FC<PayloadRendererProps> = ({ data, level = 
   if (typeof data !== 'object') {
     if (typeof data === 'boolean') {
       return (
-        <Badge variant={data ? 'default' : 'outline'} className="text-xs">
+        <Badge variant={data ? 'default' : 'outline'} className="text-xs shrink-0">
           {data ? 'True' : 'False'}
         </Badge>
       );
     }
     if (typeof data === 'number') {
-      return <span className="font-mono text-sm text-foreground">{data.toLocaleString()}</span>;
+      return <span className="font-mono text-sm text-foreground whitespace-nowrap">{data.toLocaleString()}</span>;
     }
-    return <span className="text-sm text-foreground break-all">{String(data)}</span>;
+    return <span className="text-sm text-foreground break-words whitespace-pre-wrap">{String(data)}</span>;
   }
 
   // Handle Arrays
@@ -52,12 +51,12 @@ export const PayloadRenderer: React.FC<PayloadRendererProps> = ({ data, level = 
       const keys = Array.from(new Set(data.flatMap((item) => Object.keys(item || {}))));
 
       return (
-        <div className="overflow-x-auto rounded-md border border-border mt-1">
-          <table className="w-full text-xs text-left">
+        <div className="overflow-x-auto rounded-md border border-border mt-1 max-w-full">
+          <table className="w-full text-xs text-left min-w-[300px]">
             <thead className="bg-muted text-muted-foreground font-medium uppercase border-b border-border">
               <tr>
                 {keys.map((k) => (
-                  <th key={k} className="px-3 py-2">
+                  <th key={k} className="px-3 py-2 whitespace-nowrap">
                     {formatTitle(k)}
                   </th>
                 ))}
@@ -67,7 +66,7 @@ export const PayloadRenderer: React.FC<PayloadRendererProps> = ({ data, level = 
               {data.map((row, idx) => (
                 <tr key={idx} className="hover:bg-muted/50 transition-colors">
                   {keys.map((k) => (
-                    <td key={k} className="px-3 py-2 align-top">
+                    <td key={k} className="px-3 py-2 align-top break-words max-w-[200px]">
                       <PayloadRenderer data={row[k]} level={level + 1} />
                     </td>
                   ))}
@@ -83,7 +82,7 @@ export const PayloadRenderer: React.FC<PayloadRendererProps> = ({ data, level = 
     return (
       <div className="flex flex-wrap gap-1 mt-1">
         {data.map((item, idx) => (
-          <Badge key={idx} variant="secondary" className="text-xs">
+          <Badge key={idx} variant="secondary" className="text-xs break-all">
             {String(item)}
           </Badge>
         ))}
@@ -108,13 +107,13 @@ export const PayloadRenderer: React.FC<PayloadRendererProps> = ({ data, level = 
             className={
               isComplex
                 ? 'col-span-full mt-2'
-                : 'flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-1 border-b border-border/40 last:border-0'
+                : 'flex flex-col sm:flex-row sm:items-start justify-between gap-1 py-1 border-b border-border/40 last:border-0'
             }
           >
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[130px]">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[130px] shrink-0 break-all pt-0.5">
               {formatTitle(key)}:
             </span>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0 break-words">
               <PayloadRenderer data={value} level={level + 1} />
             </div>
           </div>
@@ -123,3 +122,5 @@ export const PayloadRenderer: React.FC<PayloadRendererProps> = ({ data, level = 
     </div>
   );
 };
+
+export default PayloadRenderer;
