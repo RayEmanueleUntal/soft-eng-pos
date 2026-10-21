@@ -116,54 +116,39 @@ export default function ApprovalRequestsPage() {
 
   // Action Handlers
   const handleConfirmApprove = async () => {
-    if (!approvingRequest) return;
-    setSubmitting(true);
-    try {
-      await approveApprovalRequest(approvingRequest.id);
-      setRequests((prev) =>
-        prev.map((r) =>
-          r.id === approvingRequest.id
-            ? { ...r, status: "APPROVED", reviewedById: "ADMIN-CURRENT" }
-            : r,
-        ),
-      );
-      setApprovingRequest(null);
-      setIsDetailsOpen(false);
-    } catch (err) {
-      alert("Failed to approve request. Please check API connection.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  if (!approvingRequest) return;
+  setSubmitting(true);
+  try {
+    const updated = await approveApprovalRequest(approvingRequest.id);
+    // Update local state with real backend response
+    setRequests((prev) => prev.map((r) => (r.id === approvingRequest.id ? updated : r)));
+    setApprovingRequest(null);
+    setIsDetailsOpen(false);
+  } catch (err: any) {
+    alert(err.response?.data?.message || 'Failed to approve request.');
+  } finally {
+    setSubmitting(false);
+  }
+};
 
-  const handleConfirmReject = async () => {
-    if (!rejectingRequest) return;
-    setSubmitting(true);
-    try {
-      await rejectApprovalRequest(rejectingRequest.id, {
-        rejectionReason: rejectionReasonInput,
-      });
-      setRequests((prev) =>
-        prev.map((r) =>
-          r.id === rejectingRequest.id
-            ? {
-                ...r,
-                status: "REJECTED",
-                reviewedById: "ADMIN-CURRENT",
-                rejectionReason: rejectionReasonInput || "Rejected by Manager",
-              }
-            : r,
-        ),
-      );
-      setRejectingRequest(null);
-      setRejectionReasonInput("");
-      setIsDetailsOpen(false);
-    } catch (err) {
-      alert("Failed to reject request. Please check API connection.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+ const handleConfirmReject = async () => {
+  if (!rejectingRequest) return;
+  setSubmitting(true);
+  try {
+    const updated = await rejectApprovalRequest(rejectingRequest.id, {
+      rejectionReason: rejectionReasonInput,
+    });
+    // Update local state with real backend response
+    setRequests((prev) => prev.map((r) => (r.id === rejectingRequest.id ? updated : r)));
+    setRejectingRequest(null);
+    setRejectionReasonInput('');
+    setIsDetailsOpen(false);
+  } catch (err: any) {
+    alert(err.response?.data?.message || 'Failed to reject request.');
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
