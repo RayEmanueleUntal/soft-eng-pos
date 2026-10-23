@@ -69,6 +69,10 @@ const navigation: NavItem[] = [
         href: "/dashboard/inventory/adjustments",
         requiresStockRole: true,
       },
+      {
+        name: "Deliveries",
+        href: "/dashboard/inventory/deliveries",
+      },
     ],
   },
   {
