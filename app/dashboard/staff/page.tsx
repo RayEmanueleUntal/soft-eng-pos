@@ -3,8 +3,7 @@
 
 
 import { StaffTable } from "@/components/staff/StaffTable";
-
-import { StaffHeader } from "@/components/staff/StaffHeader";
+import { PageHeader } from "@/components/ui/pageheader";
 
 export default function StaffPage() {
   
@@ -14,7 +13,7 @@ export default function StaffPage() {
   return (
     <div className="flex-1 space-y-6 p-8">
       
-      <StaffHeader />
+      <PageHeader header="Staff Management" subheader="Manage employee profiles, assigned system roles, and account access status." />
 
       <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
         <StaffTable />

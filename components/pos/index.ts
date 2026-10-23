@@ -1,7 +1,7 @@
 // Public API for POS components
 // Internal subcomponents (rows, cards, individual forms) are encapsulated inside their respective folders.
 
-export { PosHeader } from "./PosHeader";
+
 export { PosCommandBar } from "./PosCommandBar";
 
 // Cart

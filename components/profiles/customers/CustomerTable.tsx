@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, Plus } from "lucide-react";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -24,8 +24,8 @@ import { apiClient } from "@/lib/api";
 import { Customer, CustomerResponse } from "@/lib/customers/types";
 
 import { CustomerSearch } from "./CustomerSearch";
-import { CustomerForm } from "./CustomerForm";
 import { CustomerPagination } from "./CustomerPagination";
+import { AddCustomerModal } from "./AddCustomerModal";
 
 export function CustomerTable() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -94,16 +94,19 @@ export function CustomerTable() {
 
   return (
     <div className="space-y-4">
-      <CustomerSearch
-        searchTerm={searchTerm}
-        onSearchChange={(value) => {
-          setSearchTerm(value);
-          setPage(1);
-        }}
-        isAddOpen={isAddOpen}
-        onAddOpenChange={setIsAddOpen}
-        onSaved={handleSaved}
-      />
+      <div className="flex items-center justify-between gap-3">
+        <CustomerSearch
+          searchTerm={searchTerm}
+          onSearchChange={(value) => {
+            setSearchTerm(value);
+            setPage(1);
+          }}
+        />
+
+        <Button onClick={() => setIsAddOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" /> Add Customer
+        </Button>
+      </div>
 
       {error && (
         <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -227,13 +230,28 @@ export function CustomerTable() {
         }}
       >
         {selectedCustomer && (
-          <CustomerForm
+          <AddCustomerModal
+            isOpen={isEditOpen}
+            onClose={() => setIsEditOpen(false)}
             mode="edit"
             customer={selectedCustomer}
-            onSaved={handleSaved}
+            onSuccess={() => {
+              setIsAddOpen(false);
+              fetchCustomers();
+            }}
           />
         )}
       </Dialog>
+
+      <AddCustomerModal
+        isOpen={isAddOpen}
+        mode="add"
+        onClose={() => setIsAddOpen(false)}
+        onSuccess={() => {
+          setIsAddOpen(false);
+          fetchCustomers();
+        }}
+      />
     </div>
   );
 }

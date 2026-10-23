@@ -1,26 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
+  Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
 import { apiClient } from "@/lib/api";
 import { Customer, CustomerType } from "@/lib/customers/types";
+import { useState } from "react";
 
-interface CustomerFormProps {
+interface AddCustomerModalProps {
+  isOpen: boolean;
   mode: "add" | "edit";
-  customer?: Customer;
-  onSaved: () => void;
+  onClose: () => void;
+  onSuccess: (customer: Customer) => void;
+  customer?: Customer | null; // Optional: works for editing too!
 }
 
-export function CustomerForm({ mode, customer, onSaved }: CustomerFormProps) {
+export function AddCustomerModal({
+  isOpen,
+  onClose,
+  mode,
+  onSuccess,
+  customer,
+}: AddCustomerModalProps) {
+  // 1. Local state (Name, Contact, Type, Wholesale fields)
+  // 2. Inline validation (Name required, wholesale needs company & limit)
+  // 3. API submit (POST /customers if new, PATCH /customers/:id if editing)
+  // 4. Returns:
   const [name, setName] = useState(customer?.name ?? "");
 
   const [contactNumber, setContactNumber] = useState(
@@ -87,15 +99,16 @@ export function CustomerForm({ mode, customer, onSaved }: CustomerFormProps) {
           : {}),
       };
 
+      let response;
       if (mode === "add") {
-        await apiClient.post("/customers/", payload);
+        response = await apiClient.post("/customers/", payload);
       } else {
         if (!customer) return;
 
-        await apiClient.patch(`/customers/${customer.id}`, payload);
+        response = await apiClient.patch(`/customers/${customer.id}`, payload);
       }
 
-      onSaved();
+      onSuccess(response.data);
     } catch (error: any) {
       console.error("Failed to save customer:", error);
 
@@ -109,20 +122,24 @@ export function CustomerForm({ mode, customer, onSaved }: CustomerFormProps) {
   };
 
   return (
-    <DialogContent className="sm:max-w-[500px]">
-      <DialogHeader>
-        <DialogTitle>
-          {mode === "add" ? "Add New Customer" : "Edit Customer"}
-        </DialogTitle>
-
-        <DialogDescription>
-          {mode === "add"
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>
+            {mode === "add" ? "Add New Customer" : "Edit Customer"}
+          </DialogTitle>
+          <DialogDescription>
+            {mode === "add"
             ? "Fill in the details below to register a retail or wholesale customer."
             : "Update the customer's profile information."}
-        </DialogDescription>
-      </DialogHeader>
+          </DialogDescription>
+        </DialogHeader>
 
-      <div className="grid gap-3 py-4">
+
+
+
+        {/* All inputs: Name, Contact, Type (Retail vs Wholesale), Company, Credit */}
+        <div className="grid gap-3 py-4">
         <div className="grid gap-2">
           <label className="text-sm font-medium">Customer Name</label>
 
@@ -204,20 +221,20 @@ export function CustomerForm({ mode, customer, onSaved }: CustomerFormProps) {
 
         {formError && <p className="text-sm text-destructive">{formError}</p>}
       </div>
-
-      <DialogFooter>
-        <Button
-          onClick={handleSubmit}
-          disabled={isSaving}
-          className="bg-[#6366f1] hover:bg-[#4f46e5]"
-        >
-          {isSaving
-            ? "Saving..."
-            : mode === "add"
-              ? "Save Customer"
-              : "Save Changes"}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
+        
+        
+        
+        
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={isSaving}>
+            {isSaving ? "Saving..." : "Save Customer"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
