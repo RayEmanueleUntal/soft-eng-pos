@@ -80,7 +80,7 @@ export function PosCart({
   );
 
   return (
-    <div className="lg:col-span-4 flex h-full flex-col rounded-[4px] overflow-hidden gap-3 ">
+    <div className="lg:col-span-4 flex h-full flex-col rounded-[4px] gap-3 ">
       <div className="flex items-center justify-between gap-2 shrink-0">
         <div className="relative flex-1 min-w-0" ref={containerRef}>
           <div
@@ -124,7 +124,7 @@ export function PosCart({
 
           {/* Dropdown Menu with Search Input */}
           {isOpen && (
-            <div className="absolute right-0 mt-1 w-80 bg-popover border border-border rounded-md shadow-lg z-50 p-2">
+            <div className="absolute right-0 left-0 mt-1 w-full bg-popover border border-border rounded-md shadow-lg z-50 p-2">
               <div className="relative mb-2">
                 <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
