@@ -82,10 +82,13 @@ const MOCK_SWAGGER_RECEIPT = {
 export default function PosPage() {
   const { cart, cartTotal, addItemToCart, updateQuantity, clearCart } =
     usePosCart();
-  const { customers, loading: isCustomersLoading } = usePosCustomers();
+  const { 
+    customers, 
+    loading: isCustomersLoading,
+    refetch: refetchCustomers } = usePosCustomers();
 
   // Default to Walk-in customer (ID "1" in database)
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("1");
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [lastCompletedSale, setLastCompletedSale] = useState<string | null>(
     null,
@@ -96,8 +99,9 @@ export default function PosPage() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const selectedCustomer =
-    customers.find((c) => String(c.id) === selectedCustomerId) ?? null;
+  const selectedCustomer = selectedCustomerId
+    ? customers.find((c) => String(c.id) === selectedCustomerId) ?? null
+    : null;
 
   usePosShortcuts({
     onFocusSearch: () => searchInputRef.current?.focus(),
@@ -156,6 +160,7 @@ export default function PosPage() {
             onSelectCustomer={setSelectedCustomerId}
             customers={customers}
             loading={isCustomersLoading}
+            onRefetchCustomers={refetchCustomers}
           />
         </div>
 

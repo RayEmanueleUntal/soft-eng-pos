@@ -354,7 +354,7 @@ export async function fetchTransactionsApi(): Promise<TransactionSummary[]> {
         invoice_number: item.invoice_number ?? `INV-${item.id}`,
         date: formattedDate,
         status: item.status,
-        customerName: item.customer?.name || "Walk-in Retail Customer",
+        customerName: item.customer?.name?.trim() ? item.customer.name : "-",
         paymentMethod,
         totalAmount: Number(item.grand_total ?? 0),
         cashierName: item.cashier_name || "Cashier",

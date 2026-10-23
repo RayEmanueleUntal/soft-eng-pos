@@ -33,6 +33,7 @@ interface PosCartProps {
   onSelectCustomer: (customerId: string) => void;
   customers?: PosCustomer[];
   loading?: boolean;
+  onRefetchCustomers?: () => Promise<void> | void;
 }
 
 export function PosCart({
@@ -42,13 +43,10 @@ export function PosCart({
   onClearCart,
   selectedCustomerId,
   onSelectCustomer,
-  customers: externalCustomers,
-  loading: externalLoading,
+  customers = [],
+  loading = false,
+  onRefetchCustomers,
 }: PosCartProps) {
-  const hookData = usePosCustomers();
-  const customers = externalCustomers ?? hookData.customers;
-  const loading = externalLoading ?? hookData.loading;
-
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -100,24 +98,24 @@ export function PosCart({
               <div className="font-medium text-foreground truncate">
                 {selectedCustomerData
                   ? `${selectedCustomerData.name} (${selectedCustomerData.type === "WHOLESALE" ? "Wholesale" : "Retail"})`
-                  : "Select Customer..."}
+                  : "None"}
               </div>
             </div>
 
-            {selectedCustomerData && (
+            
               <Badge
                 variant={
-                  selectedCustomerData.type === "WHOLESALE"
+                  selectedCustomerData?.type === "WHOLESALE"
                     ? "default"
                     : "secondary"
                 }
                 className="rounded-sm text-[10px] shrink-0"
               >
-                {selectedCustomerData.type === "WHOLESALE"
+                {selectedCustomerData?.type === "WHOLESALE"
                   ? "Wholesale"
                   : "Retail"}
               </Badge>
-            )}
+            
 
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground ml-1 shrink-0" />
           </div>
@@ -138,6 +136,31 @@ export function PosCart({
               </div>
 
               <div className="max-h-60 overflow-y-auto flex flex-col gap-1">
+                <div
+                  onClick={() => {
+                    onSelectCustomer("");
+                    setIsOpen(false);
+                    setSearchTerm("");
+                  }}
+                  className={`flex items-center justify-between p-2 text-xs rounded-sm cursor-pointer transition-colors ${
+                    !selectedCustomerId || selectedCustomerId === ""
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium text-foreground">None</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      Standard Retail
+                    </span>
+                  </div>
+                  {(!selectedCustomerId || selectedCustomerId === "") && (
+                    <Check className="h-3.5 w-3.5 text-primary" />
+                  )}
+                </div>
+                <div className="border-t border-border my-1" />
+                {/* 2. Database Customers list */}
+
                 {filteredCustomers.length === 0 ? (
                   <div className="p-2 text-center text-xs text-muted-foreground">
                     No customer found.
@@ -183,9 +206,13 @@ export function PosCart({
         </div>
 
         <div className="flex items-center h-full">
-          <Button size="lg" onClick={() => setIsAddOpen(true)} className="shrink-0 h-full px-2.5 text-xs font-medium" >
-          <Plus className=" h-7 w-4" /> <User className=""/>
-        </Button>
+          <Button
+            size="lg"
+            onClick={() => setIsAddOpen(true)}
+            className="shrink-0 h-full px-2.5 text-xs font-medium"
+          >
+            <Plus className=" h-7 w-4" /> <User className="" />
+          </Button>
         </div>
       </div>
 
@@ -253,14 +280,19 @@ export function PosCart({
       </div>
 
       <AddCustomerModal
-              isOpen={isAddOpen}
-              mode="add"
-              onClose={() => setIsAddOpen(false)}
-              onSuccess={() => {
-                setIsAddOpen(false);
-                hookData.refetch();
-              }}
-            />
+        isOpen={isAddOpen}
+        mode="add"
+        onClose={() => setIsAddOpen(false)}
+        onSuccess={async (newCustomer: any) => {
+          setIsAddOpen(false);
+          await onRefetchCustomers?.();
+
+          const newID = newCustomer?.id ?? newCustomer?.data?.id;
+          if (newID) {
+            onSelectCustomer(String(newID));
+          }
+        }}
+      />
     </div>
   );
 }
