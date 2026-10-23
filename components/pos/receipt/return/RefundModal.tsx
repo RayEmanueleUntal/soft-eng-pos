@@ -154,8 +154,15 @@ export function RefundModal({ open, onOpenChange, receipt, onSuccess }: RefundMo
                 setQuantity("1");
               }}
             >
-              <SelectTrigger id="item-select" className="rounded-[4px] text-xs h-8">
-                <SelectValue placeholder="Choose an item from receipt" />
+              <SelectTrigger id="item-select" className="w-full rounded-[4px] text-xs h-8">
+                <SelectValue placeholder="Choose an item from receipt">
+                  {(val: string | null) => {
+                    if (val === null || val === "" || val === undefined) return "Choose an item from receipt";
+                    const idx = Number(val);
+                    const it = receipt.items[idx];
+                    return it ? `${it.product_name} (Qty: ${it.quantity})` : "Choose an item from receipt";
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {receipt.items.map((item, index) => (
@@ -194,11 +201,18 @@ export function RefundModal({ open, onOpenChange, receipt, onSuccess }: RefundMo
               Condition
             </Label>
             <Select
-              value={condition || undefined}
+              value={condition || ""}
               onValueChange={(value) => setCondition(value as ItemCondition)}
+              disabled={!selectedItem}
             >
-              <SelectTrigger id="condition" className="rounded-[4px] text-xs h-8">
-                <SelectValue placeholder="Select condition" />
+              <SelectTrigger id="condition" className="w-full rounded-[4px] text-xs h-8">
+                <SelectValue placeholder="Select condition">
+                  {(val: string | null) => {
+                    if (val === "DEFECTIVE") return "Defective";
+                    if (val === "CHANGE_OF_MIND") return "Change of Mind";
+                    return "Select condition";
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="DEFECTIVE" className="text-xs">
@@ -221,6 +235,7 @@ export function RefundModal({ open, onOpenChange, receipt, onSuccess }: RefundMo
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Describe why the item is being returned..."
+              disabled={!selectedItem}
               className="rounded-[4px] text-xs min-h-[80px]"
               maxLength={500}
             />
