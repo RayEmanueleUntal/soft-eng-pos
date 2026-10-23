@@ -11,7 +11,13 @@ import {
 } from "@/components/ui/table";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, MoreVertical, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Search,
+  MoreVertical,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,7 +38,7 @@ import {
   createSupplier,
   updateSupplier,
   deleteSupplier,
-} from "@/lib/api/suppliers";
+} from "@/lib/suppliers/suppliers";
 import { SupplierModal } from "./SupplierModal";
 import { SupplierDeleteDialog } from "./SupplierDeleteDialog";
 
@@ -51,14 +57,21 @@ export function SupplierTable() {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
+    null,
+  );
 
   // Delete Dialog State
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
-  const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
+  const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(
+    null,
+  );
 
   // Toast message state
-  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   const showFeedback = (type: "success" | "error", message: string) => {
     setFeedback({ type, message });
@@ -78,7 +91,10 @@ export function SupplierTable() {
       setTotalPages(res.totalPages);
       setTotalItems(res.total);
     } catch (err: any) {
-      showFeedback("error", err.response?.data?.message || "Failed to load suppliers.");
+      showFeedback(
+        "error",
+        err.response?.data?.message || "Failed to load suppliers.",
+      );
     } finally {
       setLoading(false);
     }
@@ -112,13 +128,19 @@ export function SupplierTable() {
     if (!supplierToDelete) return;
     try {
       setActionLoading(true);
-      await deleteSupplier(supplierToDelete.id);
-      showFeedback("success", "Supplier deleted successfully.");
+      const res = await deleteSupplier(supplierToDelete.id);
+      showFeedback(
+        "success",
+        res.message || "Supplier processed successfully.",
+      );
       setIsDeleteDialogOpen(false);
       setSupplierToDelete(null);
       loadData();
     } catch (err: any) {
-      showFeedback("error", err.response?.data?.message || "Failed to delete supplier.");
+      showFeedback(
+        "error",
+        err.response?.data?.message || "Failed to delete supplier.",
+      );
     } finally {
       setActionLoading(false);
     }
@@ -201,38 +223,68 @@ export function SupplierTable() {
             {loading ? (
               Array.from({ length: 5 }).map((_, idx) => (
                 <TableRow key={idx}>
-                  <TableCell><div className="h-4 w-32 bg-muted animate-pulse rounded" /></TableCell>
-                  <TableCell><div className="h-4 w-24 bg-muted animate-pulse rounded" /></TableCell>
-                  <TableCell><div className="h-4 w-40 bg-muted animate-pulse rounded" /></TableCell>
-                  <TableCell><div className="h-4 w-16 bg-muted animate-pulse rounded" /></TableCell>
-                  <TableCell><div className="h-4 w-16 bg-muted animate-pulse rounded" /></TableCell>
-                  <TableCell><div className="h-4 w-8 bg-muted animate-pulse rounded" /></TableCell>
+                  <TableCell>
+                    <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="h-4 w-40 bg-muted animate-pulse rounded" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="h-4 w-16 bg-muted animate-pulse rounded" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="h-4 w-16 bg-muted animate-pulse rounded" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="h-4 w-8 bg-muted animate-pulse rounded" />
+                  </TableCell>
                 </TableRow>
               ))
             ) : suppliers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell
+                  colSpan={6}
+                  className="text-center py-8 text-muted-foreground"
+                >
                   No suppliers found.
                 </TableCell>
               </TableRow>
             ) : (
               suppliers.map((supplier) => {
                 const name = supplier.companyName || supplier.name || "N/A";
-                const contact = supplier.contactPerson || "N/A";
+                const contact =
+                  supplier.contactPerson || supplier.contact_person || "N/A";
                 const contactInfo =
-                  [supplier.email, supplier.phone].filter(Boolean).join(" • ") || "N/A";
-                const leadTime = supplier.leadTimeDays ?? 0;
-                const status = supplier.status || "ACTIVE";
+                  [supplier.email, supplier.phone || supplier.contact_number]
+                    .filter(Boolean)
+                    .join(" • ") || "N/A";
+                const leadTime =
+                  supplier.leadTimeDays ?? supplier.lead_time_days ?? 0;
+                const status =
+                  supplier.status ||
+                  (supplier.is_active ? "ACTIVE" : "INACTIVE");
 
                 return (
                   <TableRow key={supplier.id}>
-                    <TableCell className="font-medium text-foreground max-w-[200px] truncate" title={name}>
+                    <TableCell
+                      className="font-medium text-foreground max-w-[200px] truncate"
+                      title={name}
+                    >
                       {name}
                     </TableCell>
-                    <TableCell className="max-w-[150px] truncate" title={contact}>
+                    <TableCell
+                      className="max-w-[150px] truncate"
+                      title={contact}
+                    >
                       {contact}
                     </TableCell>
-                    <TableCell className="text-muted-foreground max-w-[220px] truncate" title={contactInfo}>
+                    <TableCell
+                      className="text-muted-foreground max-w-[220px] truncate"
+                      title={contactInfo}
+                    >
                       {contactInfo}
                     </TableCell>
                     <TableCell className="font-mono">{leadTime} Days</TableCell>
@@ -250,7 +302,10 @@ export function SupplierTable() {
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger
-                          className={buttonVariants({ variant: "ghost", className: "h-8 w-8 p-0" })}
+                          className={buttonVariants({
+                            variant: "ghost",
+                            className: "h-8 w-8 p-0",
+                          })}
                         >
                           <MoreVertical className="h-4 w-4 text-muted-foreground" />
                         </DropdownMenuTrigger>
