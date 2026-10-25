@@ -173,6 +173,18 @@ export interface PaymentModalCustomer {
   type?: "Retail" | "Wholesale" | "RETAIL" | "WHOLESALE";
 }
 
+export interface CheckoutPaymentEntry {
+  payment_method: PaymentMethod;
+  amount_paid: number;
+  cash_tendered?: number;
+  change_given?: number;
+  reference_number?: string;
+  mobile_number?: string;
+  gcash_mobile_number?: string;
+  credit_due_date?: string;
+  po_number?: string;
+}
+
 export interface CheckoutPayload {
   transaction_type: TransactionType;
   items: Array<{
@@ -187,17 +199,8 @@ export interface CheckoutPayload {
   customer_id?: string | number | null;
   customer_name?: string | null;
   grand_total: number;
-  payment: {
-    payment_method: PaymentMethod;
-    amount_paid: number;
-    cash_tendered?: number;
-    change_given?: number;
-    reference_number?: string;
-    mobile_number?: string;
-    gcash_mobile_number?: string;
-    credit_due_date?: string;
-    po_number?: string;
-  };
+  payment: CheckoutPaymentEntry;
+  payments?: CheckoutPaymentEntry[];
   override?: boolean;
 }
 
@@ -306,7 +309,7 @@ export interface TransactionSummary {
   date: string;
   status?: TransactionStatus;
   customerName: string;
-  paymentMethod: "CASH" | "GCASH" | "CREDIT";
+  paymentMethod: "CASH" | "GCASH" | "CREDIT" | "SPLIT";
   totalAmount: number;
   cashierName?: string;
 }

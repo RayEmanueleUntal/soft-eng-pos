@@ -27,7 +27,7 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
   const [prevAmountDue, setPrevAmountDue] = useState(amountDue);
   if (amountDue !== prevAmountDue) {
     setPrevAmountDue(amountDue);
-    if (amount === "" || amount === prevAmountDue) {
+    if (amount === "" || amount === prevAmountDue || (typeof amount === "number" && typeof amountDue === "number" && amount > amountDue)) {
       setAmount(amountDue ?? "");
     }
   }
@@ -42,16 +42,20 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
   const isMobileValid = mobileRegex.test(trimmedMobile);
   const isAmountValid = typeof amount === "number" && amount > 0;
 
+  const isNotExceedingDue = amountDue === undefined || (typeof amount === "number" && amount <= amountDue + 0.001);
+
   let errorMessage = "";
   if (!isAmountValid) {
     errorMessage = "Valid GCash payment amount is required.";
+  } else if (!isNotExceedingDue && amountDue !== undefined) {
+    errorMessage = `GCash payment cannot exceed remaining due (₱${amountDue.toFixed(2)}).`;
   } else if (!isRefValid) {
     errorMessage = "GCash Reference Number is required (at least 6 digits).";
   } else if (!isMobileValid) {
     errorMessage = "A valid 11-digit GCash mobile number (09XXXXXXXXX) is required.";
   }
 
-  const isValid = isAmountValid && isRefValid && isMobileValid;
+  const isValid = isAmountValid && isNotExceedingDue && isRefValid && isMobileValid;
 
   useEffect(() => {
     onPaymentChange({

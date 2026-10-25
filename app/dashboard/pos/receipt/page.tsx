@@ -95,6 +95,8 @@ export default function TransactionHistoryPage() {
         return "secondary";
       case "CREDIT":
         return "outline";
+      case "SPLIT":
+        return "secondary";
       default:
         return "default";
     }

@@ -10,6 +10,7 @@ import type {
   RawBackendCustomer,
   PosCustomer,
   CustomerApiResponse,
+  CheckoutPaymentEntry,
   CheckoutPayload,
   CheckoutResponse,
   BackendCheckoutResponse,
@@ -134,9 +135,11 @@ export function buildCheckoutPayload(
   details: PaymentTabDetails | undefined,
   items: PaymentModalItem[],
   total: number,
-  customer: PaymentModalCustomer | null
+  customer: PaymentModalCustomer | null,
+  splitPayments?: CheckoutPaymentEntry[]
 ): CheckoutPayload {
-  const isWholesale = method === "credit" || customer?.type?.toUpperCase() === "WHOLESALE";
+  const hasCreditTender = splitPayments?.some((p) => p.payment_method === "CREDIT");
+  const isWholesale = method === "credit" || hasCreditTender || customer?.type?.toUpperCase() === "WHOLESALE";
   const cash = details?.type === "CASH" ? details : undefined;
   const gcash = details?.type === "GCASH" ? details : undefined;
   const credit = details?.type === "CREDIT" ? details : undefined;
@@ -166,7 +169,7 @@ export function buildCheckoutPayload(
     customer_id: method === "credit" ? credit?.customerId : customer?.id ?? null,
     customer_name: method === "credit" ? credit?.customerName : customer?.name ?? null,
     grand_total: total,
-    payment: {
+    payment: (splitPayments && splitPayments.length > 0) ? splitPayments[0] : {
       payment_method: method.toUpperCase() as PaymentMethod,
       amount_paid: total,
       cash_tendered: cash?.cashTendered,
@@ -177,6 +180,7 @@ export function buildCheckoutPayload(
       credit_due_date: credit?.dueDate,
       po_number: credit?.poNumber,
     },
+    payments: (splitPayments && splitPayments.length > 0) ? splitPayments : undefined,
     override: false,
   };
 }
@@ -198,26 +202,25 @@ export async function submitCheckout(payload: CheckoutPayload): Promise<Checkout
         transaction_type: payload.transaction_type || "RETAIL",
         line_discount: Number(item.line_discount ?? 0),
       })),
-      payments: [
-        {
-          payment_method: payload.payment.payment_method,
-          amount_paid: Number(payload.payment.amount_paid),
-          details:
-            payload.payment.payment_method === "CASH"
-              ? {
-                  cash_tendered: Number(payload.payment.cash_tendered ?? payload.payment.amount_paid),
-                  change_given: Number(payload.payment.change_given ?? 0),
-                }
-              : payload.payment.payment_method === "GCASH"
-              ? {
-                  reference_number: payload.payment.reference_number || "N/A",
-                  gcash_mobile_number: payload.payment.gcash_mobile_number || payload.payment.mobile_number || "",
-                }
-              : {
-                  date: payload.payment.credit_due_date ? new Date(payload.payment.credit_due_date) : new Date(),
-                },
-        },
-      ],
+      payments: (payload.payments && payload.payments.length > 0 ? payload.payments : [payload.payment]).map((p) => ({
+        payment_method: p.payment_method,
+        amount_paid: Number(p.amount_paid),
+        details:
+          p.payment_method === "CASH"
+            ? {
+                cash_tendered: Number(p.cash_tendered ?? p.amount_paid),
+                change_given: Number(p.change_given ?? 0),
+              }
+            : p.payment_method === "GCASH"
+            ? {
+                reference_number: p.reference_number || "N/A",
+                gcash_mobile_number: p.gcash_mobile_number || p.mobile_number || "",
+              }
+            : {
+                date: p.credit_due_date ? new Date(p.credit_due_date) : new Date(),
+                due_date: p.credit_due_date ? new Date(p.credit_due_date) : new Date(),
+              },
+      })),
       override: payload.override ?? false,
     };
 
@@ -253,17 +256,25 @@ export async function submitCheckout(payload: CheckoutPayload): Promise<Checkout
         type: payload.transaction_type,
         unit_of_measure: item.unit_of_measure || "PCS",
       })),
-      payments: [
-        {
-          payment_method: payload.payment.payment_method,
-          amount_paid: Number(payload.payment.amount_paid),
-          cash_tendered: payload.payment.cash_tendered,
-          change_given: payload.payment.change_given,
-          reference_number: payload.payment.reference_number,
-          mobile_number: payload.payment.mobile_number,
-          gcash_mobile_number: payload.payment.gcash_mobile_number,
-        },
-      ],
+      payments: Array.isArray(tx.payments) && tx.payments.length > 0
+        ? tx.payments.map((p: { payment_method: PaymentMethod; amount_paid: number | string; cashPayment?: { cash_tendered?: number | string; change_given?: number | string }; gCashPayment?: { reference_number?: string; gcash_mobile_number?: string } }) => ({
+            payment_method: p.payment_method,
+            amount_paid: Number(p.amount_paid),
+            cash_tendered: p.cashPayment?.cash_tendered !== undefined ? Number(p.cashPayment.cash_tendered) : undefined,
+            change_given: p.cashPayment?.change_given !== undefined ? Number(p.cashPayment.change_given) : undefined,
+            reference_number: p.gCashPayment?.reference_number,
+            mobile_number: p.gCashPayment?.gcash_mobile_number,
+            gcash_mobile_number: p.gCashPayment?.gcash_mobile_number,
+          }))
+        : (payload.payments && payload.payments.length > 0 ? payload.payments : [payload.payment]).map((p) => ({
+            payment_method: p.payment_method,
+            amount_paid: Number(p.amount_paid),
+            cash_tendered: p.cash_tendered,
+            change_given: p.change_given,
+            reference_number: p.reference_number,
+            mobile_number: p.mobile_number,
+            gcash_mobile_number: p.gcash_mobile_number,
+          })),
     };
 
     return {
@@ -301,17 +312,15 @@ export async function submitCheckout(payload: CheckoutPayload): Promise<Checkout
         type: payload.transaction_type,
         unit_of_measure: item.unit_of_measure || "PCS",
       })),
-      payments: [
-        {
-          payment_method: payload.payment.payment_method,
-          amount_paid: Number(payload.payment.amount_paid),
-          cash_tendered: payload.payment.cash_tendered,
-          change_given: payload.payment.change_given,
-          reference_number: payload.payment.reference_number,
-          mobile_number: payload.payment.mobile_number,
-          gcash_mobile_number: payload.payment.gcash_mobile_number,
-        },
-      ],
+      payments: (payload.payments && payload.payments.length > 0 ? payload.payments : [payload.payment]).map((p) => ({
+        payment_method: p.payment_method,
+        amount_paid: Number(p.amount_paid),
+        cash_tendered: p.cash_tendered,
+        change_given: p.change_given,
+        reference_number: p.reference_number,
+        mobile_number: p.mobile_number,
+        gcash_mobile_number: p.gcash_mobile_number,
+      })),
     };
 
     return {
@@ -356,7 +365,8 @@ export async function fetchTransactionsApi(): Promise<TransactionSummary[]> {
       : [];
 
     return rawList.map((item) => {
-      const paymentMethod = (item.payments?.[0]?.payment_method || "CASH") as "CASH" | "GCASH" | "CREDIT";
+      const isSplit = Array.isArray(item.payments) && item.payments.length > 1;
+      const paymentMethod = isSplit ? "SPLIT" : ((item.payments?.[0]?.payment_method || "CASH") as "CASH" | "GCASH" | "CREDIT" | "SPLIT");
       let formattedDate = "N/A";
       if (item.date) {
         try {
