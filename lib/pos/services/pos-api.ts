@@ -31,14 +31,17 @@ export type * from "../types/pos-types";
 // 1. Data Adapters (Pure Mapping)
 // ==========================================
 
-export function toCatalogProduct(item: BackendProduct): CatalogProduct {
+export function toCatalogProduct(
+  item: BackendProduct,
+  categoryMap: Record<number, string> = {}
+): CatalogProduct {
   const price = Number(item.retail_price ?? 0);
-  const categoryName =
-    typeof item.category === "object" && item.category !== null
-      ? item.category.name
-      : typeof item.category === "string"
-      ? item.category
-      : "General";
+
+  // 1. Get the category ID from the product
+  const catId = Number((item as any).categoryId ?? (item as any).category_id ?? (item as any).category?.id);
+
+  // 2. Look up the live name from database map using that ID!
+  const categoryName = (item as any).category?.name || categoryMap[catId] || "General";
 
   return {
     id: item.id,
@@ -78,16 +81,34 @@ export function toPosCustomer(item: RawBackendCustomer): PosCustomer {
 // 2. API Functions
 // ==========================================
 
+export async function fetchCategoriesApi(): Promise<string[]> {
+  const res = await apiClient.get<Array<{ id: number; name?: string; categoryName?: string }>>("/product-categories");
+  return res.data.map(c => c.name || c.categoryName || `Category ${c.id}`);
+}
+
 /**
  * Fetch and map catalog products from backend API (GET /products).
  */
 export async function fetchProductsApi(): Promise<CatalogProduct[]> {
-  const response = await apiClient.get<{ data: BackendProduct[] } | BackendProduct[]>("/products");
-  const rawList = Array.isArray(response.data)
-    ? response.data
-    : response.data?.data || [];
+  // 1. Fetch both products and live categories from database
+  const [productsRes, categoriesRes] = await Promise.all([
+    apiClient.get<{ data: BackendProduct[] } | BackendProduct[]>("/products"),
+    apiClient.get<any[]>("/product-categories").catch(() => ({ data: [] })),
+  ]);
 
-  return rawList.map(toCatalogProduct);
+  // 2. Build simple ID -> Name map from database (e.g. { 1: "Bolts", 3: "Washers", ... })
+  const categoryMap: Record<number, string> = {};
+  const categoriesList = Array.isArray(categoriesRes.data) ? categoriesRes.data : [];
+  categoriesList.forEach((c) => {
+    categoryMap[c.id] = c.name || c.categoryName;
+  });
+
+  const rawList = Array.isArray(productsRes.data)
+    ? productsRes.data
+    : productsRes.data?.data || [];
+
+  // 3. Pass the dynamic categoryMap to toCatalogProduct
+  return rawList.map((item) => toCatalogProduct(item, categoryMap));
 }
 
 /**
