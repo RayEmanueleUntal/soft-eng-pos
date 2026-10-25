@@ -165,6 +165,10 @@ export interface PaymentModalItem {
   subtotal: number;
   unit_of_measure?: string;
   line_discount?: number;
+  retailPrice?: number;
+  wholesalePrice?: number;
+  pricingType?: "RETAIL" | "WHOLESALE";
+  discountPercent?: number;
 }
 
 export interface PaymentModalCustomer {
@@ -195,10 +199,13 @@ export interface CheckoutPayload {
     subtotal: number;
     unit_of_measure?: UnitOfMeasure | string;
     line_discount?: number;
+    pricingType?: "RETAIL" | "WHOLESALE";
   }>;
   customer_id?: string | number | null;
   customer_name?: string | null;
   grand_total: number;
+  discount_total?: number;
+  order_discount?: number;
   payment: CheckoutPaymentEntry;
   payments?: CheckoutPaymentEntry[];
   override?: boolean;
@@ -291,6 +298,8 @@ export interface Receipt {
   invoice_number: string | null;
   date: Date | string;
   grand_total: number;
+  discount_total?: number;
+  order_discount?: number;
   transaction_type: TransactionType;
   status?: TransactionStatus;
   cashier_name: string;

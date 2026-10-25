@@ -8,27 +8,33 @@ import {
   Search,
   ChevronDown,
   Plus,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 import type { PaymentModalItem } from "../payment/PaymentModal";
 import { CartItemRow } from "./CartItemRow";
 import { CartSummary } from "./CartSummary";
-import { formatPeso, usePosCustomers, type PosCustomer } from "@/lib/pos";
+import { formatPeso, type PosCustomer } from "@/lib/pos";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useState, useRef, useEffect } from "react";
 import { AddCustomerModal } from "@/components/profiles/customers/AddCustomerModal";
-
 import { Button } from "@/components/ui/button";
 
 interface PosCartProps {
   cart: PaymentModalItem[];
   cartTotal: number;
+  itemsSubtotal?: number;
+  orderDiscountPercent?: number;
+  orderDiscountAmount?: number;
   onUpdateQuantity: (
     productId: string | number | undefined,
     delta: number,
   ) => void;
+  onUpdateOrderDiscountPercent?: (percent: number) => void;
+  onToggleItemPricing?: (productId: string | number | undefined) => void;
+  onToggleAllPricing?: (targetType: "RETAIL" | "WHOLESALE") => void;
   onClearCart: () => void;
-
   selectedCustomerId: string;
   onSelectCustomer: (customerId: string) => void;
   customers?: PosCustomer[];
@@ -39,7 +45,13 @@ interface PosCartProps {
 export function PosCart({
   cart,
   cartTotal,
+  itemsSubtotal,
+  orderDiscountPercent,
+  orderDiscountAmount,
   onUpdateQuantity,
+  onUpdateOrderDiscountPercent,
+  onToggleItemPricing,
+  onToggleAllPricing,
   onClearCart,
   selectedCustomerId,
   onSelectCustomer,
@@ -55,6 +67,11 @@ export function PosCart({
   const selectedCustomerData = customers.find(
     (c) => String(c.id) === String(selectedCustomerId),
   );
+  const isWholesaleCustomer =
+    selectedCustomerData?.type?.toUpperCase() === "WHOLESALE";
+
+  const isAllWholesale =
+    cart.length > 0 && cart.every((i) => i.pricingType === "WHOLESALE");
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -97,25 +114,17 @@ export function PosCart({
               </span>
               <div className="font-medium text-foreground truncate">
                 {selectedCustomerData
-                  ? `${selectedCustomerData.name} (${selectedCustomerData.type === "WHOLESALE" ? "Wholesale" : "Retail"})`
-                  : "None"}
+                  ? `${selectedCustomerData.name} (${isWholesaleCustomer ? "Wholesale" : "Retail"})`
+                  : "None / Retail"}
               </div>
             </div>
 
-            
-              <Badge
-                variant={
-                  selectedCustomerData?.type === "WHOLESALE"
-                    ? "default"
-                    : "secondary"
-                }
-                className="rounded-sm text-[10px] shrink-0"
-              >
-                {selectedCustomerData?.type === "WHOLESALE"
-                  ? "Wholesale"
-                  : "Retail"}
-              </Badge>
-            
+            <Badge
+              variant={isWholesaleCustomer ? "default" : "secondary"}
+              className="rounded-sm text-[10px] shrink-0"
+            >
+              {isWholesaleCustomer ? "Wholesale" : "Retail"}
+            </Badge>
 
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground ml-1 shrink-0" />
           </div>
@@ -136,6 +145,7 @@ export function PosCart({
               </div>
 
               <div className="max-h-60 overflow-y-auto flex flex-col gap-1">
+                {/* 1. Default None / Retail option */}
                 <div
                   onClick={() => {
                     onSelectCustomer("");
@@ -149,9 +159,9 @@ export function PosCart({
                   }`}
                 >
                   <div className="flex flex-col">
-                    <span className="font-medium text-foreground">None</span>
+                    <span className="font-medium text-foreground">None / Retail</span>
                     <span className="text-[10px] text-muted-foreground">
-                      Standard Retail
+                      Standard Walk-in Customer
                     </span>
                   </div>
                   {(!selectedCustomerId || selectedCustomerId === "") && (
@@ -159,8 +169,8 @@ export function PosCart({
                   )}
                 </div>
                 <div className="border-t border-border my-1" />
-                {/* 2. Database Customers list */}
 
+                {/* 2. Database Customers list */}
                 {filteredCustomers.length === 0 ? (
                   <div className="p-2 text-center text-xs text-muted-foreground">
                     No customer found.
@@ -210,6 +220,7 @@ export function PosCart({
             size="lg"
             onClick={() => setIsAddOpen(true)}
             className="shrink-0 h-full px-2.5 text-xs font-medium"
+            title="Register New Customer"
           >
             <Plus className=" h-7 w-4" /> <User className="" />
           </Button>
@@ -217,22 +228,50 @@ export function PosCart({
       </div>
 
       <div className="flex flex-col flex-1 min-h-0 border border-input bg-card rounded-[4px] overflow-hidden ">
-        {/* Searchable Customer Selector */}
-
         <div className="h-8 border-b border-border flex justify-between items-center bg-muted px-3 shrink-0">
           <div className="flex items-center gap-2">
             <span className="font-mono text-[11px] uppercase text-muted-foreground font-bold">
               Line Items ({cart.length})
             </span>
           </div>
-          {cart.length > 0 && (
-            <button
-              onClick={onClearCart}
-              className="text-[11px] text-[#DC2626] bg-[#FEF2F2] hover:bg-[#FEE2E2] border border-[#F87171] px-2 py-0.5 rounded-[2px] flex items-center gap-1 cursor-pointer font-bold uppercase font-mono transition-colors"
-            >
-              <Trash2 className="h-3 w-3" /> Void
-            </button>
-          )}
+
+          <div className="flex items-center gap-1.5">
+            {/* Wholesale Price Single Switch: only visible when wholesale customer selected */}
+            {isWholesaleCustomer && cart.length > 0 && (
+              <button
+                type="button"
+                onClick={() =>
+                  onToggleAllPricing?.(isAllWholesale ? "RETAIL" : "WHOLESALE")
+                }
+                className={`flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold rounded-[3px] border transition-colors cursor-pointer ${
+                  isAllWholesale
+                    ? "bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/25"
+                    : "bg-muted/70 border-input text-muted-foreground hover:text-foreground"
+                }`}
+                title={
+                  isAllWholesale
+                    ? "Click to switch all items to Retail price"
+                    : "Click to switch all items to Wholesale price"
+                }
+              >
+                {isAllWholesale ? (
+                  <ToggleRight className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                ) : (
+                  <ToggleLeft className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
+                <span>All Wholesale</span>
+              </button>
+            )}
+
+            {cart.length > 0 && (
+              <button
+                onClick={onClearCart}
+                className="text-[11px] text-[#DC2626] bg-[#FEF2F2] hover:bg-[#FEE2E2] border border-[#F87171] px-2 py-0.5 rounded-[2px] flex items-center gap-1 cursor-pointer font-bold uppercase font-mono transition-colors"
+              >
+                <Trash2 className="h-3 w-3" /> Void
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Cart Item List */}
@@ -267,7 +306,9 @@ export function PosCart({
                     key={item.productId ?? item.id}
                     item={item}
                     index={idx}
+                    isWholesaleCustomer={isWholesaleCustomer}
                     onUpdateQuantity={onUpdateQuantity}
+                    onTogglePricingType={onToggleItemPricing}
                   />
                 ))
               )}
@@ -276,7 +317,13 @@ export function PosCart({
         </div>
 
         {/* Summary */}
-        <CartSummary cartTotal={cartTotal} />
+        <CartSummary
+          cartTotal={cartTotal}
+          itemsSubtotal={itemsSubtotal}
+          orderDiscountPercent={orderDiscountPercent}
+          orderDiscountAmount={orderDiscountAmount}
+          onUpdateOrderDiscountPercent={onUpdateOrderDiscountPercent}
+        />
       </div>
 
       <AddCustomerModal

@@ -80,8 +80,19 @@ const MOCK_SWAGGER_RECEIPT = {
 };
 
 export default function PosPage() {
-  const { cart, cartTotal, addItemToCart, updateQuantity, clearCart } =
-    usePosCart();
+  const {
+    cart,
+    cartTotal,
+    itemsSubtotal,
+    orderDiscountPercent,
+    orderDiscountAmount,
+    setOrderDiscountPercent,
+    addItemToCart,
+    updateQuantity,
+    toggleItemPricing,
+    toggleAllPricing,
+    clearCart,
+  } = usePosCart();
   const { 
     customers, 
     loading: isCustomersLoading,
@@ -147,13 +158,19 @@ export default function PosPage() {
           {/* Left: Quick Catalog / Product Grid */}
           <PosCatalog
             searchInputRef={searchInputRef}
-            onAddToCart={addItemToCart}
+            onAddToCart={(prod) => addItemToCart(prod, selectedCustomer?.type === "WHOLESALE" ? "WHOLESALE" : "RETAIL")}
           />
 
           {/* Right: POS Cart & Checkout Trigger */}
           <PosCart
             cart={cart}
             cartTotal={cartTotal}
+            itemsSubtotal={itemsSubtotal}
+            orderDiscountPercent={orderDiscountPercent}
+            orderDiscountAmount={orderDiscountAmount}
+            onUpdateOrderDiscountPercent={setOrderDiscountPercent}
+            onToggleItemPricing={toggleItemPricing}
+            onToggleAllPricing={toggleAllPricing}
             onUpdateQuantity={updateQuantity}
             onClearCart={clearCart}
             selectedCustomerId={selectedCustomerId}
@@ -173,6 +190,7 @@ export default function PosPage() {
           cartTotal={cartTotal}
           cartItems={cart}
           customer={selectedCustomer}
+          orderDiscountAmount={orderDiscountAmount}
           onSuccess={(receipt) => {
             setLastCompletedSale(
               receipt.invoice_number ?? `#${receipt.transactionId}`,

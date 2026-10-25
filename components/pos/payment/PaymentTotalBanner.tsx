@@ -28,10 +28,14 @@ export function PaymentTotalBanner({
           <p className="text-2xl font-extrabold text-white font-mono tabular-nums">
             {formatPeso(cartTotal)}
           </p>
-          {customer && (
+          {customer ? (
             <p className="text-[11px] text-muted-foreground/80 mt-0.5 font-sans">
               Customer: <span className="font-semibold text-white">{customer.name}</span> (
               {customer.type || "Retail"})
+            </p>
+          ) : (
+            <p className="text-[11px] text-muted-foreground/80 mt-0.5 font-sans">
+              Customer: <span className="font-semibold text-white">None / Retail</span> (Walk-in)
             </p>
           )}
         </div>

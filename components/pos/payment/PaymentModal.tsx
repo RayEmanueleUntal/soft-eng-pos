@@ -55,6 +55,7 @@ export interface PaymentModalProps {
   cartTotal: number;
   cartItems?: PaymentModalItem[];
   customer?: PaymentModalCustomer | null;
+  orderDiscountAmount?: number;
   onSuccess?: (receipt: Receipt) => void;
 }
 
@@ -77,6 +78,7 @@ export default function PaymentModal({
   cartTotal,
   cartItems = [],
   customer = null,
+  orderDiscountAmount,
   onSuccess,
 }: PaymentModalProps) {
   const isWholesale = customer?.type?.toUpperCase() === "WHOLESALE";
@@ -246,7 +248,8 @@ export default function PaymentModal({
         cartItems,
         cartTotal,
         customer,
-        finalPayments
+        finalPayments,
+        orderDiscountAmount
       );
 
       const res = await submitCheckout(payload);
