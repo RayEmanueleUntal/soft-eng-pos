@@ -128,7 +128,7 @@ export function PrintableInvoice({
   className,
   id = "printable-receipt",
 }: PrintableInvoiceProps) {
-  const customerName = receipt.customer?.name ?? "Walk-in Customer";
+  const customerName = receipt.customer?.name.trim() ? receipt.customer.name : "-";
   const displayStatus = getReceiptDisplayStatus(receipt);
   const showAdjustments = hasAdjustments(receipt);
   const totalRefunds = computeTotalRefunds(receipt);

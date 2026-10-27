@@ -10,6 +10,7 @@ import type {
   RawBackendCustomer,
   PosCustomer,
   CustomerApiResponse,
+  CheckoutPaymentEntry,
   CheckoutPayload,
   CheckoutResponse,
   BackendCheckoutResponse,
@@ -31,14 +32,17 @@ export type * from "../types/pos-types";
 // 1. Data Adapters (Pure Mapping)
 // ==========================================
 
-export function toCatalogProduct(item: BackendProduct): CatalogProduct {
+export function toCatalogProduct(
+  item: BackendProduct,
+  categoryMap: Record<number, string> = {}
+): CatalogProduct {
   const price = Number(item.retail_price ?? 0);
-  const categoryName =
-    typeof item.category === "object" && item.category !== null
-      ? item.category.name
-      : typeof item.category === "string"
-      ? item.category
-      : "General";
+
+  // 1. Get the category ID from the product
+  const catId = Number((item as any).categoryId ?? (item as any).category_id ?? (item as any).category?.id);
+
+  // 2. Look up the live name from database map using that ID!
+  const categoryName = (item as any).category?.name || categoryMap[catId] || "General";
 
   return {
     id: item.id,
@@ -78,16 +82,34 @@ export function toPosCustomer(item: RawBackendCustomer): PosCustomer {
 // 2. API Functions
 // ==========================================
 
+export async function fetchCategoriesApi(): Promise<string[]> {
+  const res = await apiClient.get<Array<{ id: number; name?: string; categoryName?: string }>>("/product-categories");
+  return res.data.map(c => c.name || c.categoryName || `Category ${c.id}`);
+}
+
 /**
  * Fetch and map catalog products from backend API (GET /products).
  */
 export async function fetchProductsApi(): Promise<CatalogProduct[]> {
-  const response = await apiClient.get<{ data: BackendProduct[] } | BackendProduct[]>("/products");
-  const rawList = Array.isArray(response.data)
-    ? response.data
-    : response.data?.data || [];
+  // 1. Fetch both products and live categories from database
+  const [productsRes, categoriesRes] = await Promise.all([
+    apiClient.get<{ data: BackendProduct[] } | BackendProduct[]>("/products"),
+    apiClient.get<any[]>("/product-categories").catch(() => ({ data: [] })),
+  ]);
 
-  return rawList.map(toCatalogProduct);
+  // 2. Build simple ID -> Name map from database (e.g. { 1: "Bolts", 3: "Washers", ... })
+  const categoryMap: Record<number, string> = {};
+  const categoriesList = Array.isArray(categoriesRes.data) ? categoriesRes.data : [];
+  categoriesList.forEach((c) => {
+    categoryMap[c.id] = c.name || c.categoryName;
+  });
+
+  const rawList = Array.isArray(productsRes.data)
+    ? productsRes.data
+    : productsRes.data?.data || [];
+
+  // 3. Pass the dynamic categoryMap to toCatalogProduct
+  return rawList.map((item) => toCatalogProduct(item, categoryMap));
 }
 
 /**
@@ -113,12 +135,20 @@ export function buildCheckoutPayload(
   details: PaymentTabDetails | undefined,
   items: PaymentModalItem[],
   total: number,
-  customer: PaymentModalCustomer | null
+  customer: PaymentModalCustomer | null,
+  splitPayments?: CheckoutPaymentEntry[],
+  discountTotal?: number
 ): CheckoutPayload {
-  const isWholesale = method === "credit" || customer?.type?.toUpperCase() === "WHOLESALE";
+  const hasCreditTender = splitPayments?.some((p) => p.payment_method === "CREDIT");
+  const isWholesale = method === "credit" || hasCreditTender || customer?.type?.toUpperCase() === "WHOLESALE";
   const cash = details?.type === "CASH" ? details : undefined;
   const gcash = details?.type === "GCASH" ? details : undefined;
   const credit = details?.type === "CREDIT" ? details : undefined;
+
+  const totalDiscount =
+    discountTotal !== undefined
+      ? discountTotal
+      : Number(items.reduce((sum, i) => sum + (i.line_discount ?? 0), 0).toFixed(2));
 
   return {
     transaction_type: isWholesale ? "WHOLESALE" : "RETAIL",
@@ -131,6 +161,7 @@ export function buildCheckoutPayload(
           subtotal: i.subtotal,
           unit_of_measure: i.unit_of_measure,
           line_discount: i.line_discount ?? 0,
+          pricingType: i.pricingType,
         }))
       : [
           {
@@ -144,8 +175,10 @@ export function buildCheckoutPayload(
         ],
     customer_id: method === "credit" ? credit?.customerId : customer?.id ?? null,
     customer_name: method === "credit" ? credit?.customerName : customer?.name ?? null,
+    discount_total: totalDiscount,
+    order_discount: totalDiscount,
     grand_total: total,
-    payment: {
+    payment: (splitPayments && splitPayments.length > 0) ? splitPayments[0] : {
       payment_method: method.toUpperCase() as PaymentMethod,
       amount_paid: total,
       cash_tendered: cash?.cashTendered,
@@ -156,6 +189,7 @@ export function buildCheckoutPayload(
       credit_due_date: credit?.dueDate,
       po_number: credit?.poNumber,
     },
+    payments: (splitPayments && splitPayments.length > 0) ? splitPayments : undefined,
     override: false,
   };
 }
@@ -166,42 +200,57 @@ export function buildCheckoutPayload(
  */
 export async function submitCheckout(payload: CheckoutPayload): Promise<CheckoutResponse> {
   try {
-    // Construct exact DTO matching backend class-validator constraints
+    // Construct exact DTO matching backend NestJS CheckoutDto schema (strictly whitelisted fields)
     const backendDto = {
-      customerId: payload.customer_id ? Number(payload.customer_id) : undefined,
+      customerId:
+        payload.customer_id && Number(payload.customer_id) > 0
+          ? Number(payload.customer_id)
+          : undefined,
       transaction_type: payload.transaction_type || "RETAIL",
-      items: payload.items.map((item) => ({
-        productId: Number(item.product_id),
-        quantity_sold: Number(item.quantity),
-        current_uom: item.unit_of_measure || "PCS",
-        transaction_type: payload.transaction_type || "RETAIL",
-        line_discount: Number(item.line_discount ?? 0),
-      })),
-      payments: [
-        {
-          payment_method: payload.payment.payment_method,
-          amount_paid: Number(payload.payment.amount_paid),
-          details:
-            payload.payment.payment_method === "CASH"
-              ? {
-                  cash_tendered: Number(payload.payment.cash_tendered ?? payload.payment.amount_paid),
-                  change_given: Number(payload.payment.change_given ?? 0),
-                }
-              : payload.payment.payment_method === "GCASH"
-              ? {
-                  reference_number: payload.payment.reference_number || "N/A",
-                  gcash_mobile_number: payload.payment.gcash_mobile_number || payload.payment.mobile_number || "",
-                }
-              : {
-                  date: payload.payment.credit_due_date ? new Date(payload.payment.credit_due_date) : new Date(),
-                },
-        },
-      ],
+      items: payload.items.map((item) => {
+        const itemTxType =
+          payload.transaction_type === "WHOLESALE"
+            ? (item.pricingType || "WHOLESALE")
+            : "RETAIL";
+        return {
+          productId: Number(item.product_id),
+          quantity_sold: Number(item.quantity),
+          current_uom: item.unit_of_measure || "PCS",
+          transaction_type: itemTxType,
+          line_discount: Number(item.line_discount ?? 0),
+        };
+      }),
+      payments: (payload.payments && payload.payments.length > 0 ? payload.payments : [payload.payment]).map((p) => {
+        const paymentMethod = p.payment_method;
+        let details: Record<string, unknown> | undefined;
+
+        if (paymentMethod === "CASH") {
+          details = {
+            cash_tendered: Number(p.cash_tendered ?? p.amount_paid),
+            change_given: Number(p.change_given ?? 0),
+          };
+        } else if (paymentMethod === "GCASH") {
+          details = {
+            reference_number: p.reference_number || "N/A",
+            gcash_mobile_number: p.gcash_mobile_number || p.mobile_number || "",
+          };
+        } else if (paymentMethod === "CREDIT") {
+          details = {
+            date: p.credit_due_date ? new Date(p.credit_due_date) : new Date(),
+          };
+        }
+
+        return {
+          payment_method: paymentMethod,
+          amount_paid: Number(p.amount_paid),
+          details,
+        };
+      }),
       override: payload.override ?? false,
     };
 
     const response = await apiClient.post<BackendCheckoutResponse>("/pos/checkout", backendDto, {
-      timeout: 3000,
+      timeout: 10000,
     });
     const data = response.data;
     const tx = data?.receipt || data;
@@ -213,6 +262,8 @@ export async function submitCheckout(payload: CheckoutPayload): Promise<Checkout
       invoice_number: tx.invoice_number ?? null,
       date: tx.date || new Date().toISOString(),
       grand_total: Number(tx.grand_total ?? payload.grand_total),
+      discount_total: Number(tx.discount_total ?? payload.discount_total ?? 0),
+      order_discount: Number(tx.order_discount ?? payload.order_discount ?? 0),
       transaction_type: tx.transaction_type || payload.transaction_type,
       status: tx.status,
       cashier_name: "POS Cashier",
@@ -222,27 +273,42 @@ export async function submitCheckout(payload: CheckoutPayload): Promise<Checkout
             number: String(payload.customer_id ?? "N/A"),
           }
         : null,
-      items: payload.items.map((item) => ({
-        product_name: item.product_name,
-        quantity: Number(item.quantity),
-        applied_price: Number(item.unit_price),
-        subtotal: Number(item.subtotal),
-        discounted_price: Number(item.unit_price),
-        net_price: Number(item.unit_price),
-        type: payload.transaction_type,
-        unit_of_measure: item.unit_of_measure || "PCS",
-      })),
-      payments: [
-        {
-          payment_method: payload.payment.payment_method,
-          amount_paid: Number(payload.payment.amount_paid),
-          cash_tendered: payload.payment.cash_tendered,
-          change_given: payload.payment.change_given,
-          reference_number: payload.payment.reference_number,
-          mobile_number: payload.payment.mobile_number,
-          gcash_mobile_number: payload.payment.gcash_mobile_number,
-        },
-      ],
+      items: payload.items.map((item) => {
+        const qty = Number(item.quantity) || 1;
+        const grossSubtotal = Number(item.unit_price) * qty;
+        const netSubtotal = Number(item.subtotal);
+        const discPrice = qty > 0 ? Number((netSubtotal / qty).toFixed(2)) : Number(item.unit_price);
+        return {
+          productId: Number(item.product_id),
+          product_name: item.product_name,
+          quantity: qty,
+          applied_price: Number(item.unit_price),
+          subtotal: grossSubtotal,
+          discounted_price: discPrice,
+          net_price: netSubtotal,
+          type: payload.transaction_type,
+          unit_of_measure: item.unit_of_measure || "PCS",
+        };
+      }),
+      payments: Array.isArray(tx.payments) && tx.payments.length > 0
+        ? tx.payments.map((p: { payment_method: PaymentMethod; amount_paid: number | string; cashPayment?: { cash_tendered?: number | string; change_given?: number | string }; gCashPayment?: { reference_number?: string; gcash_mobile_number?: string } }) => ({
+            payment_method: p.payment_method,
+            amount_paid: Number(p.amount_paid),
+            cash_tendered: p.cashPayment?.cash_tendered !== undefined ? Number(p.cashPayment.cash_tendered) : undefined,
+            change_given: p.cashPayment?.change_given !== undefined ? Number(p.cashPayment.change_given) : undefined,
+            reference_number: p.gCashPayment?.reference_number,
+            mobile_number: p.gCashPayment?.gcash_mobile_number,
+            gcash_mobile_number: p.gCashPayment?.gcash_mobile_number,
+          }))
+        : (payload.payments && payload.payments.length > 0 ? payload.payments : [payload.payment]).map((p) => ({
+            payment_method: p.payment_method,
+            amount_paid: Number(p.amount_paid),
+            cash_tendered: p.cash_tendered,
+            change_given: p.change_given,
+            reference_number: p.reference_number,
+            mobile_number: p.mobile_number,
+            gcash_mobile_number: p.gcash_mobile_number,
+          })),
     };
 
     return {
@@ -252,52 +318,18 @@ export async function submitCheckout(payload: CheckoutPayload): Promise<Checkout
       receipt: receipt,
     };
   } catch (error: unknown) {
-    const errorMsg = getErrorMessage(error, "Failed to process checkout.");
-    console.warn("Backend checkout error or timeout, creating local transaction receipt:", errorMsg);
+    const errorDetailsMsg =
+      (error as any)?.response?.data?.details?.message ||
+      (error as any)?.response?.data?.message ||
+      getErrorMessage(error, "Failed to process checkout.");
+    const formattedErrorMsg = Array.isArray(errorDetailsMsg)
+      ? errorDetailsMsg.join(", ")
+      : String(errorDetailsMsg);
 
-    const fallbackTxId = Math.floor(1000 + Math.random() * 9000);
-    const fallbackInvoice = `INV-${new Date().getFullYear()}-${String(fallbackTxId).padStart(4, "0")}`;
-    const fallbackReceipt: Receipt = {
-      transactionId: fallbackTxId,
-      invoice_number: fallbackInvoice,
-      date: new Date().toISOString(),
-      grand_total: Number(payload.grand_total),
-      transaction_type: payload.transaction_type,
-      cashier_name: "POS Cashier",
-      customer: payload.customer_name
-        ? {
-            name: payload.customer_name,
-            number: String(payload.customer_id ?? "N/A"),
-          }
-        : null,
-      items: payload.items.map((item) => ({
-        product_name: item.product_name,
-        quantity: Number(item.quantity),
-        applied_price: Number(item.unit_price),
-        subtotal: Number(item.subtotal),
-        discounted_price: Number(item.unit_price),
-        net_price: Number(item.unit_price),
-        type: payload.transaction_type,
-        unit_of_measure: item.unit_of_measure || "PCS",
-      })),
-      payments: [
-        {
-          payment_method: payload.payment.payment_method,
-          amount_paid: Number(payload.payment.amount_paid),
-          cash_tendered: payload.payment.cash_tendered,
-          change_given: payload.payment.change_given,
-          reference_number: payload.payment.reference_number,
-          mobile_number: payload.payment.mobile_number,
-          gcash_mobile_number: payload.payment.gcash_mobile_number,
-        },
-      ],
-    };
-
+    console.error("Backend checkout error:", formattedErrorMsg, error);
     return {
-      success: true,
-      transactionId: fallbackReceipt.transactionId,
-      invoice_number: fallbackReceipt.invoice_number,
-      receipt: fallbackReceipt,
+      success: false,
+      message: formattedErrorMsg,
     };
   }
 }
@@ -335,7 +367,8 @@ export async function fetchTransactionsApi(): Promise<TransactionSummary[]> {
       : [];
 
     return rawList.map((item) => {
-      const paymentMethod = (item.payments?.[0]?.payment_method || "CASH") as "CASH" | "GCASH" | "CREDIT";
+      const isSplit = Array.isArray(item.payments) && item.payments.length > 1;
+      const paymentMethod = isSplit ? "SPLIT" : ((item.payments?.[0]?.payment_method || "CASH") as "CASH" | "GCASH" | "CREDIT" | "SPLIT");
       let formattedDate = "N/A";
       if (item.date) {
         try {
@@ -354,7 +387,7 @@ export async function fetchTransactionsApi(): Promise<TransactionSummary[]> {
         invoice_number: item.invoice_number ?? `INV-${item.id}`,
         date: formattedDate,
         status: item.status,
-        customerName: item.customer?.name || "Walk-in Retail Customer",
+        customerName: item.customer?.name?.trim() ? item.customer.name : "-",
         paymentMethod,
         totalAmount: Number(item.grand_total ?? 0),
         cashierName: item.cashier_name || "Cashier",

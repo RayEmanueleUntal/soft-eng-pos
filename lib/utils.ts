@@ -31,7 +31,7 @@ export function getErrorMessage(error: unknown, fallback = "An unexpected error 
     }
 
     // Backend validation error (e.g., NestJS 400 Bad Request)
-    const backendMessage = error.response?.data?.message;
+    const backendMessage = error.response?.data?.details?.message || error.response?.data?.message;
     if (backendMessage) {
       return Array.isArray(backendMessage) ? backendMessage.join(", ") : String(backendMessage);
     }

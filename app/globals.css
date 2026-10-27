@@ -129,6 +129,13 @@
   }
 }
 
+@utility headline-xl {
+  font-family: var(--font-heading);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 38px;
+}
+
 .print-only {
   display: none;
 }

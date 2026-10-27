@@ -21,7 +21,7 @@ export function PosCatalog({ searchInputRef, onAddToCart }: PosCatalogProps) {
 
   // Extract unique categories dynamically from loaded products
   const categories = useMemo(() => {
-    const set = new Set(products.map((p) => p.category).filter(Boolean));
+    const set = new Set(products.map((p) => p.category?.trim()).filter(Boolean));
     return ["All", ...Array.from(set)];
   }, [products]);
 
@@ -65,7 +65,7 @@ export function PosCatalog({ searchInputRef, onAddToCart }: PosCatalogProps) {
 
       {/* Category Filter Pills */}
       {categories.length > 1 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 shrink-0 scrollbar-none text-xs">
           {categories.map((cat) => (
             <button
               key={cat}
