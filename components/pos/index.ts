@@ -17,6 +17,7 @@ export type { PaymentModalItem, PaymentModalCustomer } from "./payment/PaymentMo
 
 // Receipt
 export { ReceiptModal } from "./receipt/ReceiptModal";
+export { ReceiptSummaryCard } from "./receipt/ReceiptSummaryCard";
 export { PrintableInvoice } from "./receipt/PrintableInvoice";
 export { RefundModal } from "./receipt/return/RefundModal";
 export { ExchangeModal } from "./receipt/return/ExchangeModal";
