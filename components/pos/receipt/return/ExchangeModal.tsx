@@ -207,9 +207,14 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
                 setQuantity("1");
               }}
             >
-              <SelectTrigger className="rounded-[4px] text-xs h-8">
+              <SelectTrigger className="w-full rounded-[4px] text-xs h-8">
                 <SelectValue placeholder="Choose an item from receipt">
-                  {selectedItem && selectedItem.product_name}
+                  {(val: string | null) => {
+                    if (val === null || val === "" || val === undefined) return "Choose an item from receipt";
+                    const idx = Number(val);
+                    const it = receipt.items[idx];
+                    return it ? `${it.product_name} (Qty: ${it.quantity})` : "Choose an item from receipt";
+                  }}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="w-full">
@@ -249,8 +254,9 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
               Condition
             </Label>
             <Select
-              value={condition || undefined}
+              value={condition || ""}
               onValueChange={(value) => setCondition(value as ItemCondition)}
+              disabled={!selectedItem}
             >
               <SelectTrigger id="condition" className="rounded-[4px] text-xs h-8">
                 <SelectValue placeholder="Select condition">
@@ -278,6 +284,7 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Describe why the item is being exchanged..."
+              disabled={!selectedItem}
               className="rounded-[4px] text-xs min-h-[80px]"
               maxLength={500}
             />
@@ -296,13 +303,27 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
             <Label htmlFor="new-product-select" className="text-xs font-medium">
               Select New Product
             </Label>
+            <Input
+              id="new-product-search"
+              type="text"
+              placeholder="Search by name or SKU..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              disabled={!selectedItem}
+              className="rounded-[4px] text-xs h-8"
+            />
             <Select
               value={newProductId}
               onValueChange={(value) => setNewProductId(value || "")}
+              disabled={!selectedItem}
             >
-              <SelectTrigger id="new-product-select" className="rounded-[4px] text-xs h-8">
+              <SelectTrigger className="w-full rounded-[4px] text-xs h-8">
                 <SelectValue placeholder="Select new product">
-                  {selectedNewProduct && selectedNewProduct.name}
+                  {(val: string | null) => {
+                    if (!val) return "Select new product";
+                    const prod = products.find((p) => String(p.id) === val);
+                    return prod ? `${prod.name} - ${prod.sku} (${prod.price})` : "Select new product";
+                  }}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="w-full">
@@ -327,6 +348,7 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
               step={getQuantityStep(selectedNewProduct?.unit_of_measure)}
               value={newQuantity}
               onChange={(e) => setNewQuantity(e.target.value)}
+              disabled={!selectedItem}
               className="rounded-[4px] text-xs h-8"
             />
           </div>
@@ -350,11 +372,12 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
               id="stock-override"
               checked={allowStockOverride}
               onChange={(e) => setAllowStockOverride(e.target.checked)}
-              className="rounded-[2px] border-input"
+              disabled={!selectedItem}
+              className="rounded-[2px] border-input disabled:cursor-not-allowed disabled:opacity-50"
             />
             <Label
               htmlFor="stock-override"
-              className="text-xs font-medium cursor-pointer"
+              className={cn("text-xs font-medium", !selectedItem ? "cursor-not-allowed opacity-50" : "cursor-pointer")}
             >
               Allow stock override (if new item is out of stock)
             </Label>

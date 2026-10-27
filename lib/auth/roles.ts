@@ -48,6 +48,13 @@ export const ROLE_PERMISSIONS: Record<string, Role[]> = {
     ROLES.STOCK_MANAGEMENT,
   ],
 
+  "/dashboard/inventory/deliveries": [
+    ROLES.ADMIN,
+    ROLES.MANAGER,
+    ROLES.STOCK_MANAGEMENT,
+    ROLES.SECRETARY,
+  ],
+
   "/dashboard/products": [
     ROLES.ADMIN,
     ROLES.MANAGER,
