@@ -156,7 +156,3 @@ The repository enforces modular co-location and strict domain boundaries:
 - **[Design Tokens (`design.md`)](design.md):** Color definitions, tabular typography rules, and density guidelines.
 - **[Project Vision (`AGENT.md`)](AGENT.md):** Operational domains, business logic constraints, and domain entity models.
 - **[Contributing Guidelines (`CONTRIBUTING.md`)](CONTRIBUTING.md):** Guidelines for contributors.
-
-```
-
-```
