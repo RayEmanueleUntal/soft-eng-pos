@@ -43,7 +43,7 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Clear Idempotency Key upon successful response
+/// Clear Idempotency Key upon successful response
 apiClient.interceptors.response.use(
   (response) => {
     const mutatingMethods = ["post", "put", "patch"];
@@ -62,6 +62,7 @@ apiClient.interceptors.response.use(
       !error.config?.url?.includes("/auth/signin")
     ) {
       if (typeof window !== "undefined") {
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
         window.location.href = "/auth/login";
       }
     }

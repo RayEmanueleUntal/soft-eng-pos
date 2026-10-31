@@ -62,7 +62,7 @@ Because our team heavily utilizes AI coding tools (e.g., Copilot, Cursor, ChatGP
 Before submitting your PR for review:
 
 1. **Self-Review Your Code:**
-   - Run `npm run build` or `npx tsc --noEmit` locally to ensure there are no TypeScript compilation or linting errors.
+   - Run `npm run build` or `npx tsc --noEmit` and `npm run lint` locally to ensure there are no TypeScript compilation or linting errors.
    - Verify that no secrets or unintended environment files (like `.env.local`) are tracked in git.
 
 2. **Respond to Feedback:** Address reviewer comments promptly and push updates directly to your feature branch.
