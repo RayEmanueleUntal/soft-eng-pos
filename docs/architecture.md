@@ -40,6 +40,7 @@ app/
 │   ├── inventory/         <-- Stock management domain
 │   │   ├── adjustments/page.tsx
 │   │   ├── bins/page.tsx
+│   │   ├── purchase-orders/page.tsx
 │   │   ├── deliveries/page.tsx
 │   │   ├── rop/page.tsx
 │   │   └── shipments/     <-- Dispatch tracking
