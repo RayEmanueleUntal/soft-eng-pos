@@ -2,13 +2,11 @@
 
 import { useState, useRef } from "react";
 import { CheckCircle2 } from "lucide-react";
-import {
-  PosCatalog,
-  PosCart,
-  PosCommandBar,
-  PaymentModal,
-  ReceiptModal,
-} from "@/components/pos";
+import { PosCart } from "./_components/cart/PosCart";
+import { PosCatalog } from "./_components/catalog/PosCatalog";
+import PaymentModal from "./_components/payment/PaymentModal";
+import { PosCommandBar } from "./_components/PosCommandBar";
+import { ReceiptModal } from "./receipt/[id]/_components/ReceiptModal";
 import {
   usePosCart,
   usePosShortcuts,
@@ -93,10 +91,11 @@ export default function PosPage() {
     toggleAllPricing,
     clearCart,
   } = usePosCart();
-  const { 
-    customers, 
+  const {
+    customers,
     loading: isCustomersLoading,
-    refetch: refetchCustomers } = usePosCustomers();
+    refetch: refetchCustomers,
+  } = usePosCustomers();
 
   // Default to Walk-in customer (ID "1" in database)
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
@@ -111,7 +110,7 @@ export default function PosPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const selectedCustomer = selectedCustomerId
-    ? customers.find((c) => String(c.id) === selectedCustomerId) ?? null
+    ? (customers.find((c) => String(c.id) === selectedCustomerId) ?? null)
     : null;
 
   usePosShortcuts({
@@ -158,7 +157,12 @@ export default function PosPage() {
           {/* Left: Quick Catalog / Product Grid */}
           <PosCatalog
             searchInputRef={searchInputRef}
-            onAddToCart={(prod) => addItemToCart(prod, selectedCustomer?.type === "WHOLESALE" ? "WHOLESALE" : "RETAIL")}
+            onAddToCart={(prod) =>
+              addItemToCart(
+                prod,
+                selectedCustomer?.type === "WHOLESALE" ? "WHOLESALE" : "RETAIL",
+              )
+            }
           />
 
           {/* Right: POS Cart & Checkout Trigger */}
@@ -180,8 +184,6 @@ export default function PosPage() {
             onRefetchCustomers={refetchCustomers}
           />
         </div>
-
-        
 
         {/* 4. Payment Recording Modal */}
         <PaymentModal
@@ -214,7 +216,7 @@ export default function PosPage() {
           />
         )}
       </div>
-       <div className="shrink-0" >
+      <div className="shrink-0">
         {/* 3. Bottom Command Bar */}
         <PosCommandBar
           cartCount={cart.length}
@@ -223,7 +225,7 @@ export default function PosPage() {
           onHoldTransaction={() => alert("Hold function activated")}
           onOpenCheckout={() => setIsCheckoutOpen(true)}
         />
-       </div>
+      </div>
     </div>
   );
 }

@@ -1,24 +1,28 @@
 // Reorder Point page for the Inventory Management module of the POS system.
 // Shows live items at or below their reorder point so staff can restock or adjust the ROP.
 // Row actions depend on the signed-in role (stock managers restock, managers/secretaries edit ROP).
-"use client"
+"use client";
 
-import { ROPTable } from "@/components/inventory/ROPTable"
-import { Button } from "@/components/ui/button"
-import { canEditROP, canManageStock } from "@/lib/auth/permissions"
-import { useCurrentRole } from "@/lib/auth/use-current-role"
-import { useROPItems } from "@/lib/inventory/useROPItems"
+import { ROPTable } from "@/app/dashboard/inventory/rop/_components/ROPTable";
+import { Button } from "@/components/ui/button";
+import { canEditROP, canManageStock } from "@/lib/auth/permissions";
+import { useCurrentRole } from "@/lib/auth/use-current-role";
+import { useROPItems } from "@/lib/inventory/useROPItems";
 
 // Renders the ROP alert list with loading, error and empty states.
 export default function ROPPage() {
-  const { ropItems, categories, loading, error, refetch } = useROPItems()
-  const role = useCurrentRole()
+  const { ropItems, categories, loading, error, refetch } = useROPItems();
+  const role = useCurrentRole();
 
   return (
     <div className="flex-1 space-y-6 p-8">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Reorder Point Management</h2>
-        <p className="text-muted-foreground text-sm mt-1">Monitor and manage reorder points for inventory items</p>
+        <h2 className="text-2xl font-bold tracking-tight">
+          Reorder Point Management
+        </h2>
+        <p className="text-muted-foreground text-sm mt-1">
+          Monitor and manage reorder points for inventory items
+        </p>
       </div>
 
       <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
@@ -44,5 +48,5 @@ export default function ROPPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

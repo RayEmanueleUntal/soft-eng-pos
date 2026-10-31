@@ -8,7 +8,7 @@ import {
   approveApprovalRequest,
   rejectApprovalRequest,
 } from "@/lib/approval/approval-api";
-import { PayloadRenderer } from "@/components/admin/approval-requests/PayloadRenderer";
+import { PayloadRenderer } from "@/app/dashboard/admin/approval-requests/_components/PayloadRenderer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -116,39 +116,43 @@ export default function ApprovalRequestsPage() {
 
   // Action Handlers
   const handleConfirmApprove = async () => {
-  if (!approvingRequest) return;
-  setSubmitting(true);
-  try {
-    const updated = await approveApprovalRequest(approvingRequest.id);
-    // Update local state with real backend response
-    setRequests((prev) => prev.map((r) => (r.id === approvingRequest.id ? updated : r)));
-    setApprovingRequest(null);
-    setIsDetailsOpen(false);
-  } catch (err: any) {
-    alert(err.response?.data?.message || 'Failed to approve request.');
-  } finally {
-    setSubmitting(false);
-  }
-};
+    if (!approvingRequest) return;
+    setSubmitting(true);
+    try {
+      const updated = await approveApprovalRequest(approvingRequest.id);
+      // Update local state with real backend response
+      setRequests((prev) =>
+        prev.map((r) => (r.id === approvingRequest.id ? updated : r)),
+      );
+      setApprovingRequest(null);
+      setIsDetailsOpen(false);
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Failed to approve request.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
- const handleConfirmReject = async () => {
-  if (!rejectingRequest) return;
-  setSubmitting(true);
-  try {
-    const updated = await rejectApprovalRequest(rejectingRequest.id, {
-      rejectionReason: rejectionReasonInput,
-    });
-    // Update local state with real backend response
-    setRequests((prev) => prev.map((r) => (r.id === rejectingRequest.id ? updated : r)));
-    setRejectingRequest(null);
-    setRejectionReasonInput('');
-    setIsDetailsOpen(false);
-  } catch (err: any) {
-    alert(err.response?.data?.message || 'Failed to reject request.');
-  } finally {
-    setSubmitting(false);
-  }
-};
+  const handleConfirmReject = async () => {
+    if (!rejectingRequest) return;
+    setSubmitting(true);
+    try {
+      const updated = await rejectApprovalRequest(rejectingRequest.id, {
+        rejectionReason: rejectionReasonInput,
+      });
+      // Update local state with real backend response
+      setRequests((prev) =>
+        prev.map((r) => (r.id === rejectingRequest.id ? updated : r)),
+      );
+      setRejectingRequest(null);
+      setRejectionReasonInput("");
+      setIsDetailsOpen(false);
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Failed to reject request.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">

@@ -1,4 +1,4 @@
-import { CustomerTable } from "@/components/profiles/customers/CustomerTable";
+import { CustomerTable } from "@/app/dashboard/customers/_components/CustomerTable";
 
 export default function CustomersPage() {
   return (

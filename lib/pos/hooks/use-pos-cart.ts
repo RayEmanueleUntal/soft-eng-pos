@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { PaymentModalItem, CatalogProduct } from "@/components/pos";
+import type { PaymentModalItem, CatalogProduct } from "@/lib/pos";
 
 const DEFAULT_INITIAL_CART: PaymentModalItem[] = [];
 
@@ -9,10 +9,13 @@ const DEFAULT_INITIAL_CART: PaymentModalItem[] = [];
 function calcLinePricing(
   quantity: number,
   unitPrice: number,
-  discountPercent: number = 0
+  discountPercent: number = 0,
 ) {
   const gross = quantity * unitPrice;
-  const validPercent = Math.min(100, Math.max(0, isNaN(discountPercent) ? 0 : discountPercent));
+  const validPercent = Math.min(
+    100,
+    Math.max(0, isNaN(discountPercent) ? 0 : discountPercent),
+  );
   const discountAmount = Number((gross * (validPercent / 100)).toFixed(2));
   const subtotal = Math.max(0, Number((gross - discountAmount).toFixed(2)));
   return {
@@ -21,47 +24,57 @@ function calcLinePricing(
   };
 }
 
-export function usePosCart(initialCart: PaymentModalItem[] = DEFAULT_INITIAL_CART) {
+export function usePosCart(
+  initialCart: PaymentModalItem[] = DEFAULT_INITIAL_CART,
+) {
   const [cart, setCart] = useState<PaymentModalItem[]>(initialCart);
   const [orderDiscountPercent, setRawDiscountPercent] = useState<number>(0);
 
   // Total of gross items before discount
   const itemsSubtotal = Number(
-    cart.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0).toFixed(2)
+    cart
+      .reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
+      .toFixed(2),
   );
 
   // Total discount amount across all items
   const orderDiscountAmount = Number(
-    cart.reduce((sum, item) => sum + (item.line_discount ?? 0), 0).toFixed(2)
+    cart.reduce((sum, item) => sum + (item.line_discount ?? 0), 0).toFixed(2),
   );
 
   // Net cart total
-  const cartTotal = Math.max(0, Number((itemsSubtotal - orderDiscountAmount).toFixed(2)));
+  const cartTotal = Math.max(
+    0,
+    Number((itemsSubtotal - orderDiscountAmount).toFixed(2)),
+  );
 
   // Update order discount percentage and distribute across all current line items
   const setOrderDiscountPercent = (percent: number) => {
-    const validPercent = Math.min(100, Math.max(0, isNaN(percent) ? 0 : percent));
+    const validPercent = Math.min(
+      100,
+      Math.max(0, isNaN(percent) ? 0 : percent),
+    );
     setRawDiscountPercent(validPercent);
     setCart((prev) =>
       prev.map((item) => {
         const { line_discount, subtotal } = calcLinePricing(
           item.quantity,
           item.unitPrice,
-          validPercent
+          validPercent,
         );
         return {
           ...item,
           line_discount,
           subtotal,
         };
-      })
+      }),
     );
   };
 
   // Update item quantity
   const updateQuantity = (
     productId: string | number | undefined,
-    delta: number
+    delta: number,
   ) => {
     setCart((prev) =>
       prev
@@ -73,7 +86,7 @@ export function usePosCart(initialCart: PaymentModalItem[] = DEFAULT_INITIAL_CAR
             const { line_discount, subtotal } = calcLinePricing(
               newQty,
               item.unitPrice,
-              orderDiscountPercent
+              orderDiscountPercent,
             );
 
             return {
@@ -85,7 +98,7 @@ export function usePosCart(initialCart: PaymentModalItem[] = DEFAULT_INITIAL_CAR
           }
           return item;
         })
-        .filter((item): item is PaymentModalItem => item !== null)
+        .filter((item): item is PaymentModalItem => item !== null),
     );
   };
 
@@ -104,7 +117,7 @@ export function usePosCart(initialCart: PaymentModalItem[] = DEFAULT_INITIAL_CAR
           const { line_discount, subtotal } = calcLinePricing(
             item.quantity,
             nextPrice,
-            orderDiscountPercent
+            orderDiscountPercent,
           );
 
           return {
@@ -116,7 +129,7 @@ export function usePosCart(initialCart: PaymentModalItem[] = DEFAULT_INITIAL_CAR
           };
         }
         return item;
-      })
+      }),
     );
   };
 
@@ -132,7 +145,7 @@ export function usePosCart(initialCart: PaymentModalItem[] = DEFAULT_INITIAL_CAR
         const { line_discount, subtotal } = calcLinePricing(
           item.quantity,
           nextPrice,
-          orderDiscountPercent
+          orderDiscountPercent,
         );
 
         return {
@@ -142,12 +155,15 @@ export function usePosCart(initialCart: PaymentModalItem[] = DEFAULT_INITIAL_CAR
           line_discount,
           subtotal,
         };
-      })
+      }),
     );
   };
 
   // Add product to cart
-  const addItemToCart = (prod: CatalogProduct, preferredPricing?: "RETAIL" | "WHOLESALE") => {
+  const addItemToCart = (
+    prod: CatalogProduct,
+    preferredPricing?: "RETAIL" | "WHOLESALE",
+  ) => {
     const pricingType = preferredPricing || "RETAIL";
     const retail = Number(prod.retailPrice ?? prod.price);
     const wholesale = Number(prod.wholesalePrice ?? prod.price);
@@ -155,14 +171,14 @@ export function usePosCart(initialCart: PaymentModalItem[] = DEFAULT_INITIAL_CAR
 
     setCart((prev) => {
       const existing = prev.find(
-        (item) => (item.productId ?? item.id) === prod.id
+        (item) => (item.productId ?? item.id) === prod.id,
       );
       if (existing) {
         const newQty = existing.quantity + 1;
         const { line_discount, subtotal } = calcLinePricing(
           newQty,
           existing.unitPrice,
-          orderDiscountPercent
+          orderDiscountPercent,
         );
         return prev.map((item) =>
           (item.productId ?? item.id) === prod.id
@@ -172,14 +188,14 @@ export function usePosCart(initialCart: PaymentModalItem[] = DEFAULT_INITIAL_CAR
                 line_discount,
                 subtotal,
               }
-            : item
+            : item,
         );
       }
 
       const { line_discount, subtotal } = calcLinePricing(
         1,
         price,
-        orderDiscountPercent
+        orderDiscountPercent,
       );
 
       return [

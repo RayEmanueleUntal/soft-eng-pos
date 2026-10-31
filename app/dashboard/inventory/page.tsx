@@ -4,8 +4,8 @@
 "use client";
 
 import * as React from "react";
-import { InventoryFilterBar } from "@/components/inventory/InventoryFilterBar";
-import { InventoryTable } from "@/components/inventory/InventoryTable";
+import { InventoryFilterBar } from "@/app/dashboard/inventory/_components/InventoryFilterBar";
+import { InventoryTable } from "@/app/dashboard/inventory/_components/InventoryTable";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { canEditROP, canManageStock } from "@/lib/auth/permissions";
@@ -28,7 +28,7 @@ export default function InventoryPage() {
     totalPages,
     loading,
     error,
-    refetch
+    refetch,
   } = useInventory();
 
   const role = useCurrentRole();
@@ -40,7 +40,7 @@ export default function InventoryPage() {
         id: cat.id,
         name: cat.categoryName,
       })),
-    [allCategoriesList]
+    [allCategoriesList],
   );
 
   // Low-stock tabs only filter the rows on the current page (the list is paginated server-side).
@@ -73,15 +73,15 @@ export default function InventoryPage() {
       <div className="bg-card p-6 rounded-lg shadow-sm border border-border flex flex-col gap-4">
         <InventoryFilterBar
           search={filters.search}
-          setSearch={(v) => setFilter('search', v)}
+          setSearch={(v) => setFilter("search", v)}
           size={filters.size}
-          setSize={(v) => setFilter('size', v)}
+          setSize={(v) => setFilter("size", v)}
           threadType={filters.threadType}
-          setThreadType={(v) => setFilter('threadType', v)}
+          setThreadType={(v) => setFilter("threadType", v)}
           material={filters.material}
-          setMaterial={(v) => setFilter('material', v)}
+          setMaterial={(v) => setFilter("material", v)}
           category={filters.category}
-          setCategory={(v) => setFilter('category', v)}
+          setCategory={(v) => setFilter("category", v)}
           categories={categoryOptions}
         />
 

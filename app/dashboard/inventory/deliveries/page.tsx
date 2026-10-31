@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { DeliveryHistoryTable } from "@/components/inventory/deliveries/DeliveryHistoryTable";
-import { ReceiveDeliveryModal } from "@/components/inventory/deliveries/ReceiveDeliveryModal";
-import { DeliveryDetailViewModal } from "@/components/inventory/deliveries/DeliveryDetailViewModal";
+import { DeliveryHistoryTable } from "./_components/DeliveryHistoryTable";
+import { ReceiveDeliveryModal } from "./_components/ReceiveDeliveryModal";
+import { DeliveryDetailViewModal } from "./_components/DeliveryDetailViewModal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { fetchDeliveries } from "@/lib/inventory/delivery-api";
@@ -27,7 +27,9 @@ export default function DeliveriesPage() {
   const [debouncedPoFilter, setDebouncedPoFilter] = React.useState<string>("");
 
   // Selected delivery for Detail View Modal
-  const [selectedDeliveryId, setSelectedDeliveryId] = React.useState<number | null>(null);
+  const [selectedDeliveryId, setSelectedDeliveryId] = React.useState<
+    number | null
+  >(null);
   const [detailModalOpen, setDetailModalOpen] = React.useState(false);
 
   // Debounce PO filter
@@ -43,7 +45,9 @@ export default function DeliveriesPage() {
     setLoading(true);
     setError(null);
 
-    const poIdNum = debouncedPoFilter ? parseInt(debouncedPoFilter, 10) : undefined;
+    const poIdNum = debouncedPoFilter
+      ? parseInt(debouncedPoFilter, 10)
+      : undefined;
 
     try {
       const res = await fetchDeliveries({
@@ -83,7 +87,8 @@ export default function DeliveriesPage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Deliveries</h2>
           <p className="text-muted-foreground text-sm mt-1">
-            Record incoming stock from suppliers and match deliveries against Purchase Orders.
+            Record incoming stock from suppliers and match deliveries against
+            Purchase Orders.
           </p>
         </div>
 
@@ -113,7 +118,9 @@ export default function DeliveriesPage() {
             disabled={loading}
             className="rounded-md gap-1.5 text-xs h-9 hover:bg-muted"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
         </div>
@@ -146,4 +153,3 @@ export default function DeliveriesPage() {
     </div>
   );
 }
-

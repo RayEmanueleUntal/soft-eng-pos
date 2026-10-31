@@ -14,14 +14,14 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { AddBinModal } from "@/components/inventory/bin/AddBinModal";
-import { BinDetailsModal } from "@/components/inventory/bin/BinDetailsModal";
+import { AddBinModal } from "@/app/dashboard/inventory/bins/_components/AddBinModal";
+import { BinDetailsModal } from "@/app/dashboard/inventory/bins/_components/BinDetailsModal";
 import {
   getBinLocations,
   searchBinLocationExact,
   BinLocation,
   BinLocationMeta,
-} from "@/lib/bin-locations";
+} from "@/lib/bin-locations/bin-locations";
 
 export default function BinLocationsPage() {
   const [bins, setBins] = useState<BinLocation[]>([]);
@@ -47,28 +47,33 @@ export default function BinLocationsPage() {
   const [isExactSearching, setIsExactSearching] = useState(false);
 
   // Fetch paginated list
-  const fetchBins = useCallback(async (currentPage: number, search?: string) => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const res = await getBinLocations({
-        page: currentPage,
-        limit: 10,
-        search: search?.trim() || undefined,
-      });
+  const fetchBins = useCallback(
+    async (currentPage: number, search?: string) => {
+      setLoading(true);
+      setErrorMsg(null);
+      try {
+        const res = await getBinLocations({
+          page: currentPage,
+          limit: 10,
+          search: search?.trim() || undefined,
+        });
 
-      // OPTION 1: Sort by ID ascending (1, 2, 3, 4, 5, 6...)
-      const sortedData = [...res.data].sort((a, b) => a.id - b.id);
+        // OPTION 1: Sort by ID ascending (1, 2, 3, 4, 5, 6...)
+        const sortedData = [...res.data].sort((a, b) => a.id - b.id);
 
-      setBins(sortedData);
-      setMeta(res.meta);
-    } catch (err: any) {
-      console.error("Error fetching bin locations:", err);
-      setErrorMsg(err?.response?.data?.message || "Failed to load bin locations.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+        setBins(sortedData);
+        setMeta(res.meta);
+      } catch (err: any) {
+        console.error("Error fetching bin locations:", err);
+        setErrorMsg(
+          err?.response?.data?.message || "Failed to load bin locations.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     fetchBins(page, searchQuery);
@@ -83,7 +88,9 @@ export default function BinLocationsPage() {
   const handleExactLookup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchAisle.trim() || !searchShelf.trim()) {
-      setErrorMsg("Both Aisle Number and Shelf Location are required for exact lookup.");
+      setErrorMsg(
+        "Both Aisle Number and Shelf Location are required for exact lookup.",
+      );
       return;
     }
 
@@ -99,7 +106,9 @@ export default function BinLocationsPage() {
       setMeta({ total: 1, page: 1, limit: 10, totalPages: 1 });
     } catch (err: any) {
       if (err?.response?.status === 404) {
-        setErrorMsg(`Bin location with aisle "${searchAisle}" and shelf "${searchShelf}" does not exist.`);
+        setErrorMsg(
+          `Bin location with aisle "${searchAisle}" and shelf "${searchShelf}" does not exist.`,
+        );
         setBins([]);
       } else {
         setErrorMsg("Failed to lookup bin location.");
@@ -195,7 +204,11 @@ export default function BinLocationsPage() {
             disabled={isExactSearching}
             className="h-8 text-xs bg-[#004888] hover:bg-[#001C3B] text-white rounded-sm px-3 font-semibold"
           >
-            {isExactSearching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Lookup"}
+            {isExactSearching ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              "Lookup"
+            )}
           </Button>
           {(searchAisle || searchShelf || bins.length === 1) && (
             <Button
@@ -253,7 +266,10 @@ export default function BinLocationsPage() {
                 </tr>
               ) : bins.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center text-[#565E74] font-mono text-xs">
+                  <td
+                    colSpan={5}
+                    className="py-10 text-center text-[#565E74] font-mono text-xs"
+                  >
                     No bin locations found.
                   </td>
                 </tr>
@@ -274,7 +290,8 @@ export default function BinLocationsPage() {
                     </td>
                     <td className="px-3 py-1">
                       <span className="font-mono text-[11px] border border-[#CBD5E1] bg-[#F8FAFC] text-[#0F172A] px-1.5 py-0.5 rounded-xs">
-                        BIN-{bin.aisle_number.toUpperCase()}-{bin.shelf_location.toUpperCase()}
+                        BIN-{bin.aisle_number.toUpperCase()}-
+                        {bin.shelf_location.toUpperCase()}
                       </span>
                     </td>
                     <td className="px-3 py-1 text-right">
@@ -301,7 +318,8 @@ export default function BinLocationsPage() {
         {/* Footer Bar */}
         <div className="bg-[#F8FAFC] border-t border-[#E2E8F0] px-3 py-2 flex items-center justify-between text-xs font-mono text-[#565E74]">
           <div>
-            Page <span className="font-bold text-[#0F172A]">{meta.page}</span> of{" "}
+            Page <span className="font-bold text-[#0F172A]">{meta.page}</span>{" "}
+            of{" "}
             <span className="font-bold text-[#0F172A]">{meta.totalPages}</span>
           </div>
 

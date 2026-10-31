@@ -3,11 +3,21 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { PrintableInvoice, ReceiptModal, ReceiptSummaryCard } from "@/components/pos";
-import { RefundModal } from "@/components/pos/receipt/return/RefundModal";
-import { ExchangeModal } from "@/components/pos/receipt/return/ExchangeModal";
-import { fetchReceiptApi, type Receipt, type ReceiptReturn, type ReceiptExchange } from "@/lib/pos";
-import { getApprovalRequests, type ApprovalRequestResponseDto } from "@/lib/approval/approval-api";
+import { PrintableInvoice } from "./_components/PrintableInvoice";
+import { ReceiptModal } from "./_components/ReceiptModal";
+import { ReceiptSummaryCard } from "./_components/ReceiptSummaryCard";
+import { RefundModal } from "./_components/return/RefundModal";
+import { ExchangeModal } from "./_components/return/ExchangeModal";
+import {
+  fetchReceiptApi,
+  type Receipt,
+  type ReceiptReturn,
+  type ReceiptExchange,
+} from "@/lib/pos";
+import {
+  getApprovalRequests,
+  type ApprovalRequestResponseDto,
+} from "@/lib/approval/approval-api";
 import { ArrowLeft, Printer, Loader2, AlertCircle } from "lucide-react";
 import { getErrorMessage } from "@/lib/utils";
 
@@ -46,55 +56,79 @@ export default function ReceiptPage() {
         pendingFound = relevant.some(
           (req) =>
             req.status === "PENDING" &&
-            (req.type === "REFUND_TRANSACTION" || req.type === "EXCHANGE_TRANSACTION")
+            (req.type === "REFUND_TRANSACTION" ||
+              req.type === "EXCHANGE_TRANSACTION"),
         );
 
         // Merge any approved returns/exchanges if not already present on receiptData
         const approvedRefunds = relevant.filter(
-          (req) => req.status === "APPROVED" && req.type === "REFUND_TRANSACTION"
+          (req) =>
+            req.status === "APPROVED" && req.type === "REFUND_TRANSACTION",
         );
         const approvedExchanges = relevant.filter(
-          (req) => req.status === "APPROVED" && req.type === "EXCHANGE_TRANSACTION"
+          (req) =>
+            req.status === "APPROVED" && req.type === "EXCHANGE_TRANSACTION",
         );
 
-        if (approvedRefunds.length > 0 && (!receiptData.returns || receiptData.returns.length === 0)) {
+        if (
+          approvedRefunds.length > 0 &&
+          (!receiptData.returns || receiptData.returns.length === 0)
+        ) {
           receiptData.returns = approvedRefunds.map((req, idx) => {
             const p = req.payload || {};
-            const item = receiptData.items.find((it) => it.productId === p.productId);
+            const item = receiptData.items.find(
+              (it) => it.productId === p.productId,
+            );
             const qty = p.quantity || 1;
             const unitPrice = item ? item.applied_price : 0;
-            const refundAmount = p.refundAmount ?? p.refund_amount ?? unitPrice * qty;
+            const refundAmount =
+              p.refundAmount ?? p.refund_amount ?? unitPrice * qty;
 
             return {
               id: typeof req.id === "number" ? req.id : idx + 1,
               productId: p.productId,
-              product_name: p.productName || p.product_name || item?.product_name || "Returned Item",
+              product_name:
+                p.productName ||
+                p.product_name ||
+                item?.product_name ||
+                "Returned Item",
               quantity: qty,
               date: req.updatedAt || req.createdAt || new Date().toISOString(),
               defect_reason: p.reason || p.defect_reason || "Return",
               refund_amount: refundAmount,
-              processed_by_staff: String(req.reviewedById || req.requestedById || "Staff"),
+              processed_by_staff: String(
+                req.reviewedById || req.requestedById || "Staff",
+              ),
             };
           });
 
           // Mark already_returned_qty on corresponding receipt items
           approvedRefunds.forEach((req) => {
             const p = req.payload || {};
-            const it = receiptData.items.find((item) => item.productId === p.productId);
+            const it = receiptData.items.find(
+              (item) => item.productId === p.productId,
+            );
             if (it) {
-              it.already_returned_qty = (it.already_returned_qty || 0) + (p.quantity || 1);
+              it.already_returned_qty =
+                (it.already_returned_qty || 0) + (p.quantity || 1);
             }
           });
         }
 
-        if (approvedExchanges.length > 0 && (!receiptData.exchanges || receiptData.exchanges.length === 0)) {
+        if (
+          approvedExchanges.length > 0 &&
+          (!receiptData.exchanges || receiptData.exchanges.length === 0)
+        ) {
           receiptData.exchanges = approvedExchanges.map((req, idx) => {
             const p = req.payload || {};
-            const item = receiptData.items.find((it) => it.productId === p.productId);
+            const item = receiptData.items.find(
+              (it) => it.productId === p.productId,
+            );
             return {
               id: typeof req.id === "number" ? req.id : idx + 1,
               productId: p.newProductId || p.productId,
-              product_name: p.newProductName || item?.product_name || "Exchanged Item",
+              product_name:
+                p.newProductName || item?.product_name || "Exchanged Item",
               quantity: p.newQuantity || p.quantity || 1,
               date: req.updatedAt || req.createdAt || new Date().toISOString(),
               price_difference: p.price_difference ?? p.priceDifference ?? 0,
@@ -161,7 +195,9 @@ export default function ReceiptPage() {
       {loading && (
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
-          <p className="text-muted-foreground text-xs font-sans">Loading receipt...</p>
+          <p className="text-muted-foreground text-xs font-sans">
+            Loading receipt...
+          </p>
         </div>
       )}
 
@@ -171,7 +207,9 @@ export default function ReceiptPage() {
           <div className="bg-card rounded-[4px] border border-input p-6 max-w-md text-center shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
             <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-4" />
             <h2 className="text-lg font-heading font-bold text-foreground mb-2">
-              {error === "Receipt not found" ? "Receipt Not Found" : "Error Loading Receipt"}
+              {error === "Receipt not found"
+                ? "Receipt Not Found"
+                : "Error Loading Receipt"}
             </h2>
             <p className="text-muted-foreground text-xs mb-6 font-sans">
               {error === "Receipt not found"
@@ -211,7 +249,8 @@ export default function ReceiptPage() {
 
             {/* Printable Invoice or Rich Receipt Summary Display */}
             <div className="mb-6 flex justify-center">
-              {receipt.returns && receipt.returns.length > 0 || (receipt.exchanges && receipt.exchanges.length > 0) ? (
+              {(receipt.returns && receipt.returns.length > 0) ||
+              (receipt.exchanges && receipt.exchanges.length > 0) ? (
                 <div className="w-full max-w-lg bg-card border border-input rounded-[4px] p-4 shadow-[0px_2px_0px_rgba(15,23,42,0.06)]">
                   <ReceiptSummaryCard receipt={receipt} />
                 </div>

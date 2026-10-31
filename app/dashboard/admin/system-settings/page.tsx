@@ -3,8 +3,8 @@
 // Composes the settings header and the settings table components.
 "use client";
 
-import { SystemSettingsHeader } from "@/components/admin/system-settings/SystemSettingsHeader";
-import { SystemSettingsTable } from "@/components/admin/system-settings/SystemSettingsTable";
+import { SystemSettingsHeader } from "@/app/dashboard/admin/system-settings/_components/SystemSettingsHeader";
+import { SystemSettingsTable } from "@/app/dashboard/admin/system-settings/_components/SystemSettingsTable";
 
 // Renders the System Settings page layout.
 export default function SystemSettingsPage() {

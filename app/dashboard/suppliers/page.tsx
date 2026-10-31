@@ -1,4 +1,4 @@
-import { SupplierTable } from "@/components/profiles/suppliers/SupplierTable";
+import { SupplierTable } from "./_components/SupplierTable";
 
 export default function SuppliersPage() {
   return (

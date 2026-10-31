@@ -1,0 +1,18 @@
+# AI Code Generation Directives
+
+You are assisting on a high-throughput Next.js frontend repository.
+Before generating or modifying any code, strictly adhere to the project standards defined in the following files:
+
+1. AGENT.md           -> Core domain rules, business vision, and tech stack limits.
+2. design.md          -> UI tokens (colors, JetBrains Mono tabular numbers, crisp 1px borders).
+3. docs/architecture.md -> Route structure, domain services, and component co-location rules.
+
+CRITICAL IMPLEMENTATION RULES:
+- API Calls: NEVER use raw fetch() or custom axios instances. MUST use `lib/api.ts`.
+- Error Handling: MUST wrap API errors with `getErrorMessage()` from `lib/utils.ts`.
+- Component Scoping:
+  - Base design primitives -> `components/ui/`
+  - Cross-page domain components -> `components/[domain]/`
+  - Route-exclusive components -> `_components/` inside that route folder.
+- Styling: High-density layout, no decorative soft shadows, strictly use Space Grotesk (headlines), Inter (body), and JetBrains Mono (SKUs, barcodes, tabular prices).
+- Clean Code: Remove scratch files, unused imports, or leftover mock objects before outputting.
