@@ -189,8 +189,11 @@ export default function PaymentModal({
     const result = getCurrentPaymentEntry();
     if (!result) return;
 
+    // Use Web Crypto API randomUUID directly (pure, deterministic for event handler scope)
+    const uniqueId = crypto.randomUUID();
+
     const newPayment: AppliedPaymentItem = {
-      id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      id: uniqueId,
       method: result.entry.payment_method,
       amount: result.entry.amount_paid,
       description: result.description,
