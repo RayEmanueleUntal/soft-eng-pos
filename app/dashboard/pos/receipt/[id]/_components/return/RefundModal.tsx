@@ -42,7 +42,8 @@ export function RefundModal({ open, onOpenChange, receipt, onSuccess }: RefundMo
   const [error, setError] = useState<string | null>(null);
 
   const selectedItem = selectedItemIndex !== null ? receipt.items[selectedItemIndex] : null;
-  const maxQuantity = selectedItem?.quantity ?? 1;
+  const alreadyReturned = selectedItem?.already_returned_qty ?? 0;
+  const maxQuantity = Math.max(0, (selectedItem?.quantity ?? 1) - alreadyReturned);
 
   const resetForm = () => {
     setSelectedItemIndex(null);
@@ -86,8 +87,13 @@ export function RefundModal({ open, onOpenChange, receipt, onSuccess }: RefundMo
       return;
     }
 
+    if (maxQuantity <= 0) {
+      setError("This item has already been fully returned.");
+      return;
+    }
+
     if (qty > maxQuantity) {
-      setError(`Quantity cannot exceed original quantity (${maxQuantity}).`);
+      setError(`Quantity cannot exceed returnable quantity (${maxQuantity}).`);
       return;
     }
 

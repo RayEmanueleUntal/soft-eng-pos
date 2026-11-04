@@ -178,11 +178,11 @@ export function PrintableInvoice({
           <div key={`${item.product_name}-${index}`} className="space-y-0.5">
             <p className="font-medium wrap-break-word">{item.product_name}</p>
             <ReceiptRow
-              label={`${formatQuantity(item.quantity)}`}
+              label={`${formatQuantity(item.quantity)}${item.pricing_uom ? ` ${item.pricing_uom}` : ""}`}
               value={formatPeso(item.net_price)}
             />
             <ReceiptRow
-              label={`@ ${formatPeso(item.applied_price)}`}
+              label={`@ ${formatPeso(item.applied_price)}${item.pricing_uom ? ` / ${item.pricing_uom}` : ""}`}
               value=""
             />
             {item.subtotal > item.net_price ? (

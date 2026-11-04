@@ -357,7 +357,11 @@ interface BackendTransactionsListResponse {
 export async function fetchTransactionsApi(): Promise<TransactionSummary[]> {
   try {
     const response = await apiClient.get<BackendTransactionsListResponse | BackendTransactionItem[]>("/transactions", {
-      params: { limit: 100 },
+      params: {
+        limit: 100,
+        includeReturns: true,
+        includeExchanges: true,
+      },
     });
     const payload = response.data;
     const rawList: BackendTransactionItem[] = Array.isArray(payload)

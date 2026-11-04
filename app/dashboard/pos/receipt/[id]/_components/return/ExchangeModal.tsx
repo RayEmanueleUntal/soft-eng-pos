@@ -48,7 +48,8 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
   const [error, setError] = useState<string | null>(null);
 
   const selectedItem = selectedItemIndex !== null ? receipt.items[selectedItemIndex] : null;
-  const maxQuantity = selectedItem?.quantity ?? 1;
+  const alreadyReturned = selectedItem?.already_returned_qty ?? 0;
+  const maxQuantity = Math.max(0, (selectedItem?.quantity ?? 1) - alreadyReturned);
 
   // Debounced search for products
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -118,8 +119,13 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
       return;
     }
 
+    if (maxQuantity <= 0) {
+      setError("This item has already been fully returned or exchanged.");
+      return;
+    }
+
     if (qty > maxQuantity) {
-      setError(`Quantity cannot exceed original quantity (${maxQuantity}).`);
+      setError(`Quantity cannot exceed available quantity (${maxQuantity}).`);
       return;
     }
 
