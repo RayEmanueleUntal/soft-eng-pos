@@ -47,16 +47,20 @@ The backend API relies on PostgreSQL, Redis, and NestJS. To run the backend serv
 Inside the backend repository directory, run:
 
 ```bash
-# 1. Start PostgreSQL & Redis services in Docker
+# 1. Pull from the main repository of the backend
+git switch main
+git pull origin main
+
+# 2. Start PostgreSQL & Redis services in Docker
 docker compose up pos-db pos-redis -d
 
-# 2. Reset / Migrate database schema (if needed)
+# 3. Reset / Migrate database schema (if needed)
 npx prisma migrate reset
 
-# 3. Seed database with initial master data
+# 4. Seed database with initial master data
 npx prisma db seed
 
-# 4. Run the backend NestJS development server locally
+# 5. Run the backend NestJS development server locally
 npm run start:dev
 
 ```
