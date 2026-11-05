@@ -3,6 +3,11 @@
 // Staff identity is taken from the auth token by the backend, so no staff id is sent.
 import { apiClient } from "@/lib/api"
 import { getApiErrorMessage } from "./api-error"
+import {
+  PaginatedStockMovementsResponseDto,
+  StaffUserResponseDto,
+  StockMovementResponseDto,
+} from "./types"
 
 export interface StockInParams {
   productId: number
@@ -19,6 +24,7 @@ export interface StockOutParams {
   reason?: string
   date?: Date
   allowOverride?: boolean
+  isOverride?: boolean
 }
 
 export interface AdjustInventoryParams {
@@ -42,6 +48,47 @@ export interface StockMovementResponse {
   reason: string
   staffId: number
   approvedById: number | null
+}
+
+export interface StockMovementsQueryParams {
+  productId?: number
+  type?: "IN" | "OUT" | "SALE" | "RETURN" | "ADJUSTMENT"
+  staffId?: number
+  approvedById?: number
+  isOverride?: boolean
+  startDate?: string
+  endDate?: string
+  page?: number
+  limit?: number
+}
+
+// Fetches paginated stock movements from GET /inventory/movements.
+export async function fetchStockMovements(
+  params?: StockMovementsQueryParams
+): Promise<PaginatedStockMovementsResponseDto> {
+  try {
+    const response = await apiClient.get<PaginatedStockMovementsResponseDto>(
+      "/inventory/movements",
+      { params }
+    )
+    return response.data
+  } catch (error) {
+    console.error("Failed to fetch stock movements:", error)
+    throw new Error(
+      getApiErrorMessage(error, "Failed to load stock movements history.")
+    )
+  }
+}
+
+// Fetches a staff user's details by ID: GET /staff-users/{id}.
+export async function fetchStaffUserById(id: number): Promise<StaffUserResponseDto> {
+  try {
+    const response = await apiClient.get<StaffUserResponseDto>(`/staff-users/${id}`)
+    return response.data
+  } catch (error) {
+    console.error(`Failed to fetch staff user ${id}:`, error)
+    throw new Error(getApiErrorMessage(error, `Failed to load staff user #${id}.`))
+  }
 }
 
 // Records received stock for a product.

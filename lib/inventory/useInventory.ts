@@ -72,7 +72,8 @@ export function useInventory() {
           setAllCategoriesList(response.data);
           const catMap: Record<number, string> = {};
           response.data.forEach((c) => {
-            catMap[c.id] = c.categoryName;
+            const name = c.name || c.categoryName || `Category #${c.id}`;
+            catMap[c.id] = name;
           });
           setCategories(catMap);
         }
@@ -95,7 +96,7 @@ export function useInventory() {
       fetchController.current = controller;
 
       return apiClient
-        .get<InventoryResponse>("/inventory/", {
+        .get<InventoryResponse>("/products", {
           params: {
             search: debouncedSearch || undefined,
             size: filters.size || undefined,
