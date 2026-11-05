@@ -1,12 +1,6 @@
 // Currency and date formatting helpers for POS receipt display (PHP locale).
 
-/** Formats a numeric value as Philippine Peso. */
-export function formatPeso(value: number): string {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-  }).format(Number.isFinite(value) ? value : 0);
-}
+export { formatPeso } from "@/lib/utils";
 
 /** Formats an ISO date string for receipt headers. */
 export function formatReceiptDate(isoDate: string | Date): string {
