@@ -14,6 +14,7 @@ export function useProductCategories() {
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -35,7 +36,12 @@ export function useProductCategories() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [reloadKey]);
 
-  return { categories, loading, error };
+  const refetch = () => {
+    setLoading(true);
+    setReloadKey((key) => key + 1);
+  };
+
+  return { categories, loading, error, refetch };
 }

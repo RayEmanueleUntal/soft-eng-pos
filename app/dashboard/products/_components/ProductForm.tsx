@@ -84,6 +84,7 @@ const formatEffective = (value: number | null) =>
 export function ProductForm({ product, onSaved }: ProductFormProps) {
   const [formData, setFormData] = useState<ProductFormData>(createEmptyForm);
   const [binLabel, setBinLabel] = useState("");
+  const [editDetail, setEditDetail] = useState<Product | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -93,48 +94,42 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
 
   const isEdit = Boolean(product);
 
-  useEffect(() => {
-    if (!product) {
-      setFormData(createEmptyForm());
-      setBinLabel("");
-      return;
-    }
-
-    const binLabelFromProduct = product.bin_location
-      ? `Aisle ${product.bin_location.aisle_number} · Shelf ${product.bin_location.shelf_location}`
-      : product.bin_aisle_number || product.bin_shelf_location
-        ? `Aisle ${product.bin_aisle_number ?? "-"} · Shelf ${product.bin_shelf_location ?? "-"}`
-        : product.binId
-          ? `Bin #${product.binId}`
+  const initFromProduct = (source: Product) => {
+    const binLabelFromProduct = source.bin_location
+      ? `Aisle ${source.bin_location.aisle_number} · Shelf ${source.bin_location.shelf_location}`
+      : source.bin_aisle_number || source.bin_shelf_location
+        ? `Aisle ${source.bin_aisle_number ?? "-"} · Shelf ${source.bin_shelf_location ?? "-"}`
+        : source.binId
+          ? `Bin #${source.binId}`
           : "";
 
     setBinLabel(binLabelFromProduct);
 
     setFormData({
-      sku: product.sku ?? "",
-      name: product.name,
-      categoryId: String(product.categoryId),
+      sku: source.sku ?? "",
+      name: source.name,
+      categoryId: String(source.categoryId),
 
-      size_dimensions: product.size_dimensions ?? "",
+      size_dimensions: source.size_dimensions ?? "",
 
-      thread_type: product.thread_type ?? "",
+      thread_type: source.thread_type ?? "",
 
-      material_grade: product.material_grade ?? "",
+      material_grade: source.material_grade ?? "",
 
-      base_uom: product.base_uom,
-      current_quantity: String(product.current_quantity),
+      base_uom: source.base_uom,
+      current_quantity: String(source.current_quantity),
 
-      reorder_point_ROP: String(product.reorder_point_ROP),
+      reorder_point_ROP: String(source.reorder_point_ROP),
 
-      cost_price: String(product.cost_price),
-      retail_price: String(product.retail_price),
+      cost_price: String(source.cost_price),
+      retail_price: String(source.retail_price),
 
       wholesale_price:
-        product.wholesale_price === null ? "" : String(product.wholesale_price),
+        source.wholesale_price === null ? "" : String(source.wholesale_price),
 
-      binId: product.binId === null ? "" : String(product.binId),
+      binId: source.binId === null ? "" : String(source.binId),
 
-      uoms: (product.uoms ?? []).map((uom, index) => ({
+      uoms: (source.uoms ?? []).map((uom, index) => ({
         key: `uom-${uom.id ?? index}`,
         uom: uom.uom,
         conversion_factor: String(uom.conversion_factor),
@@ -149,7 +144,43 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
       allowDuplicate: false,
       confirmUomChange: false,
     });
+  };
+
+  // Fetch the authoritative product detail on edit so the full alternate-UoM
+  // set and bin relation come from GET /products/:id, not the list item.
+  useEffect(() => {
+    if (!product) {
+      setEditDetail(null);
+      return;
+    }
+
+    let mounted = true;
+    setEditDetail(null);
+
+    apiClient
+      .get<Product>(`/products/${product.id}`)
+      .then((res) => {
+        if (mounted) setEditDetail(res.data);
+      })
+      .catch(() => {
+        // Fall back to the list item, which still carries the uoms array.
+        if (mounted) setEditDetail(product);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, [product]);
+
+  useEffect(() => {
+    if (isEdit) {
+      if (editDetail) initFromProduct(editDetail);
+      return;
+    }
+
+    setFormData(createEmptyForm());
+    setBinLabel("");
+  }, [isEdit, editDetail]);
 
   const updateField = <K extends keyof ProductFormData>(
     field: K,
@@ -432,6 +463,14 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
   const baseRetailNum = Number.isFinite(baseRetail) ? baseRetail : null;
   const baseWholesaleNum = baseWholesale !== null && baseWholesale >= 0 ? baseWholesale : null;
 
+  if (isEdit && !editDetail) {
+    return (
+      <div className="py-8 text-center text-sm text-muted-foreground">
+        Loading product...
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
@@ -559,6 +598,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
               id="current_quantity"
               type="number"
               min="0"
+              className="font-mono"
               value={formData.current_quantity}
               disabled={isEdit}
               onChange={(e) => updateField("current_quantity", e.target.value)}
@@ -576,6 +616,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
               id="reorder_point_ROP"
               type="number"
               min="0"
+              className="font-mono"
               value={formData.reorder_point_ROP}
               onChange={(e) => updateField("reorder_point_ROP", e.target.value)}
             />
@@ -610,6 +651,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
               type="number"
               min="0"
               step="0.01"
+              className="font-mono"
               value={formData.cost_price}
               onChange={(e) => updateField("cost_price", e.target.value)}
             />
@@ -622,6 +664,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
               type="number"
               min="0"
               step="0.01"
+              className="font-mono"
               value={formData.retail_price}
               onChange={(e) => updateField("retail_price", e.target.value)}
               required
@@ -635,6 +678,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
               type="number"
               min="0"
               step="0.01"
+              className="font-mono"
               value={formData.wholesale_price}
               onChange={(e) => updateField("wholesale_price", e.target.value)}
             />
@@ -727,6 +771,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
                         type="number"
                         min="0"
                         step="0.001"
+                        className="font-mono"
                         placeholder="e.g. 100"
                         value={row.conversion_factor}
                         onChange={(e) =>
@@ -741,6 +786,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
                         type="number"
                         min="0"
                         step="0.01"
+                        className="font-mono"
                         value={row.cost_price}
                         onChange={(e) =>
                           updateUomText(row.key, "cost_price", e.target.value)
@@ -754,6 +800,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
                         type="number"
                         min="0"
                         step="0.01"
+                        className="font-mono"
                         value={row.retail_price}
                         onChange={(e) =>
                           updateUomText(row.key, "retail_price", e.target.value)
@@ -767,6 +814,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
                         type="number"
                         min="0"
                         step="0.01"
+                        className="font-mono"
                         value={row.wholesale_price}
                         onChange={(e) =>
                           updateUomText(row.key, "wholesale_price", e.target.value)

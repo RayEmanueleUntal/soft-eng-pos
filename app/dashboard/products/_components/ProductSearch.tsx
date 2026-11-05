@@ -33,7 +33,12 @@ export function ProductSearch({
   categoryId,
   onCategoryChange,
 }: ProductSearchProps) {
-  const { categories, loading: categoriesLoading } = useProductCategories();
+  const {
+    categories,
+    loading: categoriesLoading,
+    error: categoriesError,
+    refetch: refetchCategories,
+  } = useProductCategories();
 
   return (
     <div className="rounded-lg border bg-background p-3">
@@ -90,6 +95,18 @@ export function ProductSearch({
               </option>
             ))}
           </select>
+          {categoriesError && (
+            <p className="text-xs text-destructive">
+              {categoriesError}{" "}
+              <button
+                type="button"
+                onClick={refetchCategories}
+                className="underline underline-offset-2"
+              >
+                Retry
+              </button>
+            </p>
+          )}
         </div>
       </div>
     </div>

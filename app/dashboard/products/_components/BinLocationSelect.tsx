@@ -115,7 +115,7 @@ export function BinLocationSelect({
         />
 
         {open && !disabled && (
-          <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border bg-popover shadow-md">
+          <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border bg-popover shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
             {loading ? (
               <div className="px-3 py-2 text-xs text-muted-foreground">
                 Searching bins...
