@@ -51,16 +51,19 @@ Inside the backend repository directory, run:
 git switch main
 git pull origin main
 
-# 2. Start PostgreSQL & Redis services in Docker
+# 2. Install dependencies
+npm install
+
+# 3. Start PostgreSQL & Redis services in Docker
 docker compose up pos-db pos-redis -d
 
-# 3. Reset / Migrate database schema (if needed)
+# 4. Reset / Migrate database schema (if needed)
 npx prisma migrate reset
 
-# 4. Seed database with initial master data
+# 5. Seed database with initial master data
 npx prisma db seed
 
-# 5. Run the backend NestJS development server locally
+# 6. Run the backend NestJS development server locally
 npm run start:dev
 
 ```
