@@ -16,7 +16,6 @@ export interface InventoryItem {
   name: string;
   categoryId: number;
   category_name?: string | null;
-  category_name?: string | null;
 
   size_dimensions: string | null;
   thread_type: string | null;
