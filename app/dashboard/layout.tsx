@@ -36,6 +36,7 @@ interface NavChild {
   name: string;
   href: string;
   requiresStockRole?: boolean;
+  allowedRoles?: Role[];
 }
 
 interface NavItem {
@@ -72,6 +73,11 @@ const navigation: NavItem[] = [
       {
         name: "Deliveries",
         href: "/dashboard/inventory/deliveries",
+      },
+      {
+        name: "Purchase Orders",
+        href: "/dashboard/inventory/purchase-orders",
+        allowedRoles: ROLE_PERMISSIONS["/dashboard/inventory/purchase-orders"],
       },
     ],
   },
@@ -116,7 +122,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   // Returns the sub-links of a nav item that the current role may see.
   function getVisibleChildren(item: NavItem): NavChild[] {
     return (item.children ?? []).filter(
-      (child) => !child.requiresStockRole || canManageStock(role),
+      (child) =>
+        (!child.requiresStockRole || canManageStock(role)) &&
+        (!child.allowedRoles || (!!role && child.allowedRoles.includes(role as Role))),
     );
   }
 
