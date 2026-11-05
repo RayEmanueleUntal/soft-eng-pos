@@ -84,7 +84,7 @@ export function DeliveryHistoryTable({
             ) : (
               deliveries.map((delivery) => {
                 const totalUnits = delivery.deliveryItems.reduce(
-                  (sum, item) => sum + (item.received_quantity || 0),
+                  (sum, item) => sum + (item.actual_base_quantity || 0),
                   0,
                 );
 

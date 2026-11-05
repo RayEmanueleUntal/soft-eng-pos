@@ -30,7 +30,7 @@ export function useROPItems() {
         if (!mounted || !Array.isArray(response.data)) return;
         const map: Record<number, string> = {};
         response.data.forEach((c) => {
-          map[c.id] = c.categoryName;
+          map[c.id] = c.name;
         });
         setCategories(map);
       })

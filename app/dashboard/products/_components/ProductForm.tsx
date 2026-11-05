@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,8 +9,14 @@ import {
   PRODUCT_UOMS,
   type Product,
   type ProductFormData,
+  type ProductUomFormRow,
+  type ProductUomPayload,
+  type UnitOfMeasure,
 } from "@/lib/products/types";
+import { useProductCategories } from "@/lib/products/product-categories";
 import { apiClient } from "@/lib/api";
+import { formatPeso, getErrorMessage } from "@/lib/utils";
+import { BinLocationSelect } from "./BinLocationSelect";
 
 interface ProductFormProps {
   product?: Product;
@@ -28,74 +35,304 @@ const createEmptyForm = (): ProductFormData => ({
   current_quantity: "0",
   reorder_point_ROP: "0",
 
-  pricing_uom: "PCS",
-  pricing_unit_qty: "1",
-
   cost_price: "0",
   retail_price: "",
   wholesale_price: "",
 
   binId: "",
 
+  uoms: [],
+
   allowDuplicate: false,
   confirmUomChange: false,
 });
 
+const createUomRow = (): ProductUomFormRow => ({
+  key: crypto.randomUUID(),
+  uom: "",
+  conversion_factor: "",
+  cost_price: "",
+  retail_price: "",
+  wholesale_price: "",
+  is_default_purchase: false,
+  is_default_sales: false,
+});
+
+const toNumberOrNull = (value: string): number | null => {
+  if (value.trim() === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const round2 = (value: number) => Math.round(value * 100) / 100;
+
+// Mirrors the backend calculated_* fallback: explicit override, else base price x factor.
+const effectiveUomPrice = (
+  override: string,
+  base: number | null,
+  factor: number,
+): number | null => {
+  const explicit = toNumberOrNull(override);
+  if (explicit !== null) return explicit;
+  if (base === null || !Number.isFinite(factor) || factor <= 0) return null;
+  return round2(base * factor);
+};
+
+const formatEffective = (value: number | null) =>
+  value === null ? "—" : formatPeso(value);
+
 export function ProductForm({ product, onSaved }: ProductFormProps) {
   const [formData, setFormData] = useState<ProductFormData>(createEmptyForm);
+  const [binLabel, setBinLabel] = useState("");
+  const [editDetail, setEditDetail] = useState<Product | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [detailReloadKey, setDetailReloadKey] = useState(0);
+  const [isDirty, setIsDirty] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const { categories, loading: categoriesLoading, error: categoriesError } =
+    useProductCategories();
+
   const isEdit = Boolean(product);
 
-  useEffect(() => {
-    if (!product) {
-      setFormData(createEmptyForm());
-      return;
-    }
+  const initFromProduct = (source: Product) => {
+    const binLabelFromProduct = source.bin_location
+      ? `Aisle ${source.bin_location.aisle_number} · Shelf ${source.bin_location.shelf_location}`
+      : source.bin_aisle_number || source.bin_shelf_location
+        ? `Aisle ${source.bin_aisle_number ?? "-"} · Shelf ${source.bin_shelf_location ?? "-"}`
+        : source.binId
+          ? `Bin #${source.binId}`
+          : "";
+
+    setBinLabel(binLabelFromProduct);
 
     setFormData({
-      sku: product.sku ?? "",
-      name: product.name,
-      categoryId: String(product.categoryId),
+      sku: source.sku ?? "",
+      name: source.name,
+      categoryId: String(source.categoryId),
 
-      size_dimensions: product.size_dimensions ?? "",
+      size_dimensions: source.size_dimensions ?? "",
 
-      thread_type: product.thread_type ?? "",
+      thread_type: source.thread_type ?? "",
 
-      material_grade: product.material_grade ?? "",
+      material_grade: source.material_grade ?? "",
 
-      base_uom: product.base_uom,
-      current_quantity: String(product.current_quantity),
+      base_uom: source.base_uom,
+      current_quantity: String(source.current_quantity),
 
-      reorder_point_ROP: String(product.reorder_point_ROP),
+      reorder_point_ROP: String(source.reorder_point_ROP),
 
-      pricing_uom: product.pricing_uom,
-
-      pricing_unit_qty: String(product.pricing_unit_qty),
-
-      cost_price: String(product.cost_price),
-      retail_price: String(product.retail_price),
+      cost_price: String(source.cost_price),
+      retail_price: String(source.retail_price),
 
       wholesale_price:
-        product.wholesale_price === null ? "" : String(product.wholesale_price),
+        source.wholesale_price === null ? "" : String(source.wholesale_price),
 
-      binId: product.binId === null ? "" : String(product.binId),
+      binId: source.binId === null ? "" : String(source.binId),
+
+      uoms: (source.uoms ?? []).map((uom, index) => ({
+        key: `uom-${uom.id ?? index}`,
+        uom: uom.uom,
+        conversion_factor: String(uom.conversion_factor),
+        cost_price: uom.cost_price === null ? "" : String(uom.cost_price),
+        retail_price: uom.retail_price === null ? "" : String(uom.retail_price),
+        wholesale_price:
+          uom.wholesale_price === null ? "" : String(uom.wholesale_price),
+        is_default_purchase: uom.is_default_purchase,
+        is_default_sales: uom.is_default_sales,
+      })),
 
       allowDuplicate: false,
       confirmUomChange: false,
     });
-  }, [product]);
+
+    setIsDirty(false);
+  };
+
+  // Fetch the authoritative product detail on edit so the full alternate-UoM
+  // set and bin relation come from GET /products/:id, not the list item.
+  useEffect(() => {
+    if (!product) {
+      setEditDetail(null);
+      setDetailError(null);
+      return;
+    }
+
+    let mounted = true;
+    setEditDetail(null);
+    setDetailError(null);
+
+    apiClient
+      .get<Product>(`/products/${product.id}`)
+      .then((res) => {
+        if (mounted) setEditDetail(res.data);
+      })
+      .catch((err: unknown) => {
+        // Fall back to the list item, which still carries the uoms array,
+        // but surface the failure so staff know the data may be stale.
+        if (mounted) {
+          setEditDetail(product);
+          setDetailError(
+            getErrorMessage(err, "Failed to load the latest product details."),
+          );
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [product, detailReloadKey]);
+
+  const retryDetail = () => {
+    if (
+      isDirty &&
+      !window.confirm(
+        "Reloading product details will discard your unsaved changes. Continue?",
+      )
+    ) {
+      return;
+    }
+
+    setEditDetail(null);
+    setDetailError(null);
+    setDetailReloadKey((key) => key + 1);
+  };
+
+  useEffect(() => {
+    if (isEdit) {
+      if (editDetail) initFromProduct(editDetail);
+      return;
+    }
+
+    setFormData(createEmptyForm());
+    setBinLabel("");
+    setIsDirty(false);
+  }, [isEdit, editDetail]);
 
   const updateField = <K extends keyof ProductFormData>(
     field: K,
     value: ProductFormData[K],
   ) => {
+    setIsDirty(true);
     setFormData((previous) => ({
       ...previous,
       [field]: value,
     }));
+  };
+
+  const addUomRow = () => {
+    setIsDirty(true);
+    setFormData((previous) => ({
+      ...previous,
+      uoms: [...previous.uoms, createUomRow()],
+    }));
+  };
+
+  const removeUomRow = (key: string) => {
+    setIsDirty(true);
+    setFormData((previous) => ({
+      ...previous,
+      uoms: previous.uoms.filter((row) => row.key !== key),
+    }));
+  };
+
+  const updateUomUnit = (key: string, value: UnitOfMeasure | "") => {
+    setIsDirty(true);
+    setFormData((previous) => ({
+      ...previous,
+      uoms: previous.uoms.map((row) =>
+        row.key === key ? { ...row, uom: value } : row,
+      ),
+    }));
+  };
+
+  const updateUomText = (
+    key: string,
+    field: "conversion_factor" | "cost_price" | "retail_price" | "wholesale_price",
+    value: string,
+  ) => {
+    setIsDirty(true);
+    setFormData((previous) => ({
+      ...previous,
+      uoms: previous.uoms.map((row) =>
+        row.key === key ? { ...row, [field]: value } : row,
+      ),
+    }));
+  };
+
+  // Keep only one default UoM per purpose: checking a row clears the flag on the others.
+  const handleUomFlag = (
+    key: string,
+    flag: "is_default_purchase" | "is_default_sales",
+    checked: boolean,
+  ) => {
+    setIsDirty(true);
+    setFormData((previous) => ({
+      ...previous,
+      uoms: previous.uoms.map((row) => ({
+        ...row,
+        [flag]: row.key === key ? checked : checked ? false : row[flag],
+      })),
+    }));
+  };
+
+  const validateUoms = (): ProductUomPayload[] | null => {
+    const seen = new Set<string>();
+    const payload: ProductUomPayload[] = [];
+
+    for (const row of formData.uoms) {
+      if (!row.uom) {
+        setError("Each alternate UoM requires a unit of measure.");
+        return null;
+      }
+      if (row.uom === formData.base_uom) {
+        setError("An alternate UoM cannot match the Base UoM.");
+        return null;
+      }
+      if (seen.has(row.uom)) {
+        setError(`Duplicate alternate UoM: ${row.uom}.`);
+        return null;
+      }
+      seen.add(row.uom);
+
+      const factor = Number(row.conversion_factor);
+      if (!Number.isFinite(factor) || factor <= 0) {
+        setError(`Conversion factor for ${row.uom} must be greater than 0.`);
+        return null;
+      }
+
+      for (const [label, raw] of [
+        ["Cost", row.cost_price],
+        ["Retail", row.retail_price],
+        ["Wholesale", row.wholesale_price],
+      ] as const) {
+        const parsed = toNumberOrNull(raw);
+        if (raw.trim() !== "" && (parsed === null || parsed < 0)) {
+          setError(`${label} price override for ${row.uom} must be 0 or greater.`);
+          return null;
+        }
+      }
+
+      payload.push({
+        uom: row.uom as UnitOfMeasure,
+        conversion_factor: factor,
+        ...(toNumberOrNull(row.cost_price) !== null
+          ? { cost_price: toNumberOrNull(row.cost_price)! }
+          : {}),
+        ...(toNumberOrNull(row.retail_price) !== null
+          ? { retail_price: toNumberOrNull(row.retail_price)! }
+          : {}),
+        ...(toNumberOrNull(row.wholesale_price) !== null
+          ? { wholesale_price: toNumberOrNull(row.wholesale_price)! }
+          : {}),
+        is_default_purchase: row.is_default_purchase,
+        is_default_sales: row.is_default_sales,
+      });
+    }
+
+    return payload;
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -110,8 +347,8 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
 
     const category = Number(formData.categoryId);
 
-    if (!category || category < 1) {
-      setError("A valid category ID is required.");
+    if (!Number.isInteger(category) || category < 1) {
+      setError("Please select a valid category.");
       return;
     }
 
@@ -136,35 +373,31 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
       return;
     }
 
-    const pricingUnitQty = Number(formData.pricing_unit_qty);
+    const costPrice = Number(formData.cost_price);
 
-    if (Number.isNaN(pricingUnitQty) || pricingUnitQty < 1) {
-      setError("Pricing unit quantity must be at least 1.");
+    if (!Number.isNaN(costPrice) && costPrice < 0) {
+      setError("Cost price must be 0 or greater.");
       return;
     }
 
-    const costPrice = Number(formData.cost_price);
-
-    const wholesalePrice =
-      formData.wholesale_price.trim() === ""
-        ? undefined
-        : Number(formData.wholesale_price);
-
-    if (
-      wholesalePrice !== undefined &&
-      (Number.isNaN(wholesalePrice) || wholesalePrice < 0)
-    ) {
+    const wholesalePrice = toNumberOrNull(formData.wholesale_price);
+    if (formData.wholesale_price.trim() !== "" && wholesalePrice === null) {
+      setError("Wholesale price must be 0 or greater.");
+      return;
+    }
+    if (wholesalePrice !== null && wholesalePrice < 0) {
       setError("Wholesale price must be 0 or greater.");
       return;
     }
 
-    const binId =
-      formData.binId.trim() === "" ? undefined : Number(formData.binId);
-
-    if (binId !== undefined && (!Number.isInteger(binId) || binId < 1)) {
-      setError("Bin ID must be a valid number.");
+    const binId = toNumberOrNull(formData.binId);
+    if (formData.binId.trim() !== "" && (binId === null || !Number.isInteger(binId) || binId < 1)) {
+      setError("Please select a valid bin location.");
       return;
     }
+
+    const uoms = validateUoms();
+    if (uoms === null) return;
 
     try {
       setLoading(true);
@@ -186,24 +419,20 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
 
         reorder_point_ROP: reorderPoint,
 
-        pricing_uom: formData.pricing_uom,
-
-        pricing_unit_qty: pricingUnitQty,
-
         cost_price: Number.isNaN(costPrice) ? 0 : costPrice,
 
         retail_price: retailPrice,
 
-        wholesale_price: wholesalePrice,
-
-        binId,
+        uoms,
 
         allowDuplicate: formData.allowDuplicate,
       };
 
-      if (!isEdit) {
-        payload.current_quantity = baseQuantity;
-      } else {
+      if (isEdit) {
+        // PATCH replaces the whole alternate-UoM set; null clears optional fields.
+        payload.wholesale_price = wholesalePrice;
+        payload.binId = binId;
+
         /*
          * The PATCH endpoint does not expose
          * current_quantity.
@@ -211,10 +440,13 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
          * Stock should therefore not be modified
          * through product editing.
          */
-
         if (product && product.base_uom !== formData.base_uom) {
           payload.confirmUomChange = formData.confirmUomChange;
         }
+      } else {
+        payload.current_quantity = baseQuantity;
+        payload.wholesale_price = wholesalePrice ?? undefined;
+        payload.binId = binId ?? undefined;
       }
 
       const idempotencyKey = crypto.randomUUID();
@@ -234,24 +466,64 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
       }
 
       onSaved();
-    } catch (err: any) {
-      setError(err?.response?.data?.message || "Failed to save product.");
+    } catch (err: unknown) {
+      const response = (err as { response?: { status?: number; data?: { details?: { code?: string } } } })
+        ?.response;
+
+      if (response?.data?.details?.code === "PRODUCT_HAS_TRANSACTION_HISTORY") {
+        setError(
+          "Base UOM cannot be changed after stock history exists. Revert the Base UOM or adjust stock instead.",
+        );
+        setFormData((previous) => ({
+          ...previous,
+          base_uom: product?.base_uom ?? previous.base_uom,
+          confirmUomChange: false,
+        }));
+      } else {
+        setError(getErrorMessage(err, "Failed to save product."));
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const uomOptions = PRODUCT_UOMS.map((uom) => (
-    <option key={uom} value={uom}>
-      {uom}
-    </option>
-  ));
+  const uomSelectClass =
+    "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm";
+
+  const baseCost = Number(formData.cost_price);
+  const baseRetail = Number(formData.retail_price);
+  const baseWholesale = toNumberOrNull(formData.wholesale_price);
+
+  const baseCostNum = Number.isFinite(baseCost) ? baseCost : 0;
+  const baseRetailNum = Number.isFinite(baseRetail) ? baseRetail : null;
+  const baseWholesaleNum = baseWholesale !== null && baseWholesale >= 0 ? baseWholesale : null;
+
+  if (isEdit && !editDetail) {
+    return (
+      <div className="py-8 text-center text-sm text-muted-foreground">
+        Loading product...
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
         <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
+        </div>
+      )}
+
+      {detailError && (
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+          <div className="flex items-center justify-between gap-3">
+            <span>
+              {detailError} Showing list data, which may be outdated.
+            </span>
+            <Button type="button" variant="outline" size="sm" onClick={retryDetail}>
+              Retry
+            </Button>
+          </div>
         </div>
       )}
 
@@ -281,16 +553,30 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="categoryId">Category ID *</Label>
-          <Input
+          <Label htmlFor="categoryId">Category *</Label>
+          <select
             id="categoryId"
-            type="number"
-            min="1"
             value={formData.categoryId}
-            placeholder="e.g. 1"
             onChange={(e) => updateField("categoryId", e.target.value)}
+            className={uomSelectClass}
             required
-          />
+          >
+            <option value="" disabled>
+              {categoriesLoading
+                ? "Loading categories..."
+                : categories.length === 0
+                  ? "No categories available"
+                  : "Select a category"}
+            </option>
+            {categories.map((category) => (
+              <option key={category.id} value={String(category.id)}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          {categoriesError && (
+            <p className="text-xs text-destructive">{categoriesError}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -325,7 +611,11 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
       </div>
 
       <div className="rounded-lg border p-3">
-        <h3 className="mb-4 font-semibold">Inventory</h3>
+        <h3 className="mb-1 font-semibold">Inventory</h3>
+        <p className="mb-4 text-xs text-muted-foreground">
+          Stock quantity and reorder point are always configured in the Base
+          UoM ({formData.base_uom}).
+        </p>
 
         <div className="grid gap-3 md:grid-cols-3">
           <div className="space-y-2">
@@ -340,9 +630,13 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
                   e.target.value as ProductFormData["base_uom"],
                 )
               }
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+              className={uomSelectClass}
             >
-              {uomOptions}
+              {PRODUCT_UOMS.map((uom) => (
+                <option key={uom} value={uom}>
+                  {uom}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -352,6 +646,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
               id="current_quantity"
               type="number"
               min="0"
+              className="font-mono"
               value={formData.current_quantity}
               disabled={isEdit}
               onChange={(e) => updateField("current_quantity", e.target.value)}
@@ -369,58 +664,34 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
               id="reorder_point_ROP"
               type="number"
               min="0"
+              className="font-mono"
               value={formData.reorder_point_ROP}
               onChange={(e) => updateField("reorder_point_ROP", e.target.value)}
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="binId">Bin ID</Label>
-            <Input
+          <div className="space-y-2 md:col-span-3">
+            <Label htmlFor="binId">Bin Location</Label>
+            <BinLocationSelect
               id="binId"
-              type="number"
-              min="1"
-              placeholder="Optional"
               value={formData.binId}
-              onChange={(e) => updateField("binId", e.target.value)}
+              selectedLabel={binLabel}
+              onChange={(binId, label) => {
+                updateField("binId", binId);
+                setBinLabel(label);
+              }}
             />
           </div>
         </div>
       </div>
 
       <div className="rounded-lg border p-3">
-        <h3 className="mb-4 font-semibold">Pricing</h3>
+        <h3 className="mb-1 font-semibold">Base UoM Pricing</h3>
+        <p className="mb-4 text-xs text-muted-foreground">
+          Cost, retail, and wholesale prices are per single Base UoM unit.
+        </p>
 
         <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="pricing_uom">Pricing UOM</Label>
-
-            <select
-              id="pricing_uom"
-              value={formData.pricing_uom}
-              onChange={(e) =>
-                updateField(
-                  "pricing_uom",
-                  e.target.value as ProductFormData["pricing_uom"],
-                )
-              }
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
-            >
-              {uomOptions}
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="pricing_unit_qty">Pricing Unit Quantity</Label>
-            <Input
-              id="pricing_unit_qty"
-              type="number"
-              min="1"
-              value={formData.pricing_unit_qty}
-              onChange={(e) => updateField("pricing_unit_qty", e.target.value)}
-            />
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="cost_price">Cost Price</Label>
             <Input
@@ -428,6 +699,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
               type="number"
               min="0"
               step="0.01"
+              className="font-mono"
               value={formData.cost_price}
               onChange={(e) => updateField("cost_price", e.target.value)}
             />
@@ -440,6 +712,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
               type="number"
               min="0"
               step="0.01"
+              className="font-mono"
               value={formData.retail_price}
               onChange={(e) => updateField("retail_price", e.target.value)}
               required
@@ -453,11 +726,189 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
               type="number"
               min="0"
               step="0.01"
+              className="font-mono"
               value={formData.wholesale_price}
               onChange={(e) => updateField("wholesale_price", e.target.value)}
             />
           </div>
         </div>
+      </div>
+
+      <div className="rounded-lg border p-3">
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <div>
+            <h3 className="font-semibold">Alternate UoMs</h3>
+            <p className="text-xs text-muted-foreground">
+              Optional package units (e.g. BOX, SACK). Leave price overrides
+              blank to use the calculated base price × conversion factor.
+            </p>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={addUomRow}>
+            <Plus className="mr-1 h-3.5 w-3.5" /> Add UoM
+          </Button>
+        </div>
+
+        {formData.uoms.length === 0 ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            No alternate UoMs configured.
+          </p>
+        ) : (
+          <div className="mt-3 space-y-2">
+            {formData.uoms.map((row) => {
+              const usedUoms = new Set(
+                formData.uoms
+                  .filter((other) => other.key !== row.key && other.uom)
+                  .map((other) => other.uom),
+              );
+              const factor = Number(row.conversion_factor);
+              const effectiveCost = effectiveUomPrice(
+                row.cost_price,
+                baseCostNum,
+                factor,
+              );
+              const effectiveRetail = effectiveUomPrice(
+                row.retail_price,
+                baseRetailNum,
+                factor,
+              );
+              const effectiveWholesale = effectiveUomPrice(
+                row.wholesale_price,
+                baseWholesaleNum,
+                factor,
+              );
+
+              return (
+                <div key={row.key} className="relative rounded-md border p-2.5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1.5 top-1.5 h-7 w-7"
+                    onClick={() => removeUomRow(row.key)}
+                    title="Remove UoM"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+
+                  <div className="grid gap-2 pr-8 md:grid-cols-5">
+                    <div className="space-y-1">
+                      <Label>UoM</Label>
+                      <select
+                        value={row.uom}
+                        onChange={(e) =>
+                          updateUomUnit(row.key, e.target.value as UnitOfMeasure | "")
+                        }
+                        className={uomSelectClass}
+                      >
+                        <option value="">Select UoM</option>
+                        {PRODUCT_UOMS.filter(
+                          (uom) =>
+                            uom === row.uom ||
+                            (uom !== formData.base_uom && !usedUoms.has(uom)),
+                        ).map((uom) => (
+                          <option key={uom} value={uom}>
+                            {uom}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label>Factor</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        className="font-mono"
+                        placeholder="e.g. 100"
+                        value={row.conversion_factor}
+                        onChange={(e) =>
+                          updateUomText(row.key, "conversion_factor", e.target.value)
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label>Cost override</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="font-mono"
+                        value={row.cost_price}
+                        onChange={(e) =>
+                          updateUomText(row.key, "cost_price", e.target.value)
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label>Retail override</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="font-mono"
+                        value={row.retail_price}
+                        onChange={(e) =>
+                          updateUomText(row.key, "retail_price", e.target.value)
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label>Wholesale override</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="font-mono"
+                        value={row.wholesale_price}
+                        onChange={(e) =>
+                          updateUomText(row.key, "wholesale_price", e.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 pr-8 text-xs">
+                    <label className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={row.is_default_purchase}
+                        onChange={(e) =>
+                          handleUomFlag(
+                            row.key,
+                            "is_default_purchase",
+                            e.target.checked,
+                          )
+                        }
+                        className="h-3.5 w-3.5"
+                      />
+                      Default purchase
+                    </label>
+                    <label className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={row.is_default_sales}
+                        onChange={(e) =>
+                          handleUomFlag(row.key, "is_default_sales", e.target.checked)
+                        }
+                        className="h-3.5 w-3.5"
+                      />
+                      Default sales
+                    </label>
+                    <span className="font-mono text-muted-foreground">
+                      Effective: cost {formatEffective(effectiveCost)} · retail{" "}
+                      {formatEffective(effectiveRetail)} · wholesale{" "}
+                      {formatEffective(effectiveWholesale)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
@@ -492,7 +943,8 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
 
               <p className="mt-1 text-xs text-muted-foreground">
                 Changing the base UOM requires confirmation and will trigger a
-                stock recount.
+                stock recount. It is blocked if the product already has stock
+                history.
               </p>
             </div>
           </div>
