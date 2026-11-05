@@ -25,3 +25,4 @@
 2026-10-09: Reviewed system settings files for header and function comments; added missing comments to the dashboard layout functions.
 2026-10-09: Fixed system settings "no longer exists" banner being wiped by the list reload after a stale edit or delete.
 2026-11-06: Added Purchase Orders subpage with expandable PO table, create modal (supplier, ROP quick-add, product search) and cancel flow.
+2026-11-06: Purchase Orders: call PO and supplier detail endpoints, show supplier info panel, add size/thread/material product filters.

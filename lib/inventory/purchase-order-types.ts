@@ -64,6 +64,14 @@ export interface PoDeliveriesResponse {
   data: { deliveryItems: PoDeliveryItem[] }[];
 }
 
+export interface ProductSearchParams {
+  search?: string;
+  size?: string;
+  thread?: string;
+  material?: string;
+  limit?: number;
+}
+
 export interface CreatePurchaseOrderItemPayload {
   productId: number;
   requested_quantity: number;

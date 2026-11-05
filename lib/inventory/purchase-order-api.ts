@@ -9,6 +9,7 @@ import {
   PaginatedPurchaseOrders,
   PoDeliveriesResponse,
   POStatus,
+  ProductSearchParams,
   PurchaseOrderDto,
 } from "./purchase-order-types";
 
@@ -82,13 +83,18 @@ export async function fetchReceivedBaseByProduct(
   return received;
 }
 
-// Searches the product catalog by name or SKU (GET /products?search=) for manual PO line items.
-export async function searchProducts(params: {
-  search: string;
-  limit?: number;
-}): Promise<InventoryResponse> {
+// Searches products by SKU/name plus size, thread and material filters (GET /products) for manual PO lines.
+export async function searchProducts(
+  params: ProductSearchParams,
+): Promise<InventoryResponse> {
   const response = await apiClient.get<InventoryResponse>("/products", {
-    params: { search: params.search, limit: params.limit ?? 8 },
+    params: {
+      search: params.search || undefined,
+      size: params.size || undefined,
+      thread: params.thread || undefined,
+      material: params.material || undefined,
+      limit: params.limit ?? 8,
+    },
   });
   return response.data;
 }

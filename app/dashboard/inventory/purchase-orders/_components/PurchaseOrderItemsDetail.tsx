@@ -13,7 +13,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { fetchReceivedBaseByProduct } from "@/lib/inventory/purchase-order-api";
+import {
+  fetchPurchaseOrderDetail,
+  fetchReceivedBaseByProduct,
+} from "@/lib/inventory/purchase-order-api";
 import {
   PurchaseOrderDto,
   PurchaseOrderItemDto,
@@ -24,6 +27,11 @@ type ItemReceiptStatus = "PENDING" | "PARTIAL" | "COMPLETE" | "CANCELLED";
 
 interface DeliveryResult {
   receivedByProduct: Record<number, number>;
+  error: string | null;
+}
+
+interface DetailResult {
+  order: PurchaseOrderDto | null;
   error: string | null;
 }
 
@@ -46,22 +54,48 @@ function getItemReceiptStatus(
 }
 
 interface PurchaseOrderItemsDetailProps {
-  order: PurchaseOrderDto;
+  listOrder: PurchaseOrderDto;
 }
 
-// Renders the nested line-item table and loads delivery totals once when mounted.
+// Renders the nested line-item table; loads fresh PO detail and delivery totals once when mounted.
 export function PurchaseOrderItemsDetail({
-  order,
+  listOrder,
 }: PurchaseOrderItemsDetailProps) {
-  const cancelled = order.po_status === "CANCELLED";
+  const [detail, setDetail] = React.useState<DetailResult | null>(null);
   const [result, setResult] = React.useState<DeliveryResult | null>(null);
 
+  // Prefer the freshly fetched PO; fall back to the list row if the detail request failed.
+  const order = detail?.order ?? listOrder;
+  const cancelled = order.po_status === "CANCELLED";
+
   React.useEffect(() => {
-    if (cancelled) return;
+    let active = true;
+
+    // Fetches the full PO (GET /purchase-orders/{id}) so items and status are current.
+    fetchPurchaseOrderDetail(listOrder.id)
+      .then((fresh) => {
+        if (active) setDetail({ order: fresh, error: null });
+      })
+      .catch((err: unknown) => {
+        if (active) {
+          setDetail({
+            order: null,
+            error: getErrorMessage(err, "Failed to load purchase order detail."),
+          });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [listOrder.id]);
+
+  React.useEffect(() => {
+    if (listOrder.po_status === "CANCELLED") return;
     let active = true;
 
     // Totals received base units per product across every delivery recorded for this PO.
-    fetchReceivedBaseByProduct(order.id)
+    fetchReceivedBaseByProduct(listOrder.id)
       .then((receivedByProduct) => {
         if (active) setResult({ receivedByProduct, error: null });
       })
@@ -77,7 +111,7 @@ export function PurchaseOrderItemsDetail({
     return () => {
       active = false;
     };
-  }, [order.id, cancelled]);
+  }, [listOrder.id, listOrder.po_status]);
 
   const loadingReceipts = !cancelled && result === null;
   const receiptsAvailable = cancelled || (result !== null && !result.error);
@@ -88,6 +122,12 @@ export function PurchaseOrderItemsDetail({
 
   return (
     <div className="space-y-2 border-l-2 border-l-primary bg-muted/30 p-3">
+      {detail?.error && (
+        <p className="break-words rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
+          {detail.error} Showing the data from the list instead.
+        </p>
+      )}
+
       {result?.error && (
         <p className="break-words rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
           {result.error} Receipt status is unavailable for this order.

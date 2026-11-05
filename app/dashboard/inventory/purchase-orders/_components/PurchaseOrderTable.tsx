@@ -178,7 +178,7 @@ export function PurchaseOrderTable({
                     {expanded && (
                       <TableRow className="hover:bg-transparent">
                         <TableCell colSpan={COLUMN_COUNT} className="p-0">
-                          <PurchaseOrderItemsDetail order={order} />
+                          <PurchaseOrderItemsDetail listOrder={order} />
                         </TableCell>
                       </TableRow>
                     )}

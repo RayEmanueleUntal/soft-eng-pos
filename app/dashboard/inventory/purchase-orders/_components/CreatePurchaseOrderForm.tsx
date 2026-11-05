@@ -17,7 +17,7 @@ import {
 import { createPurchaseOrder } from "@/lib/inventory/purchase-order-api";
 import { PurchaseOrderDto } from "@/lib/inventory/purchase-order-types";
 import { InventoryItem } from "@/lib/inventory/types";
-import { fetchSuppliers, Supplier } from "@/lib/suppliers/suppliers";
+import { fetchSupplierById, fetchSuppliers, Supplier } from "@/lib/suppliers/suppliers";
 import { getErrorMessage } from "@/lib/utils";
 import {
   createDraftLine,
@@ -28,6 +28,7 @@ import {
 } from "./PoLineItemsEditor";
 import { PoProductSearch } from "./PoProductSearch";
 import { RopQuickAddList } from "./RopQuickAddList";
+import { SupplierDetailResult, SupplierInfoPanel } from "./SupplierInfoPanel";
 
 interface SupplierResult {
   suppliers: Supplier[];
@@ -46,6 +47,7 @@ export function CreatePurchaseOrderForm({
 }: CreatePurchaseOrderFormProps) {
   const [supplierResult, setSupplierResult] = React.useState<SupplierResult | null>(null);
   const [supplierId, setSupplierId] = React.useState("");
+  const [supplierDetail, setSupplierDetail] = React.useState<SupplierDetailResult | null>(null);
   const [lines, setLines] = React.useState<DraftLine[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -70,6 +72,30 @@ export function CreatePurchaseOrderForm({
       active = false;
     };
   }, []);
+
+  React.useEffect(() => {
+    if (supplierId === "") return;
+    let active = true;
+
+    // Loads the picked supplier (GET /suppliers/{id}) to show its details and confirm it is active.
+    fetchSupplierById(supplierId)
+      .then((supplier) => {
+        if (active) setSupplierDetail({ supplierId, supplier, error: null });
+      })
+      .catch((err: unknown) => {
+        if (active) {
+          setSupplierDetail({
+            supplierId,
+            supplier: null,
+            error: getErrorMessage(err, "Failed to load supplier details."),
+          });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [supplierId]);
 
   const addedProductIds = React.useMemo(
     () => new Set(lines.map((line) => line.productId)),
@@ -102,7 +128,10 @@ export function CreatePurchaseOrderForm({
   const linesValid =
     lines.length > 0 &&
     lines.every((line) => isValidQuantity(line.quantity) && isValidUnitCost(line.unitCost));
-  const canSubmit = supplierId !== "" && linesValid && !submitting;
+  const currentSupplierDetail =
+    supplierId !== "" && supplierDetail?.supplierId === supplierId ? supplierDetail : null;
+  const supplierInactive = currentSupplierDetail?.supplier?.status === "INACTIVE";
+  const canSubmit = supplierId !== "" && !supplierInactive && linesValid && !submitting;
 
   // Validates the draft and posts it; keeps the user's input when the request fails.
   const handleSubmit = async (e: React.FormEvent) => {
@@ -183,6 +212,12 @@ export function CreatePurchaseOrderForm({
                 ))}
               </SelectContent>
             </Select>
+          )}
+          {supplierId !== "" && (
+            <SupplierInfoPanel
+              loading={currentSupplierDetail === null}
+              result={currentSupplierDetail}
+            />
           )}
         </div>
 
