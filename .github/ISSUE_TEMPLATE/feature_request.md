@@ -21,7 +21,7 @@ A brief description of what feature or backend integration needs to be built.
 
 ## 🔌 API Endpoints Involved
 
-> _Use `lib/api.ts` for all requests. Refer to Swagger UI (`http://localhost:3000/api`) for request/response schemas._
+> _Use `lib/api.ts` for all requests. Refer to Swagger UI (`http://localhost:3001/api`) for request/response schemas._
 
 - `METHOD /endpoint-path`
 - `METHOD /endpoint-path`
