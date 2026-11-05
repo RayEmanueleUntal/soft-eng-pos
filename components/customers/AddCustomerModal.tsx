@@ -10,8 +10,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { apiClient } from "@/lib/api";
-import { Customer, CustomerType } from "@/lib/customers/types";
+import {
+  createCustomer,
+  updateCustomer,
+} from "@/lib/customers/customer-api";
+import {
+  Customer,
+  CustomerPayload,
+  CustomerType,
+} from "@/lib/customers/types";
+import { getErrorMessage } from "@/lib/utils";
 import { useState } from "react";
 
 interface AddCustomerModalProps {
@@ -49,10 +57,6 @@ export function AddCustomerModal({
     customer?.wholesale?.credit_limit?.toString() ?? "",
   );
 
-  const [outstandingBalance, setOutstandingBalance] = useState(
-    customer?.wholesale?.outstanding_balance?.toString() ?? "0",
-  );
-
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState("");
 
@@ -86,7 +90,7 @@ export function AddCustomerModal({
     try {
       setIsSaving(true);
 
-      const payload = {
+      const payload: CustomerPayload = {
         name: name.trim(),
         contact_number: contactNumber.trim(),
         type,
@@ -94,27 +98,25 @@ export function AddCustomerModal({
           ? {
               company_name: companyName.trim(),
               credit_limit: Number(creditLimit),
-              outstanding_balance: Number(outstandingBalance) || 0,
             }
           : {}),
       };
 
-      let response;
-      if (mode === "add") {
-        response = await apiClient.post("/customers/", payload);
-      } else {
-        if (!customer) return;
+      const savedCustomer =
+        mode === "add"
+          ? await createCustomer(payload)
+          : customer
+            ? await updateCustomer(customer.id, payload)
+            : null;
 
-        response = await apiClient.patch(`/customers/${customer.id}`, payload);
+      if (savedCustomer) {
+        onSuccess(savedCustomer);
       }
-
-      onSuccess(response.data);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to save customer:", error);
 
       setFormError(
-        error?.response?.data?.message ||
-          "Failed to save customer. Please try again.",
+        getErrorMessage(error, "Failed to save customer. Please try again."),
       );
     } finally {
       setIsSaving(false);
@@ -198,21 +200,6 @@ export function AddCustomerModal({
                 placeholder="50000"
                 value={creditLimit}
                 onChange={(e) => setCreditLimit(e.target.value)}
-                disabled={isSaving}
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">
-                Outstanding Balance (PHP)
-              </label>
-
-              <Input
-                type="number"
-                min="0"
-                placeholder="0"
-                value={outstandingBalance}
-                onChange={(e) => setOutstandingBalance(e.target.value)}
                 disabled={isSaving}
               />
             </div>

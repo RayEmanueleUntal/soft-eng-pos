@@ -2,6 +2,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useProductCategories } from "@/lib/products/product-categories";
 
 interface ProductSearchProps {
   searchTerm: string;
@@ -32,6 +33,13 @@ export function ProductSearch({
   categoryId,
   onCategoryChange,
 }: ProductSearchProps) {
+  const {
+    categories,
+    loading: categoriesLoading,
+    error: categoriesError,
+    refetch: refetchCategories,
+  } = useProductCategories();
+
   return (
     <div className="rounded-lg border bg-background p-3">
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
@@ -72,14 +80,33 @@ export function ProductSearch({
         </div>
 
         <div className="space-y-2">
-          <Label>Category ID</Label>
-          <Input
-            type="number"
-            min="1"
-            placeholder="e.g. 1"
+          <Label>Category</Label>
+          <select
             value={categoryId}
             onChange={(e) => onCategoryChange(e.target.value)}
-          />
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+          >
+            <option value="">
+              {categoriesLoading ? "Loading..." : "All categories"}
+            </option>
+            {categories.map((category) => (
+              <option key={category.id} value={String(category.id)}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          {categoriesError && (
+            <p className="text-xs text-destructive">
+              {categoriesError}{" "}
+              <button
+                type="button"
+                onClick={refetchCategories}
+                className="underline underline-offset-2"
+              >
+                Retry
+              </button>
+            </p>
+          )}
         </div>
       </div>
     </div>

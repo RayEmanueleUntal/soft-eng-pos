@@ -6,6 +6,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function formatPeso(value: number): string {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+  }).format(Number.isFinite(value) ? value : 0);
+}
+
 /**
  * Safely extracts a user-readable error message from an unknown error.
  * Handles Axios network errors, HTTP status codes (401, 403, 404),
@@ -27,7 +34,15 @@ export function getErrorMessage(error: unknown, fallback = "An unexpected error 
       return "Access denied. You do not have permission to view or perform this action.";
     }
     if (status === 404) {
-      return error.response?.data?.message || fallback;
+      const backendMessage =
+        error.response?.data?.details?.message ||
+        error.response?.data?.message;
+      if (backendMessage) {
+        return Array.isArray(backendMessage)
+          ? backendMessage.join(", ")
+          : String(backendMessage);
+      }
+      return fallback;
     }
 
     // Backend validation error (e.g., NestJS 400 Bad Request)
