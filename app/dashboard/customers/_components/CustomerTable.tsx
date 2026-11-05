@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Table,
   TableBody,
@@ -11,8 +11,13 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { MoreVertical, Plus } from "lucide-react";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import {
+  CheckCircle2,
+  CreditCard,
+  MoreVertical,
+  Plus,
+  X,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,16 +25,35 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { apiClient } from "@/lib/api";
-import { Customer, CustomerResponse } from "@/lib/customers/types";
+import { getCustomers } from "@/lib/customers/customer-api";
+import {
+  Customer,
+  CustomerFilters,
+  CustomerPayment,
+  EMPTY_CUSTOMER_FILTERS,
+} from "@/lib/customers/types";
+import { formatPeso, getErrorMessage } from "@/lib/utils";
 
-import { CustomerSearch } from "./CustomerSearch";
+import { CustomerFilterBar } from "./CustomerFilterBar";
 import { CustomerPagination } from "./CustomerPagination";
+import { CustomerPaymentModal } from "./CustomerPaymentModal";
 import { AddCustomerModal } from "@/components/customers/AddCustomerModal";
+
+const CUSTOMER_PAGE_LIMIT = 10;
+
+interface PaymentNotice {
+  customerName: string;
+  amount: number;
+  previousBalance: number;
+  newBalance: number;
+}
 
 export function CustomerTable() {
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState<CustomerFilters>({
+    ...EMPTY_CUSTOMER_FILTERS,
+  });
+  const [total, setTotal] = useState(0);
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -42,49 +66,68 @@ export function CustomerTable() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null,
   );
+  const [paymentCustomer, setPaymentCustomer] = useState<Customer | null>(
+    null,
+  );
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [paymentNotice, setPaymentNotice] = useState<PaymentNotice | null>(
+    null,
+  );
 
-  const limit = 10;
+  const requestSequence = useRef(0);
 
-  const fetchCustomers = async () => {
+  const loadCustomers = useCallback(async () => {
+    const requestId = ++requestSequence.current;
+
     try {
       setLoading(true);
       setError("");
 
-      const response = await apiClient.get<CustomerResponse>("/customers", {
-        params: {
-          search: searchTerm || undefined,
-          page,
-          limit,
-        },
+      const result = await getCustomers({
+        ...filters,
+        page,
+        limit: CUSTOMER_PAGE_LIMIT,
       });
 
-      setCustomers(response.data.data);
-      setTotalPages(response.data.totalPages);
-    } catch (error: any) {
-      console.error("Failed to fetch customers:", error);
+      if (requestId !== requestSequence.current) return;
+
+      setCustomers(result.data);
+      setTotal(result.total);
+      setTotalPages(result.totalPages);
+    } catch (err) {
+      if (requestId !== requestSequence.current) return;
 
       setError(
-        error?.response?.data?.message ||
-          "Failed to load customers. Please try again.",
+        getErrorMessage(err, "Failed to load customers. Please try again."),
       );
     } finally {
-      setLoading(false);
+      if (requestId === requestSequence.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [filters, page]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      fetchCustomers();
+      void loadCustomers();
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [searchTerm, page]);
+  }, [loadCustomers]);
 
-  const handleSaved = () => {
-    setIsAddOpen(false);
-    setIsEditOpen(false);
-    setSelectedCustomer(null);
-    fetchCustomers();
+  useEffect(() => {
+    if (!paymentNotice) return;
+
+    const timeout = setTimeout(() => {
+      setPaymentNotice(null);
+    }, 8000);
+
+    return () => clearTimeout(timeout);
+  }, [paymentNotice]);
+
+  const handleFiltersChange = (nextFilters: CustomerFilters) => {
+    setFilters(nextFilters);
+    setPage(1);
   };
 
   const handleEdit = (customer: Customer) => {
@@ -92,21 +135,84 @@ export function CustomerTable() {
     setIsEditOpen(true);
   };
 
+  const handleEditClose = () => {
+    setIsEditOpen(false);
+    setSelectedCustomer(null);
+  };
+
+  const handleSettleCredit = (customer: Customer) => {
+    setPaymentCustomer(customer);
+    setIsPaymentOpen(true);
+  };
+
+  const handlePaymentSuccess = (
+    payment: CustomerPayment,
+    customer: Customer,
+  ) => {
+    setCustomers((previous) =>
+      previous.map((item) =>
+        item.id === customer.id && item.wholesale
+          ? {
+              ...item,
+              wholesale: {
+                ...item.wholesale,
+                outstanding_balance: payment.new_balance,
+              },
+            }
+          : item,
+      ),
+    );
+
+    setPaymentNotice({
+      customerName: customer.name,
+      amount: payment.amount_paid,
+      previousBalance: payment.previous_balance,
+      newBalance: payment.new_balance,
+    });
+  };
+
   return (
     <div className="space-y-4">
+      <CustomerFilterBar
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
+      />
+
       <div className="flex items-center justify-between gap-3">
-        <CustomerSearch
-          searchTerm={searchTerm}
-          onSearchChange={(value) => {
-            setSearchTerm(value);
-            setPage(1);
-          }}
-        />
+        <p className="text-sm text-muted-foreground">
+          {total} customer{total === 1 ? "" : "s"}
+        </p>
 
         <Button onClick={() => setIsAddOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Add Customer
         </Button>
       </div>
+
+      {paymentNotice && (
+        <div
+          role="status"
+          className="flex items-center justify-between gap-3 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700"
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span>
+              Payment of {formatPeso(paymentNotice.amount)} recorded for{" "}
+              {paymentNotice.customerName}. Balance:{" "}
+              {formatPeso(paymentNotice.previousBalance)} →{" "}
+              {formatPeso(paymentNotice.newBalance)}.
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setPaymentNotice(null)}
+            className="rounded p-1 text-emerald-700 hover:bg-emerald-500/20"
+            aria-label="Dismiss payment notification"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -150,7 +256,7 @@ export function CustomerTable() {
             ) : (
               customers.map((customer) => (
                 <TableRow key={customer.id}>
-                  <TableCell className="font-medium text-foreground">
+                  <TableCell className="max-w-[220px] font-medium text-foreground whitespace-normal break-words">
                     {customer.name}
                   </TableCell>
 
@@ -164,23 +270,23 @@ export function CustomerTable() {
                     </Badge>
                   </TableCell>
 
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="max-w-[180px] text-muted-foreground whitespace-normal break-words">
                     {customer.contact_number}
                   </TableCell>
 
-                  <TableCell>
+                  <TableCell className="max-w-[220px] whitespace-normal break-words">
                     {customer.wholesale?.company_name ?? "—"}
                   </TableCell>
 
-                  <TableCell className="font-mono">
+                  <TableCell className="font-mono tabular-nums">
                     {customer.wholesale
-                      ? `₱${customer.wholesale.credit_limit.toLocaleString()}`
+                      ? formatPeso(customer.wholesale.credit_limit)
                       : "—"}
                   </TableCell>
 
-                  <TableCell className="font-mono">
+                  <TableCell className="font-mono tabular-nums">
                     {customer.wholesale
-                      ? `₱${customer.wholesale.outstanding_balance.toLocaleString()}`
+                      ? formatPeso(customer.wholesale.outstanding_balance)
                       : "—"}
                   </TableCell>
 
@@ -202,6 +308,16 @@ export function CustomerTable() {
                         >
                           Edit Profile
                         </DropdownMenuItem>
+
+                        {customer.type === "WHOLESALE" && customer.wholesale && (
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => handleSettleCredit(customer)}
+                          >
+                            <CreditCard className="mr-2 h-4 w-4" />
+                            Settle Credit
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -219,29 +335,18 @@ export function CustomerTable() {
         onPageChange={setPage}
       />
 
-      <Dialog
-        open={isEditOpen}
-        onOpenChange={(open) => {
-          setIsEditOpen(open);
-
-          if (!open) {
-            setSelectedCustomer(null);
-          }
-        }}
-      >
-        {selectedCustomer && (
-          <AddCustomerModal
-            isOpen={isEditOpen}
-            onClose={() => setIsEditOpen(false)}
-            mode="edit"
-            customer={selectedCustomer}
-            onSuccess={() => {
-              setIsAddOpen(false);
-              fetchCustomers();
-            }}
-          />
-        )}
-      </Dialog>
+      {isEditOpen && selectedCustomer && (
+        <AddCustomerModal
+          isOpen={isEditOpen}
+          onClose={handleEditClose}
+          mode="edit"
+          customer={selectedCustomer}
+          onSuccess={() => {
+            handleEditClose();
+            void loadCustomers();
+          }}
+        />
+      )}
 
       <AddCustomerModal
         isOpen={isAddOpen}
@@ -249,9 +354,18 @@ export function CustomerTable() {
         onClose={() => setIsAddOpen(false)}
         onSuccess={() => {
           setIsAddOpen(false);
-          fetchCustomers();
+          void loadCustomers();
         }}
       />
+
+      {paymentCustomer && (
+        <CustomerPaymentModal
+          customer={paymentCustomer}
+          open={isPaymentOpen}
+          onOpenChange={setIsPaymentOpen}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 }
