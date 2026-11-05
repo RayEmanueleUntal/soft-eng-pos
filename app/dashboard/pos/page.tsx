@@ -87,6 +87,10 @@ export default function PosPage() {
     setOrderDiscountPercent,
     addItemToCart,
     updateQuantity,
+    setItemQuantity,
+    updateItemDiscount,
+    updateItemUom,
+    removeItem,
     toggleItemPricing,
     toggleAllPricing,
     clearCart,
@@ -97,7 +101,7 @@ export default function PosPage() {
     refetch: refetchCustomers,
   } = usePosCustomers();
 
-  // Default to Walk-in customer (ID "1" in database)
+  // Default to Walk-in customer (None / Retail)
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [lastCompletedSale, setLastCompletedSale] = useState<string | null>(
@@ -123,13 +127,7 @@ export default function PosPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] bg-background flex-1 space-y-2 ">
-      <div className="shrink-0 mt-4 mb-8">
-        <button
-          onClick={() => setCompletedReceipt(MOCK_SWAGGER_RECEIPT as any)}
-          className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-destructive text-white px-4 py-2 rounded font-bold shadow-lg"
-        >
-          PREVIEW REFUND MODAL
-        </button>
+      <div className="shrink-0 mt-4 mb-4">
         {/* 1. Top Header */}
         <PageHeader
           header="POS Terminal"
@@ -176,6 +174,10 @@ export default function PosPage() {
             onToggleItemPricing={toggleItemPricing}
             onToggleAllPricing={toggleAllPricing}
             onUpdateQuantity={updateQuantity}
+            onSetQuantity={setItemQuantity}
+            onUpdateDiscount={updateItemDiscount}
+            onUpdateUom={updateItemUom}
+            onRemoveItem={removeItem}
             onClearCart={clearCart}
             selectedCustomerId={selectedCustomerId}
             onSelectCustomer={setSelectedCustomerId}

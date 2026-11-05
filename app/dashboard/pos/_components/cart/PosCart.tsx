@@ -31,6 +31,21 @@ interface PosCartProps {
     productId: string | number | undefined,
     delta: number,
   ) => void;
+  onSetQuantity?: (
+    productId: string | number | undefined,
+    qty: number,
+  ) => void;
+  onUpdateDiscount?: (
+    productId: string | number | undefined,
+    discount: number,
+  ) => void;
+  onUpdateUom?: (
+    productId: string | number | undefined,
+    uom: string,
+  ) => void;
+  onRemoveItem?: (
+    productId: string | number | undefined,
+  ) => void;
   onUpdateOrderDiscountPercent?: (percent: number) => void;
   onToggleItemPricing?: (productId: string | number | undefined) => void;
   onToggleAllPricing?: (targetType: "RETAIL" | "WHOLESALE") => void;
@@ -49,6 +64,10 @@ export function PosCart({
   orderDiscountPercent,
   orderDiscountAmount,
   onUpdateQuantity,
+  onSetQuantity,
+  onUpdateDiscount,
+  onUpdateUom,
+  onRemoveItem,
   onUpdateOrderDiscountPercent,
   onToggleItemPricing,
   onToggleAllPricing,
@@ -305,11 +324,15 @@ export function PosCart({
               ) : (
                 cart.map((item, idx) => (
                   <CartItemRow
-                    key={item.productId ?? item.id}
+                    key={`${item.productId ?? item.id}-${item.unit_of_measure ?? "uom"}`}
                     item={item}
                     index={idx}
                     isWholesaleCustomer={isWholesaleCustomer}
                     onUpdateQuantity={onUpdateQuantity}
+                    onSetQuantity={onSetQuantity}
+                    onUpdateDiscount={onUpdateDiscount}
+                    onUpdateUom={onUpdateUom}
+                    onRemoveItem={onRemoveItem}
                     onTogglePricingType={onToggleItemPricing}
                   />
                 ))

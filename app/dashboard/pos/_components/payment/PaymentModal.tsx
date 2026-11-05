@@ -19,6 +19,8 @@ import {
   Loader2,
   Plus,
   QrCode,
+  ShieldAlert,
+  ShieldCheck,
   Trash2,
 } from "lucide-react";
 import CashPaymentForm from "./CashPaymentForm";
@@ -95,6 +97,8 @@ export default function PaymentModal({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [managerOverrideRequired, setManagerOverrideRequired] = useState(false);
+  const [overrideActive, setOverrideActive] = useState(false);
 
   // Filter out payment methods that have already been applied to prevent duplicate tender entries
   const appliedMethods = new Set(
@@ -118,6 +122,8 @@ export default function PaymentModal({
     setDetailsMap({});
     setAppliedPayments([]);
     setCheckoutError(null);
+    setManagerOverrideRequired(false);
+    setOverrideActive(false);
     setIsSubmitting(false);
     onClose();
   };
@@ -243,10 +249,12 @@ export default function PaymentModal({
     }));
   }, []);
 
-  const handleCompleteSale = async () => {
+  const handleCompleteSale = async (shouldOverride?: boolean) => {
     if (!canCompleteSale || isSubmitting) return;
     setIsSubmitting(true);
     setCheckoutError(null);
+
+    const effectiveOverride = shouldOverride ?? overrideActive;
 
     try {
       let finalPayments: CheckoutPaymentEntry[] = [];
@@ -282,6 +290,7 @@ export default function PaymentModal({
         customer,
         finalPayments,
         orderDiscountAmount,
+        effectiveOverride,
       );
 
       const res = await submitCheckout(payload);
@@ -290,14 +299,29 @@ export default function PaymentModal({
         onSuccess?.(res.receipt);
         handleClose();
       } else {
-        setCheckoutError(
-          res.message || "Failed to process checkout. Please try again.",
-        );
+        const errorMsg = res.message || "Failed to process checkout. Please try again.";
+        setCheckoutError(errorMsg);
+
+        // Check if error is override-eligible (credit limit, overdue, or inventory limit)
+        const isEligible =
+          /overdue|credit|stock|inventory|limit|exception/i.test(errorMsg) ||
+          errorMsg.includes("OverdueCreditException") ||
+          errorMsg.includes("InsufficientCreditException");
+        if (isEligible) {
+          setManagerOverrideRequired(true);
+        }
       }
     } catch (err: unknown) {
-      setCheckoutError(
-        getErrorMessage(err, "An unexpected error occurred during checkout."),
-      );
+      const errorMsg = getErrorMessage(err, "An unexpected error occurred during checkout.");
+      setCheckoutError(errorMsg);
+
+      const isEligible =
+        /overdue|credit|stock|inventory|limit|exception/i.test(errorMsg) ||
+        errorMsg.includes("OverdueCreditException") ||
+        errorMsg.includes("InsufficientCreditException");
+      if (isEligible) {
+        setManagerOverrideRequired(true);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -333,6 +357,44 @@ export default function PaymentModal({
           <div className="flex items-center gap-2 text-xs font-medium text-destructive bg-destructive/10 border border-destructive/30 p-2.5 rounded-[4px]">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{checkoutError}</span>
+          </div>
+        )}
+
+        {/* Manager Override Action Banner */}
+        {managerOverrideRequired && (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-[4px] border border-amber-400 bg-amber-500/10 text-xs">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+              <div>
+                <p className="font-bold text-amber-900 dark:text-amber-200">
+                  Manager Override Required
+                </p>
+                <p className="text-amber-800 dark:text-amber-300">
+                  Authorized manager override allows bypassing overdue credit status or stock limits.
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                setOverrideActive(true);
+                setCheckoutError(null);
+                handleCompleteSale(true);
+              }}
+              disabled={isSubmitting}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 rounded-[4px] gap-1.5"
+            >
+              <ShieldCheck className="h-4 w-4" /> Manager Override
+            </Button>
+          </div>
+        )}
+
+        {/* Override Active Badge */}
+        {overrideActive && !managerOverrideRequired && (
+          <div className="flex items-center gap-2 p-2 rounded-[4px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs">
+            <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <span className="font-medium">Manager override authorized: Bypassing stock & overdue checks.</span>
           </div>
         )}
 
@@ -497,7 +559,7 @@ export default function PaymentModal({
           </Button>
           <Button
             type="button"
-            onClick={handleCompleteSale}
+            onClick={() => handleCompleteSale()}
             disabled={!canCompleteSale || isSubmitting}
             className="bg-primary hover:bg-primary/80 text-white min-w-[150px] rounded-[4px] text-xs uppercase font-bold tracking-wider"
           >

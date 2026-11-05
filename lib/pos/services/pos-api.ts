@@ -44,6 +44,10 @@ export function toCatalogProduct(
   // 2. Look up the live name from database map using that ID!
   const categoryName = (item as any).category?.name || categoryMap[catId] || "General";
 
+  const baseUom = item.base_uom || "PCS";
+  const pricingUom = item.pricing_uom || baseUom;
+  const pricingUnitQty = Number(item.pricing_unit_qty ?? 1) || 1;
+
   return {
     id: item.id,
     name: item.name,
@@ -52,7 +56,10 @@ export function toCatalogProduct(
     retailPrice: price,
     wholesalePrice: Number(item.wholesale_price ?? price),
     category: categoryName,
-    unit_of_measure: item.base_uom || item.pricing_uom || "PCS",
+    unit_of_measure: pricingUom,
+    base_uom: baseUom,
+    pricing_uom: pricingUom,
+    pricing_unit_qty: pricingUnitQty,
     current_quantity:
       item.current_quantity !== null && item.current_quantity !== undefined
         ? Number(item.current_quantity)
@@ -93,7 +100,9 @@ export async function fetchCategoriesApi(): Promise<string[]> {
 export async function fetchProductsApi(): Promise<CatalogProduct[]> {
   // 1. Fetch both products and live categories from database
   const [productsRes, categoriesRes] = await Promise.all([
-    apiClient.get<{ data: BackendProduct[] } | BackendProduct[]>("/products"),
+    apiClient.get<{ data: BackendProduct[] } | BackendProduct[]>("/products", {
+      params: { limit: 100 },
+    }),
     apiClient.get<any[]>("/product-categories").catch(() => ({ data: [] })),
   ]);
 
@@ -137,10 +146,12 @@ export function buildCheckoutPayload(
   total: number,
   customer: PaymentModalCustomer | null,
   splitPayments?: CheckoutPaymentEntry[],
-  discountTotal?: number
+  discountTotal?: number,
+  override: boolean = false
 ): CheckoutPayload {
   const hasCreditTender = splitPayments?.some((p) => p.payment_method === "CREDIT");
-  const isWholesale = method === "credit" || hasCreditTender || customer?.type?.toUpperCase() === "WHOLESALE";
+  const hasWholesaleItem = items.some((i) => i.pricingType === "WHOLESALE");
+  const isWholesale = hasWholesaleItem || method === "credit" || hasCreditTender || customer?.type?.toUpperCase() === "WHOLESALE";
   const cash = details?.type === "CASH" ? details : undefined;
   const gcash = details?.type === "GCASH" ? details : undefined;
   const credit = details?.type === "CREDIT" ? details : undefined;
@@ -190,8 +201,26 @@ export function buildCheckoutPayload(
       po_number: credit?.poNumber,
     },
     payments: (splitPayments && splitPayments.length > 0) ? splitPayments : undefined,
-    override: false,
+    override,
   };
+}
+
+/**
+ * Checks if a wholesale customer has overdue balances or invoices.
+ * GET /customers/wholesale/{customerId}/overdue-status
+ */
+export async function checkCustomerOverdueStatusApi(customerId: number | string): Promise<{ isOverdue: boolean; message?: string }> {
+  try {
+    const res = await apiClient.get<{ isOverdue?: boolean; overdue?: boolean; message?: string }>(`/customers/wholesale/${customerId}/overdue-status`);
+    const isOverdue = Boolean(res.data?.isOverdue ?? res.data?.overdue);
+    return {
+      isOverdue,
+      message: res.data?.message,
+    };
+  } catch {
+    // If endpoint is unreachable or 404, fall back gracefully
+    return { isOverdue: false };
+  }
 }
 
 /**
@@ -208,15 +237,11 @@ export async function submitCheckout(payload: CheckoutPayload): Promise<Checkout
           : undefined,
       transaction_type: payload.transaction_type || "RETAIL",
       items: payload.items.map((item) => {
-        const itemTxType =
-          payload.transaction_type === "WHOLESALE"
-            ? (item.pricingType || "WHOLESALE")
-            : "RETAIL";
         return {
           productId: Number(item.product_id),
           quantity_sold: Number(item.quantity),
           current_uom: item.unit_of_measure || "PCS",
-          transaction_type: itemTxType,
+          transaction_type: item.pricingType || (payload.transaction_type === "WHOLESALE" ? "WHOLESALE" : "RETAIL"),
           line_discount: Number(item.line_discount ?? 0),
         };
       }),

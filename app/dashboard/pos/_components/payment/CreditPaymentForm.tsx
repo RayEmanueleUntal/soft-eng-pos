@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   formatPeso,
   usePosCustomers,
+  checkCustomerOverdueStatusApi,
   type WholesaleCustomerCredit,
 } from "@/lib/pos";
 import { AlertCircle, Calendar, CreditCard, ShieldAlert } from "lucide-react";
@@ -22,6 +23,7 @@ export interface CreditPaymentDetails {
   dueDate?: string;
   poNumber?: string;
   isValid: boolean;
+  isOverdue?: boolean;
   errorMessage?: string;
 }
 
@@ -79,6 +81,30 @@ export default function CreditPaymentForm({
 
   const selectedCustomer = wholesaleCustomers.find((c) => c.id === effectiveCustomerId);
 
+  // Check overdue status for the selected customer
+  const [isOverdue, setIsOverdue] = useState(false);
+  const [overdueMessage, setOverdueMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedCustomer?.id) {
+      setIsOverdue(false);
+      setOverdueMessage(null);
+      return;
+    }
+
+    let ignore = false;
+    checkCustomerOverdueStatusApi(selectedCustomer.id).then((res) => {
+      if (!ignore) {
+        setIsOverdue(res.isOverdue);
+        setOverdueMessage(res.message || "Customer has overdue credit invoices.");
+      }
+    });
+
+    return () => {
+      ignore = true;
+    };
+  }, [selectedCustomer?.id]);
+
   // Available credit calculation: credit_limit - outstanding_balance
   const creditLimit = selectedCustomer?.credit_limit ?? 0;
   const outstandingBalance = selectedCustomer?.outstanding_balance ?? 0;
@@ -116,6 +142,7 @@ export default function CreditPaymentForm({
       dueDate,
       poNumber: poNumber.trim() || undefined,
       isValid,
+      isOverdue,
       errorMessage: errorMessage || undefined,
     });
   }, [
@@ -124,6 +151,7 @@ export default function CreditPaymentForm({
     poNumber,
     amountDue,
     isValid,
+    isOverdue,
     errorMessage,
     creditLimit,
     outstandingBalance,
@@ -180,6 +208,17 @@ export default function CreditPaymentForm({
           )}
         </select>
       </div>
+
+      {/* Overdue Warning Alert */}
+      {isOverdue && selectedCustomer && (
+        <div className="flex items-center gap-2 p-2.5 rounded-[4px] border border-amber-400 bg-amber-500/10 text-amber-800 dark:text-amber-300 text-xs">
+          <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div className="flex-1">
+            <span className="font-bold">Overdue Invoices Detected:</span>{" "}
+            <span>{overdueMessage || "Customer has past-due credit accounts. Manager override will be required to proceed."}</span>
+          </div>
+        </div>
+      )}
 
       {/* Credit Balance Card */}
       {selectedCustomer && (
