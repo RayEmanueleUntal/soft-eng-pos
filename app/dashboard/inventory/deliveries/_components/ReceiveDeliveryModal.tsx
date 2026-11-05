@@ -71,7 +71,9 @@ export function ReceiveDeliveryModal({
   trigger,
 }: ReceiveDeliveryModalProps) {
   const [open, setOpen] = React.useState(false);
-  const [selectedPO, setSelectedPO] = React.useState<PurchaseOrder | null>(null);
+  const [selectedPO, setSelectedPO] = React.useState<PurchaseOrder | null>(
+    null,
+  );
   const [loadingPO, setLoadingPO] = React.useState(false);
   const [lines, setLines] = React.useState<Record<number, LineInput>>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -100,7 +102,9 @@ export function ReceiveDeliveryModal({
       setLines(initial);
       setSelectedPO(full);
     } catch (err) {
-      setError(getErrorMessage(err, `Could not load Purchase Order #${po.id}.`));
+      setError(
+        getErrorMessage(err, `Could not load Purchase Order #${po.id}.`),
+      );
     } finally {
       setLoadingPO(false);
     }
@@ -228,13 +232,16 @@ export function ReceiveDeliveryModal({
     try {
       const res = await createDelivery(payload);
       setSuccessInfo({
-        message: res.message || "Delivery recorded successfully and stock updated.",
+        message:
+          res.message || "Delivery recorded successfully and stock updated.",
         isPartial: res.isPartial,
       });
       onSuccess?.();
       setTimeout(() => setOpen(false), 1500);
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to record delivery. Please try again."));
+      setError(
+        getErrorMessage(err, "Failed to record delivery. Please try again."),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -298,7 +305,10 @@ export function ReceiveDeliveryModal({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 gap-4">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col flex-1 min-h-0 gap-4"
+        >
           <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
             {!selectedPO ? (
               <div className="space-y-3">
@@ -322,12 +332,16 @@ export function ReceiveDeliveryModal({
                       <span className="font-mono font-bold text-base">
                         PO #{selectedPO.id}
                       </span>
-                      <Badge variant="outline" className="rounded-sm font-mono text-[11px]">
+                      <Badge
+                        variant="outline"
+                        className="rounded-sm font-mono text-[11px]"
+                      >
                         {selectedPO.po_status}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground break-words">
-                      {selectedPO.supplierName || `Supplier #${selectedPO.supplierId}`}
+                      {selectedPO.supplierName ||
+                        `Supplier #${selectedPO.supplierId}`}
                       {selectedPO.order_date
                         ? ` • Ordered ${new Date(selectedPO.order_date).toLocaleDateString()}`
                         : ""}
@@ -382,7 +396,9 @@ export function ReceiveDeliveryModal({
                             </dd>
                           </div>
                           <div>
-                            <dt className={labelClass}>Expected in base unit</dt>
+                            <dt className={labelClass}>
+                              Expected in base unit
+                            </dt>
                             <dd className="font-mono text-sm tabular-nums whitespace-nowrap">
                               {r.item.expected_base_quantity.toLocaleString()}{" "}
                               {r.item.base_uom}
@@ -395,7 +411,8 @@ export function ReceiveDeliveryModal({
                         {/* Received qty: the only required input */}
                         <div className="space-y-1.5">
                           <label htmlFor={`qty-${id}`} className={labelClass}>
-                            Received qty <span className="text-destructive">*</span>
+                            Received qty{" "}
+                            <span className="text-destructive">*</span>
                           </label>
                           <Input
                             id={`qty-${id}`}
@@ -405,7 +422,10 @@ export function ReceiveDeliveryModal({
                             value={r.line.qty}
                             disabled={isSubmitting}
                             onChange={(e) =>
-                              updateLine(id, { qty: e.target.value, base: null })
+                              updateLine(id, {
+                                qty: e.target.value,
+                                base: null,
+                              })
                             }
                             className={inputClass(r.qtyInvalid || r.exceeds)}
                           />
@@ -448,7 +468,10 @@ export function ReceiveDeliveryModal({
                         </div>
 
                         <div className="space-y-1.5">
-                          <label htmlFor={`factor-${id}`} className={labelClass}>
+                          <label
+                            htmlFor={`factor-${id}`}
+                            className={labelClass}
+                          >
                             Conv. factor
                           </label>
                           <Input
@@ -459,7 +482,10 @@ export function ReceiveDeliveryModal({
                             value={r.line.factor}
                             disabled={isSubmitting || locked}
                             onChange={(e) =>
-                              updateLine(id, { factor: e.target.value, base: null })
+                              updateLine(id, {
+                                factor: e.target.value,
+                                base: null,
+                              })
                             }
                             className={inputClass(r.factorInvalid, locked)}
                           />
@@ -489,7 +515,9 @@ export function ReceiveDeliveryModal({
                                 step="any"
                                 value={
                                   r.line.base ??
-                                  (r.computed !== null ? String(r.computed) : "")
+                                  (r.computed !== null
+                                    ? String(r.computed)
+                                    : "")
                                 }
                                 disabled={isSubmitting}
                                 onChange={(e) =>
@@ -517,7 +545,8 @@ export function ReceiveDeliveryModal({
                           onClick={() => updateLine(id, { confirming: true })}
                           className="h-8 text-xs gap-1.5 text-muted-foreground"
                         >
-                          <Pencil className="h-3.5 w-3.5" /> Edit UoM, factor or base qty
+                          <Pencil className="h-3.5 w-3.5" /> Edit UoM,
+                          Conversion Factor, or Expected Base Qty.
                         </Button>
                       )}
 
@@ -526,9 +555,9 @@ export function ReceiveDeliveryModal({
                           <div className="flex items-start gap-2">
                             <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                             <span>
-                              These values come from the Purchase Order. Editing them
-                              can make stock data inaccurate. Edit only if the delivery
-                              really differs.
+                              These values come from the Purchase Order. Editing
+                              them can make stock data inaccurate. Edit only if
+                              the delivery really differs.
                             </span>
                           </div>
                           <div className="flex gap-2 shrink-0">
@@ -537,7 +566,9 @@ export function ReceiveDeliveryModal({
                               variant="outline"
                               size="sm"
                               className="h-8 text-xs"
-                              onClick={() => updateLine(id, { confirming: false })}
+                              onClick={() =>
+                                updateLine(id, { confirming: false })
+                              }
                             >
                               Cancel
                             </Button>
@@ -546,7 +577,10 @@ export function ReceiveDeliveryModal({
                               size="sm"
                               className="h-8 text-xs"
                               onClick={() =>
-                                updateLine(id, { confirming: false, unlocked: true })
+                                updateLine(id, {
+                                  confirming: false,
+                                  unlocked: true,
+                                })
                               }
                             >
                               Yes, edit
@@ -558,7 +592,8 @@ export function ReceiveDeliveryModal({
                       {!locked && (
                         <div className="flex items-center justify-between gap-3 text-xs">
                           <span className="text-amber-700 flex items-center gap-1.5">
-                            <AlertTriangle className="h-3.5 w-3.5" /> Custom values: double-check before confirming.
+                            <AlertTriangle className="h-3.5 w-3.5" /> Custom
+                            values: double-check before confirming.
                           </span>
                           <Button
                             type="button"
@@ -568,7 +603,8 @@ export function ReceiveDeliveryModal({
                             onClick={() => resetLineToDefaults(id)}
                             className="h-8 text-xs gap-1.5"
                           >
-                            <RotateCcw className="h-3.5 w-3.5" /> Reset to PO defaults
+                            <RotateCcw className="h-3.5 w-3.5" /> Reset to PO
+                            defaults
                           </Button>
                         </div>
                       )}
@@ -604,7 +640,8 @@ export function ReceiveDeliveryModal({
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Recording Delivery...
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Recording
+                      Delivery...
                     </>
                   ) : (
                     <>
