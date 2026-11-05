@@ -65,9 +65,9 @@ export interface PurchaseOrdersListResponse {
 export interface CreateDeliveryItemPayload {
   productId: number;
   received_quantity: number;
-  received_uom: string;
-  uom_conversion_factor: number;
-  actual_base_quantity: number;
+  received_uom?: string;
+  uom_conversion_factor?: number;
+  actual_base_quantity?: number;
 }
 export interface CreateDeliveryPayload {
   poId: number;

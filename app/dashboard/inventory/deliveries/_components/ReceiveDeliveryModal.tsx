@@ -29,6 +29,9 @@ import {
   Loader2,
   ArrowLeft,
   AlertCircle,
+  AlertTriangle,
+  Pencil,
+  RotateCcw,
   Truck,
 } from "lucide-react";
 
@@ -37,10 +40,27 @@ interface ReceiveDeliveryModalProps {
   trigger?: React.ReactElement;
 }
 
+// Mirrors the backend Prisma enum UnitOfMeasure (may change in the future)
+const UOM_OPTIONS = [
+  "PCS",
+  "BOX",
+  "SET",
+  "KG",
+  "G",
+  "METER",
+  "HUNDRED",
+  "GROSS",
+  "SACK",
+  "SACKs",
+];
+
 interface LineInput {
   qty: string;
   uom: string;
   factor: string;
+  base: string | null; // manual override of actual base qty (null = computed)
+  confirming: boolean; // showing the "are you sure?" prompt
+  unlocked: boolean; // user confirmed they want to edit UoM/factor/base
 }
 
 const labelClass =
@@ -68,11 +88,13 @@ export function ReceiveDeliveryModal({
       const full = await fetchPurchaseOrderById(po.id);
       const initial: Record<number, LineInput> = {};
       (full.items ?? []).forEach((item) => {
-        // Auto-fill everything from the PO so the user only adjusts differences
         initial[item.productId] = {
           qty: String(item.requested_quantity),
           uom: item.ordered_uom,
           factor: String(item.uom_conversion_factor),
+          base: null,
+          confirming: false,
+          unlocked: false,
         };
       });
       setLines(initial);
@@ -91,6 +113,18 @@ export function ReceiveDeliveryModal({
     }));
   };
 
+  const resetLineToDefaults = (productId: number) => {
+    const item = selectedPO?.items?.find((i) => i.productId === productId);
+    if (!item) return;
+    updateLine(productId, {
+      uom: item.ordered_uom,
+      factor: String(item.uom_conversion_factor),
+      base: null,
+      confirming: false,
+      unlocked: false,
+    });
+  };
+
   const handleReset = () => {
     setSelectedPO(null);
     setLines({});
@@ -106,7 +140,15 @@ export function ReceiveDeliveryModal({
   const rows = React.useMemo(() => {
     if (!selectedPO) return [];
     return (selectedPO.items ?? []).map((item) => {
-      const line = lines[item.productId] ?? { qty: "", uom: "", factor: "" };
+      const line: LineInput = lines[item.productId] ?? {
+        qty: "",
+        uom: item.ordered_uom,
+        factor: String(item.uom_conversion_factor),
+        base: null,
+        confirming: false,
+        unlocked: false,
+      };
+
       const qtyEmpty = line.qty.trim() === "";
       const qty = Number(line.qty);
       const factor = Number(line.factor);
@@ -115,12 +157,19 @@ export function ReceiveDeliveryModal({
       const factorInvalid = !(Number.isFinite(factor) && factor > 0);
       const uomInvalid = line.uom.trim() === "";
 
-      const base =
+      const computed =
         !qtyInvalid && !factorInvalid
           ? Math.round(qty * factor * 1000) / 1000
           : null;
 
-      // Never receive more than was ordered (compared in base units)
+      let base = computed;
+      let baseInvalid = false;
+      if (line.base !== null) {
+        const b = Number(line.base);
+        baseInvalid = line.base.trim() === "" || !(Number.isFinite(b) && b > 0);
+        base = baseInvalid ? null : b;
+      }
+
       const exceeds = base !== null && base > item.expected_base_quantity;
 
       return {
@@ -129,12 +178,15 @@ export function ReceiveDeliveryModal({
         qty,
         factor,
         base,
+        computed,
         qtyEmpty,
         qtyInvalid,
         factorInvalid,
         uomInvalid,
+        baseInvalid,
         exceeds,
-        invalid: qtyInvalid || factorInvalid || uomInvalid || exceeds,
+        invalid:
+          qtyInvalid || factorInvalid || uomInvalid || baseInvalid || exceeds,
       };
     });
   }, [selectedPO, lines]);
@@ -153,13 +205,21 @@ export function ReceiveDeliveryModal({
 
     const payload: CreateDeliveryPayload = {
       poId: selectedPO.id,
-      items: rows.map((r) => ({
-        productId: r.item.productId,
-        received_quantity: r.qty,
-        received_uom: r.line.uom.trim(),
-        uom_conversion_factor: r.factor,
-        actual_base_quantity: r.base as number,
-      })),
+      items: rows.map((r) =>
+        r.line.unlocked
+          ? {
+              productId: r.item.productId,
+              received_quantity: r.qty,
+              received_uom: r.line.uom.trim(),
+              uom_conversion_factor: r.factor,
+              actual_base_quantity: r.base as number,
+            }
+          : {
+              // Locked = PO defaults; backend fills UoM, factor and base qty
+              productId: r.item.productId,
+              received_quantity: r.qty,
+            },
+      ),
     };
 
     setIsSubmitting(true);
@@ -180,9 +240,14 @@ export function ReceiveDeliveryModal({
     }
   };
 
-  const inputClass = (bad: boolean) =>
+  const inputClass = (bad: boolean, locked = false) =>
     `h-9 font-mono tabular-nums text-sm rounded-md ${
       bad ? "border-destructive focus-visible:ring-destructive" : ""
+    } ${locked ? "bg-muted/40 text-muted-foreground" : ""}`;
+
+  const selectClass = (locked: boolean) =>
+    `h-9 w-full rounded-md border border-input bg-background px-2 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed ${
+      locked ? "bg-muted/40 text-muted-foreground" : ""
     }`;
 
   return (
@@ -207,7 +272,7 @@ export function ReceiveDeliveryModal({
           </div>
           <DialogDescription className="text-sm text-muted-foreground">
             {selectedPO
-              ? "Values are pre-filled from the Purchase Order. Adjust only what differs from what actually arrived."
+              ? "Only the received quantity is required. UoM, conversion factor and base quantity are pre-filled from the Purchase Order."
               : "Choose the Purchase Order this delivery belongs to. Use the date range to narrow the list."}
           </DialogDescription>
         </DialogHeader>
@@ -251,17 +316,13 @@ export function ReceiveDeliveryModal({
               </div>
             ) : (
               <>
-                {/* Selected PO summary */}
                 <div className="flex items-center justify-between gap-3 p-4 rounded-lg border border-border bg-muted/40">
                   <div className="min-w-0 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono font-bold text-base">
                         PO #{selectedPO.id}
                       </span>
-                      <Badge
-                        variant="outline"
-                        className="rounded-sm font-mono text-[11px]"
-                      >
+                      <Badge variant="outline" className="rounded-sm font-mono text-[11px]">
                         {selectedPO.po_status}
                       </Badge>
                     </div>
@@ -284,9 +345,13 @@ export function ReceiveDeliveryModal({
                   </Button>
                 </div>
 
-                {/* One card per line item */}
                 {rows.map((r) => {
                   const id = r.item.productId;
+                  const locked = !r.line.unlocked;
+                  const uomOptions = UOM_OPTIONS.includes(r.line.uom)
+                    ? UOM_OPTIONS
+                    : [r.line.uom, ...UOM_OPTIONS];
+
                   return (
                     <div
                       key={r.item.id ?? id}
@@ -317,7 +382,7 @@ export function ReceiveDeliveryModal({
                             </dd>
                           </div>
                           <div>
-                            <dt className={labelClass}>Expected</dt>
+                            <dt className={labelClass}>Expected in base unit</dt>
                             <dd className="font-mono text-sm tabular-nums whitespace-nowrap">
                               {r.item.expected_base_quantity.toLocaleString()}{" "}
                               {r.item.base_uom}
@@ -327,9 +392,10 @@ export function ReceiveDeliveryModal({
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {/* Received qty: the only required input */}
                         <div className="space-y-1.5">
                           <label htmlFor={`qty-${id}`} className={labelClass}>
-                            Received qty
+                            Received qty <span className="text-destructive">*</span>
                           </label>
                           <Input
                             id={`qty-${id}`}
@@ -338,7 +404,9 @@ export function ReceiveDeliveryModal({
                             step="any"
                             value={r.line.qty}
                             disabled={isSubmitting}
-                            onChange={(e) => updateLine(id, { qty: e.target.value })}
+                            onChange={(e) =>
+                              updateLine(id, { qty: e.target.value, base: null })
+                            }
                             className={inputClass(r.qtyInvalid || r.exceeds)}
                           />
                           <p
@@ -353,7 +421,7 @@ export function ReceiveDeliveryModal({
                               : r.qtyInvalid
                                 ? "Must be greater than 0"
                                 : r.exceeds
-                                  ? `Exceeds ordered (max ${r.item.expected_base_quantity.toLocaleString()} ${r.item.base_uom})`
+                                  ? `Exceeds expected (max ${r.item.expected_base_quantity.toLocaleString()} ${r.item.base_uom})`
                                   : `Max ${r.item.requested_quantity.toLocaleString()} ${r.item.ordered_uom}`}
                           </p>
                         </div>
@@ -362,18 +430,21 @@ export function ReceiveDeliveryModal({
                           <label htmlFor={`uom-${id}`} className={labelClass}>
                             Received UoM
                           </label>
-                          <Input
+                          <select
                             id={`uom-${id}`}
                             value={r.line.uom}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || locked}
                             onChange={(e) =>
-                              updateLine(id, { uom: e.target.value.toUpperCase() })
+                              updateLine(id, { uom: e.target.value })
                             }
-                            className={inputClass(r.uomInvalid)}
-                          />
-                          {r.uomInvalid && (
-                            <p className="text-[11px] text-destructive">Required</p>
-                          )}
+                            className={selectClass(locked)}
+                          >
+                            {uomOptions.map((u) => (
+                              <option key={u} value={u}>
+                                {u}
+                              </option>
+                            ))}
+                          </select>
                         </div>
 
                         <div className="space-y-1.5">
@@ -386,9 +457,11 @@ export function ReceiveDeliveryModal({
                             min="0"
                             step="any"
                             value={r.line.factor}
-                            disabled={isSubmitting}
-                            onChange={(e) => updateLine(id, { factor: e.target.value })}
-                            className={inputClass(r.factorInvalid)}
+                            disabled={isSubmitting || locked}
+                            onChange={(e) =>
+                              updateLine(id, { factor: e.target.value, base: null })
+                            }
+                            className={inputClass(r.factorInvalid, locked)}
                           />
                           {r.factorInvalid && (
                             <p className="text-[11px] text-destructive">
@@ -398,14 +471,107 @@ export function ReceiveDeliveryModal({
                         </div>
 
                         <div className="space-y-1.5">
-                          <span className={labelClass}>Actual base qty</span>
-                          <div className="h-9 flex items-center rounded-md border border-dashed border-border bg-muted/40 px-3 font-mono tabular-nums text-sm font-semibold">
-                            {r.base !== null
-                              ? `${r.base.toLocaleString()} ${r.item.base_uom}`
-                              : "—"}
-                          </div>
+                          <label htmlFor={`base-${id}`} className={labelClass}>
+                            Actual base qty
+                          </label>
+                          {locked ? (
+                            <div className="h-9 flex items-center rounded-md border border-dashed border-border bg-muted/40 px-3 font-mono tabular-nums text-sm font-semibold">
+                              {r.base !== null
+                                ? `${r.base.toLocaleString()} ${r.item.base_uom}`
+                                : "—"}
+                            </div>
+                          ) : (
+                            <>
+                              <Input
+                                id={`base-${id}`}
+                                type="number"
+                                min="0"
+                                step="any"
+                                value={
+                                  r.line.base ??
+                                  (r.computed !== null ? String(r.computed) : "")
+                                }
+                                disabled={isSubmitting}
+                                onChange={(e) =>
+                                  updateLine(id, { base: e.target.value })
+                                }
+                                className={inputClass(r.baseInvalid)}
+                              />
+                              {r.baseInvalid && (
+                                <p className="text-[11px] text-destructive">
+                                  Must be greater than 0
+                                </p>
+                              )}
+                            </>
+                          )}
                         </div>
                       </div>
+
+                      {/* Edit prompt for the locked fields */}
+                      {locked && !r.line.confirming && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={isSubmitting}
+                          onClick={() => updateLine(id, { confirming: true })}
+                          className="h-8 text-xs gap-1.5 text-muted-foreground"
+                        >
+                          <Pencil className="h-3.5 w-3.5" /> Edit UoM, factor or base qty
+                        </Button>
+                      )}
+
+                      {locked && r.line.confirming && (
+                        <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                            <span>
+                              These values come from the Purchase Order. Editing them
+                              can make stock data inaccurate. Edit only if the delivery
+                              really differs.
+                            </span>
+                          </div>
+                          <div className="flex gap-2 shrink-0">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs"
+                              onClick={() => updateLine(id, { confirming: false })}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-8 text-xs"
+                              onClick={() =>
+                                updateLine(id, { confirming: false, unlocked: true })
+                              }
+                            >
+                              Yes, edit
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {!locked && (
+                        <div className="flex items-center justify-between gap-3 text-xs">
+                          <span className="text-amber-700 flex items-center gap-1.5">
+                            <AlertTriangle className="h-3.5 w-3.5" /> Custom values: double-check before confirming.
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={isSubmitting}
+                            onClick={() => resetLineToDefaults(id)}
+                            className="h-8 text-xs gap-1.5"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" /> Reset to PO defaults
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
