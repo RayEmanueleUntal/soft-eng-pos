@@ -5,6 +5,7 @@ import {
   CreateDeliveryPayload,
   CreateDeliveryResponse,
   PurchaseOrder,
+  PurchaseOrdersListResponse,
 } from "./delivery-types";
 
 export interface FetchDeliveriesParams {
@@ -63,33 +64,33 @@ export async function createDelivery(
  * Endpoint: GET /purchase-orders
  */
 export async function fetchPurchaseOrders(
-  params: { status?: string; search?: string } = {},
-): Promise<PurchaseOrder[]> {
-  try {
-    const response = await apiClient.get<
-      PurchaseOrder[] | { data: PurchaseOrder[] }
-    >("/purchase-orders", {
-      params,
-    });
-    if (Array.isArray(response.data)) {
-      return response.data;
-    }
-    if (response.data && Array.isArray((response.data as { data: PurchaseOrder[] }).data)) {
-      return (response.data as { data: PurchaseOrder[] }).data;
-    }
-    return [];
-  } catch (err) {
-    console.warn("fetchPurchaseOrders fallback:", err);
-    return [];
-  }
+  params: {
+    page?: number;
+    limit?: number;
+    startDate?: string;
+    endDate?: string;
+  } = {},
+): Promise<PurchaseOrdersListResponse> {
+  const response = await apiClient.get<PurchaseOrdersListResponse>(
+    "/purchase-orders",
+    {
+      params: {
+        page: params.page ?? 1,
+        limit: params.limit ?? 10,
+        ...(params.startDate ? { startDate: params.startDate } : {}),
+        ...(params.endDate ? { endDate: params.endDate } : {}),
+      },
+    },
+  );
+  return response.data;
 }
-
 /**
  * Fetches a specific Purchase Order by ID.
  * Endpoint: GET /purchase-orders/{id}
  */
-export async function fetchPurchaseOrderById(id: number): Promise<PurchaseOrder> {
+export async function fetchPurchaseOrderById(
+  id: number,
+): Promise<PurchaseOrder> {
   const response = await apiClient.get<PurchaseOrder>(`/purchase-orders/${id}`);
   return response.data;
 }
-

@@ -1,5 +1,5 @@
 "use client";
-
+import { getErrorMessage } from "@/lib/utils";
 import * as React from "react";
 import {
   Dialog,
@@ -20,7 +20,14 @@ import {
 } from "@/components/ui/table";
 import { DeliveryRecord } from "@/lib/inventory/delivery-types";
 import { fetchDeliveryById } from "@/lib/inventory/delivery-api";
-import { Loader2, PackageCheck, Printer, Calendar, User, FileText } from "lucide-react";
+import {
+  Loader2,
+  PackageCheck,
+  Printer,
+  Calendar,
+  User,
+  FileText,
+} from "lucide-react";
 
 interface DeliveryDetailViewModalProps {
   deliveryId: number | null;
@@ -54,11 +61,13 @@ export function DeliveryDetailViewModal({
           setRecord(data);
         }
       })
-      .catch((err: any) => {
+      .catch((err: unknown) => {
         if (!cancelled) {
           setError(
-            err.response?.data?.message ||
+            getErrorMessage(
+              err,
               `Delivery record #${deliveryId} could not be retrieved.`,
+            ),
           );
         }
       })
@@ -77,14 +86,16 @@ export function DeliveryDetailViewModal({
     window.print();
   };
 
-  const totalItemsCount = record?.deliveryItems.reduce(
-    (acc, item) => acc + item.received_quantity,
-    0,
-  ) ?? 0;
+  const totalItemsCount =
+    record?.deliveryItems.reduce(
+      (acc, item) => acc + item.actual_base_quantity,
+      0,
+    ) ?? 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl font-sans">
+      <DialogContent className="sm:max-w-3xl w-full font-sans">
+        {" "}
         <DialogHeader>
           <div className="flex items-center gap-2">
             <PackageCheck className="h-5 w-5 text-primary" />
@@ -93,7 +104,6 @@ export function DeliveryDetailViewModal({
             </DialogTitle>
           </div>
         </DialogHeader>
-
         {loading ? (
           <div className="py-12 flex flex-col items-center justify-center gap-2 text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -145,38 +155,51 @@ export function DeliveryDetailViewModal({
             </div>
 
             {/* Line items table */}
-            <div className="border border-border rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader className="bg-muted/50">
                   <TableRow>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                      Product Name
+                      Product
                     </TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider font-mono">
                       SKU
                     </TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-right font-mono">
-                      Qty Received
+                      Received
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-right font-mono">
+                      Conv. Factor
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-right font-mono">
+                      Base Qty
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {record.deliveryItems.map((item) => (
                     <TableRow key={item.id} className="text-xs">
-                      <TableCell className="font-medium text-foreground">
+                      <TableCell className="font-medium text-foreground break-words max-w-[220px]">
                         {item.productName}
                       </TableCell>
                       <TableCell className="font-mono text-muted-foreground">
                         {item.productSku || "—"}
                       </TableCell>
-                      <TableCell className="text-right font-mono font-semibold text-foreground tabular-nums">
-                        {item.received_quantity.toLocaleString()}
+                      <TableCell className="text-right font-mono tabular-nums whitespace-nowrap">
+                        {item.received_quantity.toLocaleString()}{" "}
+                        {item.received_uom}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums whitespace-nowrap">
+                        × {item.uom_conversion_factor.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-semibold tabular-nums whitespace-nowrap">
+                        {item.actual_base_quantity.toLocaleString()}
                       </TableCell>
                     </TableRow>
                   ))}
                   <TableRow className="bg-muted/20 font-medium">
-                    <TableCell colSpan={2} className="text-right text-xs">
-                      Total Units Received:
+                    <TableCell colSpan={4} className="text-right text-xs">
+                      Total Base Units Received:
                     </TableCell>
                     <TableCell className="text-right font-mono font-bold text-foreground text-sm tabular-nums">
                       {totalItemsCount.toLocaleString()}
@@ -187,7 +210,6 @@ export function DeliveryDetailViewModal({
             </div>
           </div>
         ) : null}
-
         <DialogFooter className="flex justify-between sm:justify-between items-center pt-2">
           <Button
             type="button"
@@ -215,4 +237,3 @@ export function DeliveryDetailViewModal({
     </Dialog>
   );
 }
-
