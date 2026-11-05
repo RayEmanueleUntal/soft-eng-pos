@@ -17,6 +17,18 @@ function formatTitle(key: string): string {
     .trim();
 }
 
+function tryParseJson(value: string) {
+  try {
+    const parsed = JSON.parse(value);
+    if (typeof parsed === 'object' && parsed !== null) {
+      return parsed;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export const PayloadRenderer: React.FC<PayloadRendererProps> = ({ data, level = 0 }) => {
   // Safety fallback for null / undefined
   if (data === null || data === undefined) {
@@ -25,13 +37,9 @@ export const PayloadRenderer: React.FC<PayloadRendererProps> = ({ data, level = 
 
   // Parse stringified JSON if passed as string
   if (typeof data === 'string') {
-    try {
-      const parsed = JSON.parse(data);
-      if (typeof parsed === 'object' && parsed !== null) {
-        return <PayloadRenderer data={parsed} level={level} />;
-      }
-    } catch {
-      // Fall through to normal string rendering
+    const parsed = tryParseJson(data);
+    if (parsed !== null) {
+      return <PayloadRenderer data={parsed} level={level} />;
     }
   }
 
