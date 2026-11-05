@@ -87,6 +87,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
   const [editDetail, setEditDetail] = useState<Product | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailReloadKey, setDetailReloadKey] = useState(0);
+  const [isDirty, setIsDirty] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -146,6 +147,8 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
       allowDuplicate: false,
       confirmUomChange: false,
     });
+
+    setIsDirty(false);
   };
 
   // Fetch the authoritative product detail on edit so the full alternate-UoM
@@ -183,6 +186,15 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
   }, [product, detailReloadKey]);
 
   const retryDetail = () => {
+    if (
+      isDirty &&
+      !window.confirm(
+        "Reloading product details will discard your unsaved changes. Continue?",
+      )
+    ) {
+      return;
+    }
+
     setEditDetail(null);
     setDetailError(null);
     setDetailReloadKey((key) => key + 1);
@@ -196,12 +208,14 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
 
     setFormData(createEmptyForm());
     setBinLabel("");
+    setIsDirty(false);
   }, [isEdit, editDetail]);
 
   const updateField = <K extends keyof ProductFormData>(
     field: K,
     value: ProductFormData[K],
   ) => {
+    setIsDirty(true);
     setFormData((previous) => ({
       ...previous,
       [field]: value,
@@ -209,6 +223,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
   };
 
   const addUomRow = () => {
+    setIsDirty(true);
     setFormData((previous) => ({
       ...previous,
       uoms: [...previous.uoms, createUomRow()],
@@ -216,6 +231,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
   };
 
   const removeUomRow = (key: string) => {
+    setIsDirty(true);
     setFormData((previous) => ({
       ...previous,
       uoms: previous.uoms.filter((row) => row.key !== key),
@@ -223,6 +239,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
   };
 
   const updateUomUnit = (key: string, value: UnitOfMeasure | "") => {
+    setIsDirty(true);
     setFormData((previous) => ({
       ...previous,
       uoms: previous.uoms.map((row) =>
@@ -236,6 +253,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
     field: "conversion_factor" | "cost_price" | "retail_price" | "wholesale_price",
     value: string,
   ) => {
+    setIsDirty(true);
     setFormData((previous) => ({
       ...previous,
       uoms: previous.uoms.map((row) =>
@@ -250,6 +268,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
     flag: "is_default_purchase" | "is_default_sales",
     checked: boolean,
   ) => {
+    setIsDirty(true);
     setFormData((previous) => ({
       ...previous,
       uoms: previous.uoms.map((row) => ({
