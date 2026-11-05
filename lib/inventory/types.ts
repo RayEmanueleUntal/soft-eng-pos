@@ -1,11 +1,14 @@
 // Shared TypeScript types for the Inventory Management module of the POS system.
 // Mirrors the backend inventory, category and bin-location response DTOs.
 // Used by the inventory, ROP and adjustments pages and their components.
+import type { ProductUomEntry } from "@/lib/products/types";
+
 export interface InventoryItem {
   id: number;
   sku: string | null;
   name: string;
   categoryId: number;
+  category_name?: string | null;
 
   size_dimensions: string | null;
   thread_type: string | null;
@@ -16,9 +19,6 @@ export interface InventoryItem {
   reorder_point_ROP: number;
   needsRecount: boolean;
 
-  pricing_uom: string;
-  pricing_unit_qty: number;
-
   cost_price: number;
   retail_price: number;
   wholesale_price: number | null;
@@ -27,8 +27,7 @@ export interface InventoryItem {
   bin_aisle_number: string | null;
   bin_shelf_location: string | null;
 
-  createdAt: string;
-  updatedAt: string;
+  uoms?: ProductUomEntry[];
 }
 
 export interface InventoryResponse {
@@ -43,7 +42,7 @@ export interface InventoryResponse {
 
 export interface ProductCategory {
   id: number;
-  categoryName: string;
+  name: string;
 }
 
 export type MovementType = "IN" | "OUT" | "SALE" | "RETURN" | "ADJUSTMENT";

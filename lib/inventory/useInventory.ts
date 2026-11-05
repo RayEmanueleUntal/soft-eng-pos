@@ -72,7 +72,7 @@ export function useInventory() {
           setAllCategoriesList(response.data);
           const catMap: Record<number, string> = {};
           response.data.forEach((c) => {
-            catMap[c.id] = c.categoryName;
+            catMap[c.id] = c.name;
           });
           setCategories(catMap);
         }

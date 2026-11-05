@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { AddProductModal } from "./AddProductModal";
 import { apiClient } from "@/lib/api";
+import { getErrorMessage } from "@/lib/utils";
 import type { Product } from "@/lib/products/types";
 
 import { ProductSearch } from "./ProductSearch";
@@ -70,8 +71,8 @@ export function ProductTable() {
 
       setProducts(response.data.data);
       setTotalPages(response.data.meta.totalPages);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || "Failed to load products.");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to load products."));
     } finally {
       setLoading(false);
     }
@@ -101,6 +102,37 @@ export function ProductTable() {
     }
 
     return `₱${Number(price).toFixed(2)}`;
+  };
+
+  const renderAltUoms = (product: Product) => {
+    const uoms = product.uoms ?? [];
+    if (uoms.length === 0) return null;
+
+    const visible = uoms.slice(0, 2);
+
+    return (
+      <div className="mt-1.5 space-y-0.5 border-t pt-1.5">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Alt UoMs
+        </div>
+        {visible.map((uom) => (
+          <div
+            key={uom.id ?? uom.uom}
+            className="font-mono text-[11px] leading-4 text-muted-foreground"
+          >
+            {uom.uom} ×{uom.conversion_factor} · cost{" "}
+            {formatPrice(uom.calculated_cost_price)} · retail{" "}
+            {formatPrice(uom.calculated_retail_price)} · wholesale{" "}
+            {formatPrice(uom.calculated_wholesale_price)}
+          </div>
+        ))}
+        {uoms.length > 2 && (
+          <div className="text-[11px] text-muted-foreground">
+            +{uoms.length - 2} more
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -177,7 +209,9 @@ export function ProductTable() {
                   </TableCell>
 
                   <TableCell>
-                    {product.category?.name || product.categoryId}
+                    {product.category_name ||
+                      product.category?.name ||
+                      product.categoryId}
                   </TableCell>
 
                   <TableCell>
@@ -196,6 +230,8 @@ export function ProductTable() {
                         <span className="font-medium">Material:</span>{" "}
                         {product.material_grade || "-"}
                       </div>
+
+                      {renderAltUoms(product)}
                     </div>
                   </TableCell>
 
@@ -218,14 +254,14 @@ export function ProductTable() {
                   <TableCell>
                     {formatPrice(product.retail_price)}
                     <div className="text-xs text-muted-foreground">
-                      per {product.pricing_uom}
+                      per {product.base_uom}
                     </div>
                   </TableCell>
 
                   <TableCell>
                     {formatPrice(product.wholesale_price)}
                     <div className="text-xs text-muted-foreground">
-                      per {product.pricing_uom}
+                      per {product.base_uom}
                     </div>
                   </TableCell>
 
