@@ -85,6 +85,8 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
   const [formData, setFormData] = useState<ProductFormData>(createEmptyForm);
   const [binLabel, setBinLabel] = useState("");
   const [editDetail, setEditDetail] = useState<Product | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [detailReloadKey, setDetailReloadKey] = useState(0);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -151,26 +153,40 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
   useEffect(() => {
     if (!product) {
       setEditDetail(null);
+      setDetailError(null);
       return;
     }
 
     let mounted = true;
     setEditDetail(null);
+    setDetailError(null);
 
     apiClient
       .get<Product>(`/products/${product.id}`)
       .then((res) => {
         if (mounted) setEditDetail(res.data);
       })
-      .catch(() => {
-        // Fall back to the list item, which still carries the uoms array.
-        if (mounted) setEditDetail(product);
+      .catch((err: unknown) => {
+        // Fall back to the list item, which still carries the uoms array,
+        // but surface the failure so staff know the data may be stale.
+        if (mounted) {
+          setEditDetail(product);
+          setDetailError(
+            getErrorMessage(err, "Failed to load the latest product details."),
+          );
+        }
       });
 
     return () => {
       mounted = false;
     };
-  }, [product]);
+  }, [product, detailReloadKey]);
+
+  const retryDetail = () => {
+    setEditDetail(null);
+    setDetailError(null);
+    setDetailReloadKey((key) => key + 1);
+  };
 
   useEffect(() => {
     if (isEdit) {
@@ -476,6 +492,19 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
       {error && (
         <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
+        </div>
+      )}
+
+      {detailError && (
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+          <div className="flex items-center justify-between gap-3">
+            <span>
+              {detailError} Showing list data, which may be outdated.
+            </span>
+            <Button type="button" variant="outline" size="sm" onClick={retryDetail}>
+              Retry
+            </Button>
+          </div>
         </div>
       )}
 
