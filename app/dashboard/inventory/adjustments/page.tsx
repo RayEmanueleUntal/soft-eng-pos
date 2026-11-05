@@ -3,11 +3,12 @@
 // Provides multi-attribute search and filtering, pagination, and staff name resolution.
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StockMovementHistoryTable } from "@/app/dashboard/inventory/adjustments/_components/StockMovementHistoryTable";
 import { StockAdjustmentModal } from "@/components/inventory/StockAdjustmentModal";
 import {
   InventoryItem,
+  InventoryResponse,
   MovementType,
   StockMovementResponseDto,
 } from "@/lib/inventory/types";
@@ -15,6 +16,7 @@ import {
   fetchStockMovements,
   fetchStaffUserById,
   StockMovementResponse,
+  StockMovementsQueryParams,
 } from "@/lib/inventory/stock-movement-api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,8 +29,70 @@ import {
 } from "@/components/ui/select";
 import { Search, X, RotateCcw } from "lucide-react";
 import { apiClient } from "@/lib/api";
+import { getErrorMessage } from "@/lib/utils";
+
+function includesText(value: unknown, query: string): boolean {
+  return String(value ?? "").toLowerCase().includes(query.toLowerCase());
+}
+
+function movementMatchesProductFilters(
+  movement: StockMovementResponseDto,
+  filters: {
+    size: string;
+    thread: string;
+    material: string;
+    categoryId: string;
+  }
+): boolean {
+  const product = movement.product;
+  if (filters.size && !includesText(product?.size_dimensions, filters.size)) {
+    return false;
+  }
+  if (filters.thread && !includesText(product?.thread_type, filters.thread)) {
+    return false;
+  }
+  if (filters.material && !includesText(product?.material_grade, filters.material)) {
+    return false;
+  }
+  if (filters.categoryId !== "ALL") {
+    const productCategoryId =
+      product?.categoryId ?? product?.category?.id ?? null;
+    if (productCategoryId == null || String(productCategoryId) !== filters.categoryId) {
+      return false;
+    }
+  }
+  return true;
+}
 
 const PAGE_LIMIT = 20;
+const PRODUCT_FILTER_LIMIT = 100;
+
+async function fetchMatchingProductIds(params: {
+  size?: string;
+  thread?: string;
+  material?: string;
+  categoryId?: number;
+}): Promise<Set<number>> {
+  const ids = new Set<number>();
+  let pageNum = 1;
+  let totalPages = 1;
+
+  do {
+    const productsRes = await apiClient.get<InventoryResponse>("/products", {
+      params: {
+        ...params,
+        page: pageNum,
+        limit: PRODUCT_FILTER_LIMIT,
+      },
+    });
+    const items = productsRes.data?.data ?? [];
+    items.forEach((item) => ids.add(item.id));
+    totalPages = Math.max(1, productsRes.data?.meta?.totalPages ?? 1);
+    pageNum += 1;
+  } while (pageNum <= totalPages);
+
+  return ids;
+}
 
 export default function InventoryAdjustmentsPage() {
   const [movements, setMovements] = useState<StockMovementResponseDto[]>([]);
@@ -57,6 +121,8 @@ export default function InventoryAdjustmentsPage() {
   // Categories & Staff cache
   const [categoriesList, setCategoriesList] = useState<Array<{ id: number; name: string }>>([]);
   const [staffMap, setStaffMap] = useState<Record<number, string>>({});
+  const staffMapRef = useRef(staffMap);
+  staffMapRef.current = staffMap;
 
   // Debounce text filters
   useEffect(() => {
@@ -72,7 +138,7 @@ export default function InventoryAdjustmentsPage() {
   // Fetch categories once for category filter
   useEffect(() => {
     apiClient
-      .get<any[]>("/product-categories")
+      .get<Array<{ id: number; name?: string; categoryName?: string }>>("/product-categories")
       .then((res) => {
         if (Array.isArray(res.data)) {
           setCategoriesList(
@@ -83,7 +149,7 @@ export default function InventoryAdjustmentsPage() {
           );
         }
       })
-      .catch((err) => console.error("Failed to fetch categories:", err));
+      .catch((err) => console.error("Failed to fetch categories:", getErrorMessage(err, "Failed to fetch categories.")));
   }, []);
 
   // Fetch movements from GET /inventory/movements
@@ -92,7 +158,7 @@ export default function InventoryAdjustmentsPage() {
       setLoading(true);
       setError(null);
 
-      const queryParams: any = {
+      const queryParams: StockMovementsQueryParams = {
         page,
         limit: PAGE_LIMIT,
       };
@@ -107,19 +173,56 @@ export default function InventoryAdjustmentsPage() {
         queryParams.endDate = new Date(endDate).toISOString();
       }
 
+      const needsProductAttrFilter =
+        Boolean(debouncedSize) ||
+        Boolean(debouncedThread) ||
+        Boolean(debouncedMaterial) ||
+        categoryFilter !== "ALL";
+
+      let allowedProductIds: Set<number> | null = null;
+      if (needsProductAttrFilter) {
+        try {
+          allowedProductIds = await fetchMatchingProductIds({
+            size: debouncedSize || undefined,
+            thread: debouncedThread || undefined,
+            material: debouncedMaterial || undefined,
+            categoryId: categoryFilter !== "ALL" ? Number(categoryFilter) : undefined,
+          });
+          if (allowedProductIds.size === 1) {
+            queryParams.productId = Array.from(allowedProductIds)[0];
+          }
+        } catch (err) {
+          console.error(
+            "Failed to resolve product filters:",
+            getErrorMessage(err, "Failed to resolve product filters.")
+          );
+        }
+      }
+
       const res = await fetchStockMovements(queryParams);
       let list = res.data || [];
 
-      // Multi-attribute client-side filtering on returned list for attributes like
-      // name, SKU, size, thread, material, category if not natively filtered by backend
+      if (allowedProductIds) {
+        const matchingIds = allowedProductIds;
+        list = list.filter((m) => matchingIds.has(m.productId));
+      } else if (needsProductAttrFilter) {
+        list = list.filter((m) =>
+          movementMatchesProductFilters(m, {
+            size: debouncedSize,
+            thread: debouncedThread,
+            material: debouncedMaterial,
+            categoryId: categoryFilter,
+          })
+        );
+      }
+
       if (debouncedSearch) {
-        const q = debouncedSearch.toLowerCase();
         list = list.filter(
           (m) =>
-            m.product?.name?.toLowerCase().includes(q) ||
-            m.product?.sku?.toLowerCase().includes(q) ||
-            String(m.productId).includes(q) ||
-            m.reason?.toLowerCase().includes(q)
+            includesText(m.product?.name, debouncedSearch) ||
+            includesText(m.product?.sku, debouncedSearch) ||
+            includesText(m.productId, debouncedSearch) ||
+            includesText(m.reason, debouncedSearch)
         );
       }
 
@@ -128,11 +231,12 @@ export default function InventoryAdjustmentsPage() {
       setTotalCount(res.total ?? list.length);
 
       // Resolve staff names for all staffIds present in the batch
+      const knownStaff = staffMapRef.current;
       const missingStaffIds = Array.from(
         new Set(
           list
             .map((m) => m.staffId)
-            .filter((id) => Boolean(id) && !staffMap[id])
+            .filter((id) => Boolean(id) && !knownStaff[id])
         )
       );
 
@@ -158,8 +262,8 @@ export default function InventoryAdjustmentsPage() {
           });
         });
       }
-    } catch (err: any) {
-      setError(err?.message || "Failed to load stock movements.");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to load stock movements."));
     } finally {
       setLoading(false);
     }
@@ -173,7 +277,6 @@ export default function InventoryAdjustmentsPage() {
     debouncedThread,
     debouncedMaterial,
     categoryFilter,
-    staffMap,
   ]);
 
   useEffect(() => {
@@ -271,7 +374,15 @@ export default function InventoryAdjustmentsPage() {
               }}
             >
               <SelectTrigger className="h-8 w-[150px] text-xs rounded-[2px]">
-                <SelectValue placeholder="Category" />
+                <SelectValue placeholder="Category">
+                  {(val: string | null) => {
+                    if (!val || val === "ALL") return "All Categories";
+                    return (
+                      categoriesList.find((cat) => String(cat.id) === val)?.name ??
+                      "Category"
+                    );
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL" className="text-xs">All Categories</SelectItem>

@@ -111,6 +111,12 @@ export interface StockMovementResponseDto {
     name: string;
     baseUom?: string;
     base_uom?: string;
+    categoryId?: number;
+    category_name?: string | null;
+    category?: { id: number; name?: string; categoryName?: string } | null;
+    size_dimensions?: string | null;
+    thread_type?: string | null;
+    material_grade?: string | null;
   };
   staff?: {
     id: number;
