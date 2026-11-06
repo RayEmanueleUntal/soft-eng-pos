@@ -1,34 +1,45 @@
-import axios from "axios";
+import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { v4 as uuidv4 } from "uuid";
 
 export const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
-    // Temporary auth token for testing - remove in production
-    // "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsInVzZXJuYW1lIjoiYWRtaW4xMjMiLCJyb2xlIjoiQURNSU4iLCJpYXQiOjE3ODgwNzc4NzQsImV4cCI6MTc4ODA3ODc3NH0.17izYHtcca_49GQjWEpZC-7pCPo2RsKKi9rDgMfsxxc"
   },
 });
 
-// Add auth token and idempotency key interceptors
-apiClient.interceptors.request.use((config) => {
-  // if (process.env.NODE_ENV !== "production") {
-  //   config.headers["x-mock-role"] =
-  //     process.env.NEXT_PUBLIC_MOCK_ROLE || "ADMIN";
-  // }
+// Flag and subscribers queue to handle concurrent 401 requests during token refresh
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: any) => void;
+}> = [];
 
-  // 1. Attach JWT token from storage if available
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((promise) => {
+    if (error) {
+      promise.reject(error);
+    } else if (token) {
+      promise.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+// ----------------------------------------------------------------------
+// 1. Request Interceptor: Attach Access Token & Idempotency Key
+// ----------------------------------------------------------------------
+apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  // 1. Attach Access JWT token from storage if available
   const token =
     typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-  if (token) {
+  if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // 2. Attach Idempotency-Key for all mutating routes
+  // 2. Attach Idempotency-Key for mutating routes (POST, PUT, PATCH)
   const mutatingMethods = ["post", "put", "patch"];
-
   if (config.method && mutatingMethods.includes(config.method.toLowerCase())) {
-    // Use the URL path as a unique key descriptor for pending requests
     const requestPath = config.url || "";
     let idempotencyKey = sessionStorage.getItem(`idempotency_${requestPath}`);
 
@@ -37,15 +48,20 @@ apiClient.interceptors.request.use((config) => {
       sessionStorage.setItem(`idempotency_${requestPath}`, idempotencyKey);
     }
 
-    config.headers["Idempotency-Key"] = idempotencyKey;
+    if (config.headers) {
+      config.headers["Idempotency-Key"] = idempotencyKey;
+    }
   }
 
   return config;
 });
 
-/// Clear Idempotency Key upon successful response
+// ----------------------------------------------------------------------
+// 2. Response Interceptor: Idempotency Cleanup & Automatic Refresh
+// ----------------------------------------------------------------------
 apiClient.interceptors.response.use(
   (response) => {
+    // Clear Idempotency Key upon successful mutating response
     const mutatingMethods = ["post", "put", "patch"];
     const method = response.config.method?.toLowerCase();
 
@@ -56,30 +72,101 @@ apiClient.interceptors.response.use(
 
     return response;
   },
-  (error) => {
-    if (
-      error.response?.status === 401 &&
-      !error.config?.url?.includes("/auth/signin")
-    ) {
-      if (typeof window !== "undefined") {
-        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-        window.location.href = "/auth/login";
-      }
-    }
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean;
+    };
 
-    // Clear the key on bad user requests (like a 400 Validation Error)
-    // so they can fix their input and click save again.
-    const method = error.config?.method?.toLowerCase();
+    // Clear idempotency key on bad user requests (400 validation error) so they can fix input and retry
+    const method = originalRequest?.method?.toLowerCase();
     const mutatingMethods = ["post", "put", "patch"];
     if (
       method &&
       mutatingMethods.includes(method) &&
-      error.response?.status < 500
+      error.response?.status &&
+      error.response.status < 500
     ) {
-      const requestPath = error.config.url || "";
+      const requestPath = originalRequest.url || "";
       sessionStorage.removeItem(`idempotency_${requestPath}`);
+    }
+
+    // Handle 401 Unauthorized errors (Automatic Token Refresh)
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes("/auth/signin") &&
+      !originalRequest.url?.includes("/auth/refresh")
+    ) {
+      // If refresh is already in progress, queue failed requests until refresh completes
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            return apiClient(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const refreshToken =
+        typeof window !== "undefined"
+          ? localStorage.getItem("refresh_token")
+          : null;
+
+      if (!refreshToken) {
+        isRefreshing = false;
+        handleLogoutRedirect();
+        return Promise.reject(error);
+      }
+
+      try {
+        // Call backend /auth/refresh endpoint
+        const response = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/refresh`,
+          { refreshToken },
+        );
+
+        const { access_token, refresh_token } = response.data;
+
+        // Persist rotated tokens
+        if (typeof window !== "undefined") {
+          localStorage.setItem("access_token", access_token);
+          localStorage.setItem("refresh_token", refresh_token);
+        }
+
+        apiClient.defaults.headers.common.Authorization = `Bearer ${access_token}`;
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${access_token}`;
+        }
+
+        processQueue(null, access_token);
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        handleLogoutRedirect();
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
     }
 
     return Promise.reject(error);
   },
 );
+
+// Helper function to clear tokens and safely redirect to login
+function handleLogoutRedirect() {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.href = "/auth/login";
+  }
+}
