@@ -158,7 +158,9 @@ export default function PosPage() {
             onAddToCart={(prod) =>
               addItemToCart(
                 prod,
-                "RETAIL",
+                selectedCustomer?.type?.toUpperCase() === "WHOLESALE"
+                  ? "WHOLESALE"
+                  : "RETAIL"
               )
             }
           />

@@ -22,20 +22,55 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
 
   const [selectedUom, setSelectedUom] = useState<string>(pricingUom);
 
-  const isPricingUom = selectedUom.toUpperCase() === pricingUom.toUpperCase();
-  const conversionFactor = isPricingUom ? pricingUnitQty : 1;
-
-  // Compute dynamic unit prices based on selected UoM
+  // Resolve the price for a given UoM directly from backend data:
+  //   • For the base UoM → use product.retailPrice (retail_price from API, per base unit)
+  //   • For an alternate UoM → use uoms[].retail_price if present, else multiply base × convFactor
   const baseRetailPrice = Number(product.retailPrice ?? product.price ?? 0);
   const baseWholesalePrice = Number(product.wholesalePrice ?? product.price ?? 0);
 
-  const displayPrice = isPricingUom
-    ? baseRetailPrice
-    : Number((baseRetailPrice / pricingUnitQty).toFixed(2));
+  const resolvePrice = (uom: string, basePrice: number): number => {
+    if (uom.toUpperCase() === baseUom.toUpperCase()) return basePrice;
+    const entry = (product.uoms ?? []).find(
+      (u) => u.uom && u.uom.toUpperCase() === uom.toUpperCase()
+    );
+    if (!entry) return basePrice;
+    // Prefer the backend-supplied price for this UoM
+    const entryRetail = Number(entry.retail_price ?? entry.price ?? 0);
+    if (entryRetail > 0) return entryRetail;
+    // Fall back: multiply base-unit price by conversion factor
+    const factor = Number(
+      entry.conversion_factor ?? entry.conversionFactor ?? entry.multiplier ?? 1
+    );
+    return Number((basePrice * (factor || 1)).toFixed(2));
+  };
 
-  const displayWholesalePrice = isPricingUom
-    ? baseWholesalePrice
-    : Number((baseWholesalePrice / pricingUnitQty).toFixed(2));
+  const displayPrice = resolvePrice(selectedUom, baseRetailPrice);
+  const displayWholesalePrice = (() => {
+    if (selectedUom.toUpperCase() === baseUom.toUpperCase()) return baseWholesalePrice;
+    const entry = (product.uoms ?? []).find(
+      (u) => u.uom && u.uom.toUpperCase() === selectedUom.toUpperCase()
+    );
+    if (!entry) return baseWholesalePrice;
+    const entryWholesale = Number(entry.wholesale_price ?? 0);
+    if (entryWholesale > 0) return entryWholesale;
+    const entryRetail = Number(entry.retail_price ?? entry.price ?? 0);
+    if (entryRetail > 0) return entryRetail;
+    const factor = Number(entry.conversion_factor ?? entry.conversionFactor ?? entry.multiplier ?? 1);
+    return Number((baseWholesalePrice * (factor || 1)).toFixed(2));
+  })();
+
+  // Conversion factor for stock display: how many base units = 1 of selectedUom
+  const conversionFactor = (() => {
+    if (selectedUom.toUpperCase() === baseUom.toUpperCase()) return 1;
+    const entry = (product.uoms ?? []).find(
+      (u) => u.uom && u.uom.toUpperCase() === selectedUom.toUpperCase()
+    );
+    if (entry) {
+      const f = Number(entry.conversion_factor ?? entry.conversionFactor ?? entry.multiplier ?? 0);
+      if (f > 0) return f;
+    }
+    return pricingUnitQty;
+  })();
 
   // Compute dynamic stock availability: current_quantity / conversion_factor
   const totalBaseStock = typeof product.current_quantity === "number" ? product.current_quantity : 0;

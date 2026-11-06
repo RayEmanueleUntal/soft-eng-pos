@@ -51,6 +51,7 @@ export interface BackendProductUom {
   multiplier?: number;
   price?: number;
   retail_price?: number;
+  wholesale_price?: number;
 }
 
 export interface BackendProduct {
