@@ -24,3 +24,13 @@
 2026-10-09: Limited /dashboard/admin/system-settings to Admin and Manager and added a role-filtered System Settings sidebar link.
 2026-10-09: Reviewed system settings files for header and function comments; added missing comments to the dashboard layout functions.
 2026-10-09: Fixed system settings "no longer exists" banner being wiped by the list reload after a stale edit or delete.
+2026-11-06: Added Purchase Orders subpage with expandable PO table, create modal (supplier, ROP quick-add, product search) and cancel flow.
+2026-11-06: Purchase Orders: call PO and supplier detail endpoints, show supplier info panel, add size/thread/material product filters.
+2026-11-06: Purchase Orders create form: per-line UoM dropdown with conversion factor, UoM-based default cost, sends ordered_uom and factor.
+2026-11-06: Purchase Orders create form: hid the spin arrows on the unit cost input so users type prices instead of stepping from zero.
+2026-11-06: Purchase Orders create form: searchable supplier combobox filters loaded active suppliers by company name.
+2026-11-06: Purchase Orders create form: optional conversion-factor override, locked until Different pack size? is clicked.
+2026-11-06: Purchase Orders create form: quieter conversion-factor override (pencil control, no extra paragraphs).
+2026-11-06: Purchase Orders create form: shortened the line-items helper to one sentence.
+2026-11-06: Purchase Orders create form: Yes/No confirm after editing a conversion factor that differs from the product record.
+2026-11-06: Purchase Orders create form: dropped the Use default button; empty factor on blur restores the catalog lock.
