@@ -44,9 +44,26 @@ export function toCatalogProduct(
   // 2. Look up the live name from database map using that ID!
   const categoryName = (item as any).category?.name || categoryMap[catId] || "General";
 
-  const baseUom = item.base_uom || "PCS";
-  const pricingUom = item.pricing_uom || baseUom;
-  const pricingUnitQty = Number(item.pricing_unit_qty ?? 1) || 1;
+  const baseUom = (item.base_uom || "PCS") as string;
+
+  // 3. Derive pricing UoM: prefer flat field, then fall back to first non-base entry in `uoms` array.
+  //    The `uoms` array from GET /products contains alternate units (e.g. BOX, GROSS).
+  const uomsArray = item.uoms ?? [];
+  const alternateUomEntry = uomsArray.find(
+    (u) => u.uom && u.uom.toUpperCase() !== baseUom.toUpperCase()
+  );
+
+  const pricingUom = (item.pricing_uom || alternateUomEntry?.uom || baseUom) as string;
+
+  // Conversion factor: how many base units make up one pricing unit
+  const flatQty = Number(item.pricing_unit_qty ?? 0);
+  const uomConvFactor = Number(
+    alternateUomEntry?.conversion_factor ??
+    alternateUomEntry?.conversionFactor ??
+    alternateUomEntry?.multiplier ??
+    0
+  );
+  const pricingUnitQty = (flatQty > 0 ? flatQty : uomConvFactor > 0 ? uomConvFactor : 1);
 
   return {
     id: item.id,
@@ -64,6 +81,7 @@ export function toCatalogProduct(
       item.current_quantity !== null && item.current_quantity !== undefined
         ? Number(item.current_quantity)
         : undefined,
+    uoms: uomsArray,
   };
 }
 

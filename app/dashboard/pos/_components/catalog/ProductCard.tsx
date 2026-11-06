@@ -14,7 +14,11 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const baseUom = product.base_uom || "PCS";
   const pricingUom = product.pricing_uom || product.unit_of_measure || baseUom;
   const pricingUnitQty = product.pricing_unit_qty && product.pricing_unit_qty > 0 ? product.pricing_unit_qty : 1;
-  const hasAlternateUom = baseUom.toUpperCase() !== pricingUom.toUpperCase();
+
+  // Show the switcher if the flat fields differ OR if the uoms array has any non-base entry
+  const hasAlternateUom =
+    baseUom.toUpperCase() !== pricingUom.toUpperCase() ||
+    (product.uoms ?? []).some((u) => u.uom && u.uom.toUpperCase() !== baseUom.toUpperCase());
 
   const [selectedUom, setSelectedUom] = useState<string>(pricingUom);
 
