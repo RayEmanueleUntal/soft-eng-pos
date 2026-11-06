@@ -33,6 +33,7 @@ export default function ReceiptPage() {
   const [refundModalOpen, setRefundModalOpen] = useState(false);
   const [exchangeModalOpen, setExchangeModalOpen] = useState(false);
   const [hasPendingApproval, setHasPendingApproval] = useState(false);
+  const [pendingBreakdown, setPendingBreakdown] = useState<any>(null);
 
   const loadReceiptAndApprovals = async () => {
     try {
@@ -44,21 +45,44 @@ export default function ReceiptPage() {
 
       // Check approvals to see if there are pending or approved returns/exchanges
       let pendingFound = false;
+      let pendingBreakdown: any = null;
       try {
         const approvals = await getApprovalRequests();
         const txId = receiptData.transactionId;
+        const invNum = receiptData.invoice_number;
+
+        const parsePayload = (raw: any) => {
+          if (!raw) return {};
+          if (typeof raw === "string") {
+            try {
+              return JSON.parse(raw);
+            } catch {
+              return {};
+            }
+          }
+          return raw;
+        };
 
         const relevant = approvals.filter((req) => {
-          const reqTxId = req.payload?.transactionId;
-          return reqTxId === txId || String(reqTxId) === String(txId);
+          const p = parsePayload(req.payload);
+          const reqTxId = p?.transactionId ?? p?.transaction_id;
+          const reqInv = p?.invoice_number ?? p?.invoiceNumber;
+          const matchesTx = reqTxId !== undefined && (reqTxId === txId || String(reqTxId) === String(txId) || Number(reqTxId) === Number(txId));
+          const matchesInv = invNum && reqInv && (reqInv === invNum || String(reqInv).trim() === String(invNum).trim());
+          return matchesTx || matchesInv;
         });
 
-        pendingFound = relevant.some(
+        const pendingReq = relevant.find(
           (req) =>
             req.status === "PENDING" &&
             (req.type === "REFUND_TRANSACTION" ||
               req.type === "EXCHANGE_TRANSACTION"),
         );
+        pendingFound = !!pendingReq;
+        if (pendingReq) {
+          const p = parsePayload(pendingReq.payload);
+          pendingBreakdown = p.paymentBreakdown || p.payment_breakdown || null;
+        }
 
         // Merge any approved returns/exchanges if not already present on receiptData
         const approvedRefunds = relevant.filter(
@@ -75,9 +99,9 @@ export default function ReceiptPage() {
           (!receiptData.returns || receiptData.returns.length === 0)
         ) {
           receiptData.returns = approvedRefunds.map((req, idx) => {
-            const p = req.payload || {};
+            const p = parsePayload(req.payload);
             const item = receiptData.items.find(
-              (it) => it.productId === p.productId,
+              (it) => it.productId === (p.productId ?? p.product_id),
             );
             const qty = p.quantity || 1;
             const unitPrice = item ? item.applied_price : 0;
@@ -86,7 +110,7 @@ export default function ReceiptPage() {
 
             return {
               id: typeof req.id === "number" ? req.id : idx + 1,
-              productId: p.productId,
+              productId: p.productId ?? p.product_id ?? item?.productId ?? 0,
               product_name:
                 p.productName ||
                 p.product_name ||
@@ -104,9 +128,10 @@ export default function ReceiptPage() {
 
           // Mark already_returned_qty on corresponding receipt items
           approvedRefunds.forEach((req) => {
-            const p = req.payload || {};
+            const p = parsePayload(req.payload);
+            const pId = p.productId ?? p.product_id;
             const it = receiptData.items.find(
-              (item) => item.productId === p.productId,
+              (item) => item.productId === pId,
             );
             if (it) {
               it.already_returned_qty =
@@ -120,16 +145,16 @@ export default function ReceiptPage() {
           (!receiptData.exchanges || receiptData.exchanges.length === 0)
         ) {
           receiptData.exchanges = approvedExchanges.map((req, idx) => {
-            const p = req.payload || {};
+            const p = parsePayload(req.payload);
             const item = receiptData.items.find(
-              (it) => it.productId === p.productId,
+              (it) => it.productId === (p.productId ?? p.product_id),
             );
             return {
               id: typeof req.id === "number" ? req.id : idx + 1,
-              productId: p.newProductId || p.productId,
+              productId: p.newProductId ?? p.new_product_id ?? p.productId ?? p.product_id ?? 0,
               product_name:
-                p.newProductName || item?.product_name || "Exchanged Item",
-              quantity: p.newQuantity || p.quantity || 1,
+                p.newProductName || p.new_product_name || item?.product_name || "Exchanged Item",
+              quantity: p.newQuantity || p.new_quantity || p.quantity || 1,
               date: req.updatedAt || req.createdAt || new Date().toISOString(),
               price_difference: p.price_difference ?? p.priceDifference ?? 0,
               is_within_7_days: true,
@@ -141,6 +166,7 @@ export default function ReceiptPage() {
       }
 
       setHasPendingApproval(pendingFound);
+      setPendingBreakdown(pendingBreakdown);
       setReceipt(receiptData);
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Receipt not found"));
@@ -158,7 +184,7 @@ export default function ReceiptPage() {
   };
 
   const handleBack = () => {
-    router.push("/dashboard");
+    router.push("/dashboard/pos/receipt");
   };
 
   const handleRefundSuccess = () => {
@@ -182,7 +208,7 @@ export default function ReceiptPage() {
             className="text-muted-foreground hover:text-foreground hover:bg-accent rounded-[4px] text-xs"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
+            Back to Receipts
           </Button>
           <div className="h-6 w-px bg-border" />
           <h1 className="text-[24px] font-bold font-heading tracking-tight text-foreground">
@@ -221,7 +247,7 @@ export default function ReceiptPage() {
               className="bg-primary hover:bg-primary/80 text-white rounded-[4px] text-xs font-bold uppercase tracking-wider"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
+              Back to Receipts
             </Button>
           </div>
         </div>
@@ -246,6 +272,46 @@ export default function ReceiptPage() {
                 </span>
               )}
             </div>
+
+            {/* Pending Return Breakdown Card */}
+            {hasPendingApproval && pendingBreakdown && (
+              <div className="mb-6 rounded-[4px] border border-amber-300 bg-amber-50/50 p-4 space-y-2 text-xs">
+                <div className="flex items-center justify-between pb-1 border-b border-amber-200">
+                  <span className="font-heading font-semibold text-amber-800 uppercase tracking-wider">
+                    Pending Refund / Exchange Breakdown
+                  </span>
+                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">
+                    PENDING APPROVAL
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div className="rounded border border-amber-200 bg-white/80 p-2.5">
+                    <span className="text-muted-foreground block text-[11px] mb-1">
+                      Credit Debt Cancellation
+                    </span>
+                    <span className="font-mono text-sm font-bold text-foreground">
+                      ₱{Number(pendingBreakdown.creditDebtCancellation ?? pendingBreakdown.credit_debt_cancellation ?? pendingBreakdown.credit ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="rounded border border-amber-200 bg-white/80 p-2.5">
+                    <span className="text-muted-foreground block text-[11px] mb-1">
+                      Cash Payout
+                    </span>
+                    <span className="font-mono text-sm font-bold text-foreground">
+                      ₱{Number(pendingBreakdown.cashPayout ?? pendingBreakdown.cash_payout ?? pendingBreakdown.cash ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+                {(pendingBreakdown.totalRefund !== undefined || pendingBreakdown.total_refund !== undefined) && (
+                  <div className="flex justify-between pt-1 border-t border-amber-200 font-medium">
+                    <span className="text-muted-foreground">Total Refund Amount</span>
+                    <span className="font-mono font-bold text-foreground">
+                      ₱{Number(pendingBreakdown.totalRefund ?? pendingBreakdown.total_refund ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Printable Invoice or Rich Receipt Summary Display */}
             <div className="mb-6 flex justify-center">

@@ -110,7 +110,15 @@ export function InventoryFilterBar({
         onValueChange={(value) => setCategory(value === "all" ? null : value)}
       >
         <SelectTrigger className="w-[180px] h-8 text-[13px] rounded-[2px]">
-          <SelectValue placeholder="Filter by category..." />
+          <SelectValue placeholder="Filter by category...">
+            {(val: string | null) => {
+              if (!val || val === "all") return "All Categories";
+              return (
+                categories.find((item) => String(item.id) === val)?.name ??
+                "Filter by category..."
+              );
+            }}
+          </SelectValue>
         </SelectTrigger>
 
         <SelectContent>

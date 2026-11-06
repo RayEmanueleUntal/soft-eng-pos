@@ -1,7 +1,16 @@
 // Shared TypeScript types for the Inventory Management module of the POS system.
 // Mirrors the backend inventory, category and bin-location response DTOs.
 // Used by the inventory, ROP and adjustments pages and their components.
-import type { ProductUomEntry } from "@/lib/products/types";
+export interface ProductUomResponseDto {
+  uom: string;
+  conversion_factor?: number;
+  conversionFactor?: number;
+  multiplier?: number;
+  price?: number;
+  retail_price?: number;
+  cost_price?: number;
+  calculated_cost_price?: number;
+}
 
 export interface InventoryItem {
   id: number;
@@ -19,7 +28,10 @@ export interface InventoryItem {
   reorder_point_ROP: number;
   needsRecount: boolean;
 
-  cost_price: number;
+  pricing_uom?: string;
+  pricing_unit_qty?: number;
+
+  cost_price?: number;
   retail_price: number;
   wholesale_price: number | null;
 
@@ -27,7 +39,10 @@ export interface InventoryItem {
   bin_aisle_number: string | null;
   bin_shelf_location: string | null;
 
-  uoms?: ProductUomEntry[];
+  uoms?: ProductUomResponseDto[];
+
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface InventoryResponse {
@@ -42,7 +57,8 @@ export interface InventoryResponse {
 
 export interface ProductCategory {
   id: number;
-  name: string;
+  categoryName?: string;
+  name?: string;
 }
 
 export type MovementType = "IN" | "OUT" | "SALE" | "RETURN" | "ADJUSTMENT";
@@ -76,4 +92,71 @@ export interface BinLocationsResponse {
     limit: number;
     totalPages: number;
   };
+}
+
+export interface StockMovementResponseDto {
+  id: number;
+  productId: number;
+  date: string;
+  type: "IN" | "OUT" | "SALE" | "RETURN" | "ADJUSTMENT";
+  current_uom: string;
+  quantity_changed: number;
+  previous_quantity: number;
+  new_quantity: number;
+  isOverride: boolean;
+  reason: string;
+  staffId: number;
+  approvedById: number | null;
+  product?: {
+    id: number;
+    sku: string | null;
+    name: string;
+    baseUom?: string;
+    base_uom?: string;
+    categoryId?: number;
+    category_name?: string | null;
+    category?: { id: number; name?: string; categoryName?: string } | null;
+    size_dimensions?: string | null;
+    thread_type?: string | null;
+    material_grade?: string | null;
+  };
+  staff?: {
+    id: number;
+    username: string;
+    firstName?: string;
+    lastName?: string;
+    first_name?: string;
+    last_name?: string;
+  };
+  approvedBy?: {
+    id: number;
+    username: string;
+    firstName?: string;
+    lastName?: string;
+    first_name?: string;
+    last_name?: string;
+  } | null;
+}
+
+export interface PaginatedStockMovementsResponseDto {
+  data: StockMovementResponseDto[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface StaffUserResponseDto {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  assigned_role:
+    | "ADMIN"
+    | "MANAGER"
+    | "SECRETARY"
+    | "CASHIER"
+    | "SALES_CLERK"
+    | "STOCK_MANAGEMENT";
+  is_active: boolean;
 }

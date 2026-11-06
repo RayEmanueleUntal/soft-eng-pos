@@ -117,7 +117,7 @@ export function ROPTable({
                 <TableRow key={item.id} className="hover:bg-[#E0F2FE]/50 h-8">
                   <TableCell className="font-mono font-medium text-foreground">{item.sku || '-'}</TableCell>
                   <TableCell className="font-medium text-foreground">{item.name}</TableCell>
-                  <TableCell>{categories[item.categoryId] ?? `Category #${item.categoryId}`}</TableCell>
+                  <TableCell>{item.category_name || categories[item.categoryId] || `Category #${item.categoryId}`}</TableCell>
                   <TableCell>{item.size_dimensions || '-'}</TableCell>
                   <TableCell>{item.thread_type || '-'}</TableCell>
                   <TableCell>{item.material_grade || '-'}</TableCell>

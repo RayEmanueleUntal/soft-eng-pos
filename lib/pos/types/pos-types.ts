@@ -37,6 +37,9 @@ export interface CatalogProduct {
   retailPrice?: number;
   wholesalePrice?: number;
   unit_of_measure?: UnitOfMeasure | string;
+  base_uom?: UnitOfMeasure | string;
+  pricing_uom?: UnitOfMeasure | string;
+  pricing_unit_qty?: number;
   current_quantity?: number;
 }
 
@@ -49,6 +52,7 @@ export interface BackendProduct {
   category?: { name: string } | string | null;
   base_uom?: UnitOfMeasure | string | null;
   pricing_uom?: UnitOfMeasure | string | null;
+  pricing_unit_qty?: number | string | null;
   current_quantity?: number | string | null;
 }
 
@@ -164,6 +168,10 @@ export interface PaymentModalItem {
   unitPrice: number;
   subtotal: number;
   unit_of_measure?: string;
+  base_uom?: string;
+  pricing_uom?: string;
+  pricing_unit_qty?: number;
+  current_quantity?: number;
   line_discount?: number;
   retailPrice?: number;
   wholesalePrice?: number;

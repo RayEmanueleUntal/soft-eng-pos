@@ -38,7 +38,7 @@ export default function InventoryPage() {
     () =>
       allCategoriesList.map((cat) => ({
         id: cat.id,
-        name: cat.name,
+        name: cat.name || cat.categoryName || `Category #${cat.id}`,
       })),
     [allCategoriesList],
   );

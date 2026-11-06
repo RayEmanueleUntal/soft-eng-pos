@@ -128,29 +128,32 @@ export function ReceiptSummaryCard({ receipt, className }: ReceiptSummaryCardPro
         ) : null}
       </div>
 
-      {/* Line Items with already_returned_qty annotations */}
-      {receipt.items.some((item) => (item.already_returned_qty ?? 0) > 0) && (
-        <div className="rounded-[4px] border border-border p-3 space-y-1.5 text-sm bg-card">
-          <p className="text-xs font-heading font-semibold text-muted-foreground uppercase tracking-wider">
-            Items
-          </p>
-          {receipt.items.map((item, idx) => (
-            <div key={idx} className="flex justify-between gap-2">
-              <div className="min-w-0">
-                <span className="text-foreground">{item.product_name}</span>
-                {(item.already_returned_qty ?? 0) > 0 && (
-                  <span className="ml-1.5 text-[11px] font-mono text-destructive">
-                    ({item.already_returned_qty} returned)
-                  </span>
-                )}
-              </div>
-              <span className="font-mono text-foreground shrink-0">
-                {item.quantity} × {formatPeso(item.applied_price)}
-              </span>
+      {/* Line Items with UoM and already_returned_qty annotations */}
+      <div className="rounded-[4px] border border-border p-3 space-y-1.5 text-sm bg-card">
+        <p className="text-xs font-heading font-semibold text-muted-foreground uppercase tracking-wider">
+          Items
+        </p>
+        {receipt.items.map((item, idx) => (
+          <div key={idx} className="flex justify-between gap-2 items-start py-1 border-b border-border/40 last:border-0">
+            <div className="min-w-0">
+              <span className="text-foreground font-medium">{item.product_name}</span>
+              {(item.already_returned_qty ?? 0) > 0 && (
+                <span className="ml-1.5 text-[11px] font-mono text-destructive">
+                  ({item.already_returned_qty} returned)
+                </span>
+              )}
+              {item.pricing_uom && (
+                <div className="text-[11px] text-muted-foreground font-mono">
+                  UoM: {item.pricing_uom}
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-      )}
+            <span className="font-mono text-foreground shrink-0 tabular-nums">
+              {item.quantity} {item.pricing_uom ? item.pricing_uom : ""} × {formatPeso(item.applied_price)}
+            </span>
+          </div>
+        ))}
+      </div>
 
       {/* Returns Section */}
       {receipt.returns && receipt.returns.length > 0 && (

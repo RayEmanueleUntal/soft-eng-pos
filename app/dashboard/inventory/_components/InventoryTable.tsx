@@ -100,7 +100,8 @@ export function InventoryTable({
                   <TableCell>{item.name}</TableCell>
 
                   <TableCell>
-                    {categories[item.categoryId] ??
+                    {item.category_name ||
+                      categories[item.categoryId] ||
                       `Category #${item.categoryId}`}
                   </TableCell>
 
