@@ -189,6 +189,7 @@ export interface PaymentModalItem {
   wholesalePrice?: number;
   pricingType?: "RETAIL" | "WHOLESALE";
   discountPercent?: number;
+  uoms?: BackendProductUom[];
 }
 
 export interface PaymentModalCustomer {
