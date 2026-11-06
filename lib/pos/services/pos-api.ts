@@ -169,7 +169,9 @@ export function buildCheckoutPayload(
 ): CheckoutPayload {
   const hasCreditTender = splitPayments?.some((p) => p.payment_method === "CREDIT");
   const hasWholesaleItem = items.some((i) => i.pricingType === "WHOLESALE");
-  const isWholesale = hasWholesaleItem || method === "credit" || hasCreditTender || customer?.type?.toUpperCase() === "WHOLESALE";
+  // Transaction level is wholesale only when at least one item uses wholesale pricing.
+  // A wholesale customer selecting all retail items should produce a RETAIL transaction.
+  const isWholesale = hasWholesaleItem;
   const cash = details?.type === "CASH" ? details : undefined;
   const gcash = details?.type === "GCASH" ? details : undefined;
   const credit = details?.type === "CREDIT" ? details : undefined;
