@@ -8,6 +8,8 @@ export interface ProductUomResponseDto {
   multiplier?: number;
   price?: number;
   retail_price?: number;
+  cost_price?: number;
+  calculated_cost_price?: number;
 }
 
 export interface InventoryItem {
@@ -149,6 +151,12 @@ export interface StaffUserResponseDto {
   username: string;
   first_name: string;
   last_name: string;
-  assigned_role: "ADMIN" | "MANAGER" | "SECRETARY" | "CASHIER" | "SALES_CLERK" | "STOCK_MANAGEMENT";
+  assigned_role:
+    | "ADMIN"
+    | "MANAGER"
+    | "SECRETARY"
+    | "CASHIER"
+    | "SALES_CLERK"
+    | "STOCK_MANAGEMENT";
   is_active: boolean;
 }
