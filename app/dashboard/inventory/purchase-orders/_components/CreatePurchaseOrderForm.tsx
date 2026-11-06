@@ -16,6 +16,7 @@ import {
   createDraftLine,
   DraftLine,
   getSelectedUom,
+  isValidFactor,
   isValidQuantity,
   isValidUnitCost,
   PoLineItemsEditor,
@@ -122,7 +123,12 @@ export function CreatePurchaseOrderForm({
   const suppliers = supplierResult?.suppliers ?? [];
   const linesValid =
     lines.length > 0 &&
-    lines.every((line) => isValidQuantity(line.quantity) && isValidUnitCost(line.unitCost));
+    lines.every(
+      (line) =>
+        isValidQuantity(line.quantity) &&
+        isValidUnitCost(line.unitCost) &&
+        isValidFactor(line.factorOverride),
+    );
   const currentSupplierDetail =
     supplierId !== "" && supplierDetail?.supplierId === supplierId ? supplierDetail : null;
   const supplierInactive = currentSupplierDetail?.supplier?.status === "INACTIVE";
@@ -144,7 +150,9 @@ export function CreatePurchaseOrderForm({
             productId: line.productId,
             requested_quantity: Number(line.quantity),
             ordered_uom: selectedUom.uom,
-            uom_conversion_factor: selectedUom.factor,
+            ...(line.factorOverride.trim() !== ""
+              ? { uom_conversion_factor: Number(line.factorOverride) }
+              : {}),
             ...(line.unitCost.trim() !== "" ? { unit_cost: Number(line.unitCost) } : {}),
           };
         }),
@@ -218,14 +226,20 @@ export function CreatePurchaseOrderForm({
           <PoLineItemsEditor
             lines={lines}
             disabled={submitting}
-            onUomChange={(id, uom) => updateLine(id, { uom, unitCost: "" })}
+            onUomChange={(id, uom) =>
+              updateLine(id, { uom, unitCost: "", factorOverride: "", factorUnlocked: false })
+            }
+            onFactorUnlock={(id) => updateLine(id, { factorUnlocked: true })}
+            onFactorOverrideChange={(id, value) => updateLine(id, { factorOverride: value })}
+            onFactorOverrideReset={(id) =>
+              updateLine(id, { factorOverride: "", factorUnlocked: false })
+            }
             onQuantityChange={(id, value) => updateLine(id, { quantity: value })}
             onUnitCostChange={(id, value) => updateLine(id, { unitCost: value })}
             onRemove={(id) => setLines((prev) => prev.filter((l) => l.productId !== id))}
           />
           <p className="text-[11px] text-muted-foreground">
-            Quantities are in the selected unit. Leave unit cost empty to use that unit&apos;s
-            default cost.
+            Qty is in the selected unit. Leave cost and factor empty to use the product defaults.
           </p>
         </div>
       </div>

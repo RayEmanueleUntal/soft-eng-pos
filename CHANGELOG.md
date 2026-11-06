@@ -29,3 +29,6 @@
 2026-11-06: Purchase Orders create form: per-line UoM dropdown with conversion factor, UoM-based default cost, sends ordered_uom and factor.
 2026-11-06: Purchase Orders create form: hid the spin arrows on the unit cost input so users type prices instead of stepping from zero.
 2026-11-06: Purchase Orders create form: searchable supplier combobox filters loaded active suppliers by company name.
+2026-11-06: Purchase Orders create form: optional conversion-factor override, locked until Different pack size? is clicked.
+2026-11-06: Purchase Orders create form: quieter conversion-factor override (pencil control, no extra paragraphs).
+2026-11-06: Purchase Orders create form: shortened the line-items helper to one sentence.

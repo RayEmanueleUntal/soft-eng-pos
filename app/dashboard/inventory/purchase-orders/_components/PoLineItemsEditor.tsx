@@ -1,9 +1,9 @@
 // Editable draft line-items table for the Create Purchase Order form in the POS inventory module.
-// Lets staff pick a UoM, set quantity and an optional unit cost per product and see an estimated total.
+// Lets staff pick a UoM, optionally override its conversion factor, set quantity and unit cost.
 // Used only by CreatePurchaseOrderForm.
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -39,6 +39,8 @@ export interface DraftLine {
   uom: string;
   quantity: string;
   unitCost: string;
+  factorOverride: string;
+  factorUnlocked: boolean;
 }
 
 // Builds a draft line from a product with a starting quantity, defaulting to the base UoM.
@@ -62,12 +64,33 @@ export function createDraftLine(item: InventoryItem, quantity: number): DraftLin
     uom: item.base_uom,
     quantity: String(quantity),
     unitCost: "",
+    factorOverride: "",
+    factorUnlocked: false,
   };
 }
 
 // Returns the UoM option currently selected on a line (falls back to the first option).
 export function getSelectedUom(line: DraftLine): UomOption {
   return line.uomOptions.find((option) => option.uom === line.uom) ?? line.uomOptions[0];
+}
+
+// Returns the catalog conversion factor for the selected UoM (base UoM is 1).
+export function getCatalogFactor(line: DraftLine): number {
+  return getSelectedUom(line).factor;
+}
+
+// Returns the factor this line will use: a valid override, otherwise the catalog default.
+export function getEffectiveFactor(line: DraftLine): number {
+  if (line.factorOverride.trim() !== "" && isValidFactor(line.factorOverride)) {
+    return Number(line.factorOverride);
+  }
+  return getCatalogFactor(line);
+}
+
+// Returns true when the override is empty (use catalog) or a whole number of at least 1.
+export function isValidFactor(value: string): boolean {
+  if (value.trim() === "") return true;
+  return /^\d+$/.test(value.trim()) && Number(value) >= 1;
 }
 
 // Returns true when the quantity is a whole number of at least 1.
@@ -94,6 +117,9 @@ interface PoLineItemsEditorProps {
   lines: DraftLine[];
   disabled: boolean;
   onUomChange: (productId: number, uom: string) => void;
+  onFactorUnlock: (productId: number) => void;
+  onFactorOverrideChange: (productId: number, value: string) => void;
+  onFactorOverrideReset: (productId: number) => void;
   onQuantityChange: (productId: number, value: string) => void;
   onUnitCostChange: (productId: number, value: string) => void;
   onRemove: (productId: number) => void;
@@ -104,6 +130,9 @@ export function PoLineItemsEditor({
   lines,
   disabled,
   onUomChange,
+  onFactorUnlock,
+  onFactorOverrideChange,
+  onFactorOverrideReset,
   onQuantityChange,
   onUnitCostChange,
   onRemove,
@@ -118,7 +147,7 @@ export function PoLineItemsEditor({
             <TableRow>
               <TableHead>SKU</TableHead>
               <TableHead>Product</TableHead>
-              <TableHead className="w-36">UoM</TableHead>
+              <TableHead className="w-44">UoM</TableHead>
               <TableHead className="w-28 text-right">Qty</TableHead>
               <TableHead className="w-32 text-right">Unit cost</TableHead>
               <TableHead className="text-right">Est. total</TableHead>
@@ -139,7 +168,14 @@ export function PoLineItemsEditor({
               lines.map((line) => {
                 const qtyInvalid = !isValidQuantity(line.quantity);
                 const costInvalid = !isValidUnitCost(line.unitCost);
+                const factorInvalid = !isValidFactor(line.factorOverride);
                 const selectedUom = getSelectedUom(line);
+                const catalogFactor = getCatalogFactor(line);
+                const effectiveFactor = getEffectiveFactor(line);
+                const factorOverridden =
+                  line.factorOverride.trim() !== "" &&
+                  isValidFactor(line.factorOverride) &&
+                  Number(line.factorOverride) !== catalogFactor;
                 return (
                   <TableRow key={line.productId}>
                     <TableCell className="font-mono text-muted-foreground">
@@ -151,36 +187,87 @@ export function PoLineItemsEditor({
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Select
-                        value={line.uom}
-                        disabled={disabled}
-                        onValueChange={(value) => {
-                          if (value) onUomChange(line.productId, value);
-                        }}
-                      >
-                        <SelectTrigger
-                          size="sm"
-                          aria-label={`Unit of measure for ${line.name}`}
-                          className="rounded-[4px] font-mono text-xs"
-                        >
-                          <SelectValue>
-                            <span>{selectedUom.uom}</span>
-                            <span className="text-muted-foreground">
-                              ×{selectedUom.factor}
-                            </span>
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent alignItemWithTrigger={false}>
-                          {line.uomOptions.map((option) => (
-                            <SelectItem key={option.uom} value={option.uom}>
-                              <span className="font-mono">{option.uom}</span>
-                              <span className="font-mono text-[11px] text-muted-foreground">
-                                ×{option.factor}
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1">
+                          <Select
+                            value={line.uom}
+                            disabled={disabled}
+                            onValueChange={(value) => {
+                              if (value) onUomChange(line.productId, value);
+                            }}
+                          >
+                            <SelectTrigger
+                              size="sm"
+                              aria-label={`Unit of measure for ${line.name}`}
+                              className="rounded-[4px] font-mono text-xs"
+                            >
+                              <SelectValue>
+                                <span>{selectedUom.uom}</span>
+                                <span className="text-muted-foreground">
+                                  ×{effectiveFactor}
+                                </span>
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent alignItemWithTrigger={false}>
+                              {line.uomOptions.map((option) => (
+                                <SelectItem key={option.uom} value={option.uom}>
+                                  <span className="font-mono">{option.uom}</span>
+                                  <span className="font-mono text-[11px] text-muted-foreground">
+                                    ×{option.factor}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {!line.factorUnlocked && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-xs"
+                              disabled={disabled}
+                              aria-label={`Override conversion factor for ${line.name} (optional)`}
+                              title="Override conversion factor (optional)"
+                              onClick={() => onFactorUnlock(line.productId)}
+                            >
+                              <Pencil />
+                            </Button>
+                          )}
+                        </div>
+                        {line.factorUnlocked && (
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              min={1}
+                              step={1}
+                              inputMode="numeric"
+                              aria-label={`Conversion factor for ${line.name}`}
+                              placeholder={String(catalogFactor)}
+                              value={line.factorOverride}
+                              disabled={disabled}
+                              aria-invalid={factorInvalid}
+                              onChange={(e) =>
+                                onFactorOverrideChange(line.productId, e.target.value)
+                              }
+                              className="h-7 w-16 rounded-[4px] text-right font-mono text-xs tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            />
+                            {factorOverridden && (
+                              <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                                overridden
                               </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                            )}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={disabled}
+                              onClick={() => onFactorOverrideReset(line.productId)}
+                              className="h-7 shrink-0 px-2 text-[11px]"
+                            >
+                              Use default
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Input
