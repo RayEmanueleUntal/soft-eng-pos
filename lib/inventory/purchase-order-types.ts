@@ -75,6 +75,8 @@ export interface ProductSearchParams {
 export interface CreatePurchaseOrderItemPayload {
   productId: number;
   requested_quantity: number;
+  ordered_uom?: string;
+  uom_conversion_factor?: number;
   unit_cost?: number;
 }
 

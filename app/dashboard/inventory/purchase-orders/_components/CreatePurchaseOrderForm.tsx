@@ -1,5 +1,5 @@
 // Create Purchase Order form for the POS inventory module's Purchase Orders subpage.
-// Combines an active-supplier select, ROP quick-add, product search and an editable draft, then POSTs it.
+// Combines a searchable supplier picker, ROP quick-add, product search and an editable draft, then POSTs it.
 // Mounted inside CreatePurchaseOrderModal, so its state resets whenever the dialog closes.
 "use client";
 
@@ -7,13 +7,6 @@ import * as React from "react";
 import { AlertCircle, Loader2, PackagePlus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { createPurchaseOrder } from "@/lib/inventory/purchase-order-api";
 import { PurchaseOrderDto } from "@/lib/inventory/purchase-order-types";
 import { InventoryItem } from "@/lib/inventory/types";
@@ -22,6 +15,7 @@ import { getErrorMessage } from "@/lib/utils";
 import {
   createDraftLine,
   DraftLine,
+  getSelectedUom,
   isValidQuantity,
   isValidUnitCost,
   PoLineItemsEditor,
@@ -29,6 +23,7 @@ import {
 import { PoProductSearch } from "./PoProductSearch";
 import { RopQuickAddList } from "./RopQuickAddList";
 import { SupplierDetailResult, SupplierInfoPanel } from "./SupplierInfoPanel";
+import { SupplierSearchSelect } from "./SupplierSearchSelect";
 
 interface SupplierResult {
   suppliers: Supplier[];
@@ -143,11 +138,16 @@ export function CreatePurchaseOrderForm({
     try {
       const order = await createPurchaseOrder({
         supplierId: Number(supplierId),
-        items: lines.map((line) => ({
-          productId: line.productId,
-          requested_quantity: Number(line.quantity),
-          ...(line.unitCost.trim() !== "" ? { unit_cost: Number(line.unitCost) } : {}),
-        })),
+        items: lines.map((line) => {
+          const selectedUom = getSelectedUom(line);
+          return {
+            productId: line.productId,
+            requested_quantity: Number(line.quantity),
+            ordered_uom: selectedUom.uom,
+            uom_conversion_factor: selectedUom.factor,
+            ...(line.unitCost.trim() !== "" ? { unit_cost: Number(line.unitCost) } : {}),
+          };
+        }),
       });
       onCreated(order);
     } catch (err) {
@@ -182,36 +182,12 @@ export function CreatePurchaseOrderForm({
               </Link>
             </p>
           ) : (
-            <Select
+            <SupplierSearchSelect
+              suppliers={suppliers}
               value={supplierId}
               disabled={submitting}
-              onValueChange={(value) => setSupplierId(value ?? "")}
-            >
-              <SelectTrigger className="h-9 rounded-[4px]">
-                <SelectValue placeholder="Select an active supplier">
-                  {(value: string) => {
-                    const selected = suppliers.find((s) => String(s.id) === value);
-                    return selected ? (
-                      <span className="truncate">{selected.companyName}</span>
-                    ) : (
-                      "Select an active supplier"
-                    );
-                  }}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent alignItemWithTrigger={false}>
-                {suppliers.map((supplier) => (
-                  <SelectItem key={supplier.id} value={String(supplier.id)}>
-                    <span className="block max-w-[28rem] truncate">
-                      {supplier.companyName}
-                    </span>
-                    <span className="font-mono text-[11px] text-muted-foreground">
-                      {supplier.leadTimeDays}d lead
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={setSupplierId}
+            />
           )}
           {supplierId !== "" && (
             <SupplierInfoPanel
@@ -242,13 +218,14 @@ export function CreatePurchaseOrderForm({
           <PoLineItemsEditor
             lines={lines}
             disabled={submitting}
+            onUomChange={(id, uom) => updateLine(id, { uom, unitCost: "" })}
             onQuantityChange={(id, value) => updateLine(id, { quantity: value })}
             onUnitCostChange={(id, value) => updateLine(id, { unitCost: value })}
             onRemove={(id) => setLines((prev) => prev.filter((l) => l.productId !== id))}
           />
           <p className="text-[11px] text-muted-foreground">
-            Quantities are in each product&apos;s base unit. Leave unit cost empty to use the
-            product&apos;s cost price.
+            Quantities are in the selected unit. Leave unit cost empty to use that unit&apos;s
+            default cost.
           </p>
         </div>
       </div>

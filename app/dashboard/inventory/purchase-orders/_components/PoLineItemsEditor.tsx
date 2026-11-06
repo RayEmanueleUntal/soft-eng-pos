@@ -1,11 +1,18 @@
 // Editable draft line-items table for the Create Purchase Order form in the POS inventory module.
-// Lets staff set quantity and an optional unit cost per product and see an estimated total.
+// Lets staff pick a UoM, set quantity and an optional unit cost per product and see an estimated total.
 // Used only by CreatePurchaseOrderForm.
 "use client";
 
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -17,27 +24,50 @@ import {
 import { InventoryItem } from "@/lib/inventory/types";
 import { formatPeso } from "@/lib/utils";
 
+// One orderable unit of a product: its base UoM (factor 1) or an alternate UoM with its default cost.
+export interface UomOption {
+  uom: string;
+  factor: number;
+  costPrice: number;
+}
+
 export interface DraftLine {
   productId: number;
   sku: string | null;
   name: string;
-  baseUom: string;
-  costPrice: number;
+  uomOptions: UomOption[];
+  uom: string;
   quantity: string;
   unitCost: string;
 }
 
-// Builds a draft line from a product with a starting quantity.
+// Builds a draft line from a product with a starting quantity, defaulting to the base UoM.
 export function createDraftLine(item: InventoryItem, quantity: number): DraftLine {
+  const alternates = (item.uoms ?? [])
+    .filter((entry) => entry.uom !== item.base_uom)
+    .map((entry) => ({
+      uom: entry.uom as string,
+      factor: Number(entry.conversion_factor),
+      costPrice: Number(entry.cost_price ?? entry.calculated_cost_price),
+    }));
+
   return {
     productId: item.id,
     sku: item.sku,
     name: item.name,
-    baseUom: item.base_uom,
-    costPrice: Number(item.cost_price),
+    uomOptions: [
+      { uom: item.base_uom, factor: 1, costPrice: Number(item.cost_price) },
+      ...alternates,
+    ],
+    uom: item.base_uom,
     quantity: String(quantity),
     unitCost: "",
   };
+}
+
+// Returns the UoM option currently selected on a line (falls back to the first option).
+export function getSelectedUom(line: DraftLine): UomOption {
+  return line.uomOptions.find((option) => option.uom === line.uom) ?? line.uomOptions[0];
 }
 
 // Returns true when the quantity is a whole number of at least 1.
@@ -52,16 +82,18 @@ export function isValidUnitCost(value: string): boolean {
   return Number.isFinite(parsed) && parsed >= 0;
 }
 
-// Returns the estimated cost of a line using the typed cost or the product's cost price.
+// Returns the estimated cost of a line using the typed cost or the selected UoM's default cost.
 export function getLineEstimate(line: DraftLine): number {
   if (!isValidQuantity(line.quantity) || !isValidUnitCost(line.unitCost)) return 0;
-  const unit = line.unitCost.trim() === "" ? line.costPrice : Number(line.unitCost);
+  const unit =
+    line.unitCost.trim() === "" ? getSelectedUom(line).costPrice : Number(line.unitCost);
   return Number(line.quantity) * unit;
 }
 
 interface PoLineItemsEditorProps {
   lines: DraftLine[];
   disabled: boolean;
+  onUomChange: (productId: number, uom: string) => void;
   onQuantityChange: (productId: number, value: string) => void;
   onUnitCostChange: (productId: number, value: string) => void;
   onRemove: (productId: number) => void;
@@ -71,6 +103,7 @@ interface PoLineItemsEditorProps {
 export function PoLineItemsEditor({
   lines,
   disabled,
+  onUomChange,
   onQuantityChange,
   onUnitCostChange,
   onRemove,
@@ -85,6 +118,7 @@ export function PoLineItemsEditor({
             <TableRow>
               <TableHead>SKU</TableHead>
               <TableHead>Product</TableHead>
+              <TableHead className="w-36">UoM</TableHead>
               <TableHead className="w-28 text-right">Qty</TableHead>
               <TableHead className="w-32 text-right">Unit cost</TableHead>
               <TableHead className="text-right">Est. total</TableHead>
@@ -95,7 +129,7 @@ export function PoLineItemsEditor({
             {lines.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="py-6 text-center text-xs text-muted-foreground"
                 >
                   No line items yet. Add items from the ROP list or search products.
@@ -105,6 +139,7 @@ export function PoLineItemsEditor({
               lines.map((line) => {
                 const qtyInvalid = !isValidQuantity(line.quantity);
                 const costInvalid = !isValidUnitCost(line.unitCost);
+                const selectedUom = getSelectedUom(line);
                 return (
                   <TableRow key={line.productId}>
                     <TableCell className="font-mono text-muted-foreground">
@@ -114,6 +149,38 @@ export function PoLineItemsEditor({
                       <span className="block max-w-[240px] truncate" title={line.name}>
                         {line.name}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={line.uom}
+                        disabled={disabled}
+                        onValueChange={(value) => {
+                          if (value) onUomChange(line.productId, value);
+                        }}
+                      >
+                        <SelectTrigger
+                          size="sm"
+                          aria-label={`Unit of measure for ${line.name}`}
+                          className="rounded-[4px] font-mono text-xs"
+                        >
+                          <SelectValue>
+                            <span>{selectedUom.uom}</span>
+                            <span className="text-muted-foreground">
+                              ×{selectedUom.factor}
+                            </span>
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent alignItemWithTrigger={false}>
+                          {line.uomOptions.map((option) => (
+                            <SelectItem key={option.uom} value={option.uom}>
+                              <span className="font-mono">{option.uom}</span>
+                              <span className="font-mono text-[11px] text-muted-foreground">
+                                ×{option.factor}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell>
                       <Input
@@ -138,14 +205,14 @@ export function PoLineItemsEditor({
                         step="any"
                         inputMode="decimal"
                         aria-label={`Unit cost for ${line.name}`}
-                        placeholder={String(line.costPrice)}
+                        placeholder={String(selectedUom.costPrice)}
                         value={line.unitCost}
                         disabled={disabled}
                         aria-invalid={costInvalid}
                         onChange={(e) =>
                           onUnitCostChange(line.productId, e.target.value)
                         }
-                        className="h-7 rounded-[4px] text-right font-mono text-xs tabular-nums"
+                        className="h-7 rounded-[4px] text-right font-mono text-xs tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
                     </TableCell>
                     <TableCell className="text-right font-mono font-semibold tabular-nums">
