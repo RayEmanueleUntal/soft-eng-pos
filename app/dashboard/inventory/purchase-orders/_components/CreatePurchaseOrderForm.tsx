@@ -15,12 +15,18 @@ import { getErrorMessage } from "@/lib/utils";
 import {
   createDraftLine,
   DraftLine,
+  getCatalogFactor,
   getSelectedUom,
   isValidFactor,
+  needsFactorConfirm,
   isValidQuantity,
   isValidUnitCost,
   PoLineItemsEditor,
 } from "./PoLineItemsEditor";
+import {
+  FactorOverrideConfirm,
+  FactorOverrideConfirmDialog,
+} from "./FactorOverrideConfirmDialog";
 import { PoProductSearch } from "./PoProductSearch";
 import { RopQuickAddList } from "./RopQuickAddList";
 import { SupplierDetailResult, SupplierInfoPanel } from "./SupplierInfoPanel";
@@ -47,6 +53,13 @@ export function CreatePurchaseOrderForm({
   const [lines, setLines] = React.useState<DraftLine[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [factorConfirm, setFactorConfirm] = React.useState<FactorOverrideConfirm | null>(
+    null,
+  );
+  const linesRef = React.useRef(lines);
+  React.useEffect(() => {
+    linesRef.current = lines;
+  }, [lines]);
 
   React.useEffect(() => {
     let active = true;
@@ -134,10 +147,27 @@ export function CreatePurchaseOrderForm({
   const supplierInactive = currentSupplierDetail?.supplier?.status === "INACTIVE";
   const canSubmit = supplierId !== "" && !supplierInactive && linesValid && !submitting;
 
+  // Opens the Yes/No prompt for a line whose typed factor differs from the product record.
+  const promptFactorConfirm = (line: DraftLine) => {
+    setFactorConfirm({
+      productId: line.productId,
+      productName: line.name,
+      uom: line.uom,
+      catalogFactor: getCatalogFactor(line),
+      overrideFactor: Number(line.factorOverride),
+    });
+  };
+
   // Validates the draft and posts it; keeps the user's input when the request fails.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
+
+    const unconfirmed = lines.find((line) => needsFactorConfirm(line));
+    if (unconfirmed) {
+      promptFactorConfirm(unconfirmed);
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
@@ -227,13 +257,32 @@ export function CreatePurchaseOrderForm({
             lines={lines}
             disabled={submitting}
             onUomChange={(id, uom) =>
-              updateLine(id, { uom, unitCost: "", factorOverride: "", factorUnlocked: false })
+              updateLine(id, {
+                uom,
+                unitCost: "",
+                factorOverride: "",
+                factorUnlocked: false,
+                factorConfirmedValue: "",
+              })
             }
             onFactorUnlock={(id) => updateLine(id, { factorUnlocked: true })}
             onFactorOverrideChange={(id, value) => updateLine(id, { factorOverride: value })}
-            onFactorOverrideReset={(id) =>
-              updateLine(id, { factorOverride: "", factorUnlocked: false })
-            }
+            onFactorBlur={(snapshot) => {
+              const current = linesRef.current.find(
+                (item) => item.productId === snapshot.productId,
+              );
+              const line = current ?? snapshot;
+              if (line.factorOverride.trim() === "") {
+                if (line.factorUnlocked) {
+                  updateLine(line.productId, {
+                    factorUnlocked: false,
+                    factorConfirmedValue: "",
+                  });
+                }
+                return;
+              }
+              if (needsFactorConfirm(line)) promptFactorConfirm(line);
+            }}
             onQuantityChange={(id, value) => updateLine(id, { quantity: value })}
             onUnitCostChange={(id, value) => updateLine(id, { unitCost: value })}
             onRemove={(id) => setLines((prev) => prev.filter((l) => l.productId !== id))}
@@ -248,6 +297,22 @@ export function CreatePurchaseOrderForm({
         <Button type="button" variant="outline" disabled={submitting} onClick={onCancel}>
           Cancel
         </Button>
+        <FactorOverrideConfirmDialog
+          confirm={factorConfirm}
+          onYes={(productId) => {
+            const line = linesRef.current.find((item) => item.productId === productId);
+            updateLine(productId, { factorConfirmedValue: line?.factorOverride ?? "" });
+            setFactorConfirm(null);
+          }}
+          onNo={(productId) => {
+            updateLine(productId, {
+              factorOverride: "",
+              factorUnlocked: false,
+              factorConfirmedValue: "",
+            });
+            setFactorConfirm(null);
+          }}
+        />
         <Button type="submit" disabled={!canSubmit} className="gap-2 font-semibold uppercase">
           {submitting ? (
             <>

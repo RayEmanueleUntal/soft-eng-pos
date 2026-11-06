@@ -32,3 +32,5 @@
 2026-11-06: Purchase Orders create form: optional conversion-factor override, locked until Different pack size? is clicked.
 2026-11-06: Purchase Orders create form: quieter conversion-factor override (pencil control, no extra paragraphs).
 2026-11-06: Purchase Orders create form: shortened the line-items helper to one sentence.
+2026-11-06: Purchase Orders create form: Yes/No confirm after editing a conversion factor that differs from the product record.
+2026-11-06: Purchase Orders create form: dropped the Use default button; empty factor on blur restores the catalog lock.

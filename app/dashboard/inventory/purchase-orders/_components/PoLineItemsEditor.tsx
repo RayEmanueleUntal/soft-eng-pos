@@ -41,6 +41,7 @@ export interface DraftLine {
   unitCost: string;
   factorOverride: string;
   factorUnlocked: boolean;
+  factorConfirmedValue: string;
 }
 
 // Builds a draft line from a product with a starting quantity, defaulting to the base UoM.
@@ -66,6 +67,7 @@ export function createDraftLine(item: InventoryItem, quantity: number): DraftLin
     unitCost: "",
     factorOverride: "",
     factorUnlocked: false,
+    factorConfirmedValue: "",
   };
 }
 
@@ -91,6 +93,13 @@ export function getEffectiveFactor(line: DraftLine): number {
 export function isValidFactor(value: string): boolean {
   if (value.trim() === "") return true;
   return /^\d+$/.test(value.trim()) && Number(value) >= 1;
+}
+
+// Returns true when the typed factor differs from the catalog and has not been confirmed yet.
+export function needsFactorConfirm(line: DraftLine): boolean {
+  if (line.factorOverride.trim() === "" || !isValidFactor(line.factorOverride)) return false;
+  if (Number(line.factorOverride) === getCatalogFactor(line)) return false;
+  return line.factorOverride !== line.factorConfirmedValue;
 }
 
 // Returns true when the quantity is a whole number of at least 1.
@@ -119,7 +128,7 @@ interface PoLineItemsEditorProps {
   onUomChange: (productId: number, uom: string) => void;
   onFactorUnlock: (productId: number) => void;
   onFactorOverrideChange: (productId: number, value: string) => void;
-  onFactorOverrideReset: (productId: number) => void;
+  onFactorBlur: (line: DraftLine) => void;
   onQuantityChange: (productId: number, value: string) => void;
   onUnitCostChange: (productId: number, value: string) => void;
   onRemove: (productId: number) => void;
@@ -132,7 +141,7 @@ export function PoLineItemsEditor({
   onUomChange,
   onFactorUnlock,
   onFactorOverrideChange,
-  onFactorOverrideReset,
+  onFactorBlur,
   onQuantityChange,
   onUnitCostChange,
   onRemove,
@@ -248,6 +257,10 @@ export function PoLineItemsEditor({
                               onChange={(e) =>
                                 onFactorOverrideChange(line.productId, e.target.value)
                               }
+                              onBlur={() => {
+                                const snapshot = line;
+                                window.setTimeout(() => onFactorBlur(snapshot), 0);
+                              }}
                               className="h-7 w-16 rounded-[4px] text-right font-mono text-xs tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             />
                             {factorOverridden && (
@@ -255,16 +268,6 @@ export function PoLineItemsEditor({
                                 overridden
                               </span>
                             )}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              disabled={disabled}
-                              onClick={() => onFactorOverrideReset(line.productId)}
-                              className="h-7 shrink-0 px-2 text-[11px]"
-                            >
-                              Use default
-                            </Button>
                           </div>
                         )}
                       </div>
