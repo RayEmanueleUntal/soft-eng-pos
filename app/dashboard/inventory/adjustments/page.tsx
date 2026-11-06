@@ -122,7 +122,10 @@ export default function InventoryAdjustmentsPage() {
   const [categoriesList, setCategoriesList] = useState<Array<{ id: number; name: string }>>([]);
   const [staffMap, setStaffMap] = useState<Record<number, string>>({});
   const staffMapRef = useRef(staffMap);
-  staffMapRef.current = staffMap;
+
+  useEffect(() => {
+    staffMapRef.current = staffMap;
+  }, [staffMap]);
 
   // Debounce text filters
   useEffect(() => {
