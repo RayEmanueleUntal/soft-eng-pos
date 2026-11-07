@@ -41,6 +41,17 @@ export interface CatalogProduct {
   pricing_uom?: UnitOfMeasure | string;
   pricing_unit_qty?: number;
   current_quantity?: number;
+  uoms?: BackendProductUom[];
+}
+
+export interface BackendProductUom {
+  uom: string;
+  conversion_factor?: number;
+  conversionFactor?: number;
+  multiplier?: number;
+  price?: number;
+  retail_price?: number;
+  wholesale_price?: number;
 }
 
 export interface BackendProduct {
@@ -54,6 +65,7 @@ export interface BackendProduct {
   pricing_uom?: UnitOfMeasure | string | null;
   pricing_unit_qty?: number | string | null;
   current_quantity?: number | string | null;
+  uoms?: BackendProductUom[] | null;
 }
 
 // ==========================================
@@ -177,6 +189,7 @@ export interface PaymentModalItem {
   wholesalePrice?: number;
   pricingType?: "RETAIL" | "WHOLESALE";
   discountPercent?: number;
+  uoms?: BackendProductUom[];
 }
 
 export interface PaymentModalCustomer {

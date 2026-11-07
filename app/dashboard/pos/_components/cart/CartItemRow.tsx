@@ -20,10 +20,6 @@ interface CartItemRowProps {
     productId: string | number | undefined,
     discount: number,
   ) => void;
-  onUpdateUom?: (
-    productId: string | number | undefined,
-    uom: string,
-  ) => void;
   onRemoveItem?: (
     productId: string | number | undefined,
   ) => void;
@@ -37,7 +33,6 @@ export function CartItemRow({
   onUpdateQuantity,
   onSetQuantity,
   onUpdateDiscount,
-  onUpdateUom,
   onRemoveItem,
   onTogglePricingType,
 }: CartItemRowProps) {
@@ -94,35 +89,7 @@ export function CartItemRow({
             <span className="text-[9px] text-muted-foreground">/{currentUom}</span>
           </span>
 
-          {/* UoM Switcher if alternate exists */}
-          {hasAlternateUom && onUpdateUom && (
-            <div className="flex items-center gap-0.5 bg-muted p-0.5 rounded-[2px] border border-border">
-              <button
-                type="button"
-                onClick={() => onUpdateUom(itemId, baseUom)}
-                className={`px-1 py-0.2 text-[8px] font-mono font-bold rounded-[2px] transition-colors ${
-                  currentUom.toUpperCase() === baseUom.toUpperCase()
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title={`Switch to Base unit (${baseUom})`}
-              >
-                {baseUom}
-              </button>
-              <button
-                type="button"
-                onClick={() => onUpdateUom(itemId, pricingUom)}
-                className={`px-1 py-0.2 text-[8px] font-mono font-bold rounded-[2px] transition-colors ${
-                  currentUom.toUpperCase() === pricingUom.toUpperCase()
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title={`Switch to Pricing unit (${pricingUom})`}
-              >
-                {pricingUom}
-              </button>
-            </div>
-          )}
+
 
           {/* Wholesale vs Retail Price Toggle with Switch Icon (only for wholesale customer) */}
           {isWholesaleCustomer && (

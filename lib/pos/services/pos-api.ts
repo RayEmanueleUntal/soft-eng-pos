@@ -44,17 +44,40 @@ export function toCatalogProduct(
   // 2. Look up the live name from database map using that ID!
   const categoryName = (item as any).category?.name || categoryMap[catId] || "General";
 
-  const baseUom = item.base_uom || "PCS";
-  const pricingUom = item.pricing_uom || baseUom;
-  const pricingUnitQty = Number(item.pricing_unit_qty ?? 1) || 1;
+  const baseUom = (item.base_uom || "PCS") as string;
+
+  // 3. Collect all alternate UoM entries from the `uoms` array.
+  //    Each entry carries its own retail_price / wholesale_price directly from the backend.
+  const uomsArray = item.uoms ?? [];
+
+  // 4. Derive pricing UoM: prefer flat field, then fall back to first non-base entry in `uoms`.
+  const alternateUomEntry = uomsArray.find(
+    (u) => u.uom && u.uom.toUpperCase() !== baseUom.toUpperCase()
+  );
+  const pricingUom = (item.pricing_uom || alternateUomEntry?.uom || baseUom) as string;
+
+  // 5. Conversion factor: how many base units = 1 pricing unit.
+  const flatQty = Number(item.pricing_unit_qty ?? 0);
+  const uomConvFactor = Number(
+    alternateUomEntry?.conversion_factor ??
+    alternateUomEntry?.conversionFactor ??
+    alternateUomEntry?.multiplier ??
+    0
+  );
+  const pricingUnitQty = flatQty > 0 ? flatQty : uomConvFactor > 0 ? uomConvFactor : 1;
+
+  // 6. Wholesale price from backend (per base unit, same convention as retail_price).
+  const wholesalePrice = Number(item.wholesale_price ?? price);
 
   return {
     id: item.id,
     name: item.name,
     sku: item.sku || `SKU-${item.id}`,
     price,
+    // retailPrice / wholesalePrice always store the per-BASE-UNIT prices from the API.
+    // ProductCard uses uoms[].retail_price for the per-alternate-UoM price.
     retailPrice: price,
-    wholesalePrice: Number(item.wholesale_price ?? price),
+    wholesalePrice,
     category: categoryName,
     unit_of_measure: pricingUom,
     base_uom: baseUom,
@@ -64,6 +87,7 @@ export function toCatalogProduct(
       item.current_quantity !== null && item.current_quantity !== undefined
         ? Number(item.current_quantity)
         : undefined,
+    uoms: uomsArray,
   };
 }
 
@@ -151,7 +175,11 @@ export function buildCheckoutPayload(
 ): CheckoutPayload {
   const hasCreditTender = splitPayments?.some((p) => p.payment_method === "CREDIT");
   const hasWholesaleItem = items.some((i) => i.pricingType === "WHOLESALE");
-  const isWholesale = hasWholesaleItem || method === "credit" || hasCreditTender || customer?.type?.toUpperCase() === "WHOLESALE";
+  // Transaction is WHOLESALE when:
+  //   • at least one item uses wholesale pricing, OR
+  //   • payment includes CREDIT (backend requires wholesale transaction type for credit payments).
+  // A wholesale customer checking out with all-retail items + non-credit payment → RETAIL transaction.
+  const isWholesale = hasWholesaleItem || hasCreditTender || method === "credit";
   const cash = details?.type === "CASH" ? details : undefined;
   const gcash = details?.type === "GCASH" ? details : undefined;
   const credit = details?.type === "CREDIT" ? details : undefined;
@@ -184,8 +212,8 @@ export function buildCheckoutPayload(
             line_discount: 0,
           },
         ],
-    customer_id: method === "credit" ? credit?.customerId : customer?.id ?? null,
-    customer_name: method === "credit" ? credit?.customerName : customer?.name ?? null,
+    customer_id: method === "credit" ? (credit?.customerId ?? customer?.id ?? null) : (customer?.id ?? null),
+    customer_name: method === "credit" ? (credit?.customerName ?? customer?.name ?? null) : (customer?.name ?? null),
     discount_total: totalDiscount,
     order_discount: totalDiscount,
     grand_total: total,
