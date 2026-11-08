@@ -34,15 +34,20 @@ export type * from "../types/pos-types";
 
 export function toCatalogProduct(
   item: BackendProduct,
-  categoryMap: Record<number, string> = {}
+  categoryMap: Record<number, string> = {},
 ): CatalogProduct {
   const price = Number(item.retail_price ?? 0);
 
   // 1. Get the category ID from the product
-  const catId = Number((item as any).categoryId ?? (item as any).category_id ?? (item as any).category?.id);
+  const catId = Number(
+    (item as any).categoryId ??
+      (item as any).category_id ??
+      (item as any).category?.id,
+  );
 
   // 2. Look up the live name from database map using that ID!
-  const categoryName = (item as any).category?.name || categoryMap[catId] || "General";
+  const categoryName =
+    (item as any).category?.name || categoryMap[catId] || "General";
 
   const baseUom = (item.base_uom || "PCS") as string;
 
@@ -52,19 +57,22 @@ export function toCatalogProduct(
 
   // 4. Derive pricing UoM: prefer flat field, then fall back to first non-base entry in `uoms`.
   const alternateUomEntry = uomsArray.find(
-    (u) => u.uom && u.uom.toUpperCase() !== baseUom.toUpperCase()
+    (u) => u.uom && u.uom.toUpperCase() !== baseUom.toUpperCase(),
   );
-  const pricingUom = (item.pricing_uom || alternateUomEntry?.uom || baseUom) as string;
+  const pricingUom = (item.pricing_uom ||
+    alternateUomEntry?.uom ||
+    baseUom) as string;
 
   // 5. Conversion factor: how many base units = 1 pricing unit.
   const flatQty = Number(item.pricing_unit_qty ?? 0);
   const uomConvFactor = Number(
     alternateUomEntry?.conversion_factor ??
-    alternateUomEntry?.conversionFactor ??
-    alternateUomEntry?.multiplier ??
-    0
+      alternateUomEntry?.conversionFactor ??
+      alternateUomEntry?.multiplier ??
+      0,
   );
-  const pricingUnitQty = flatQty > 0 ? flatQty : uomConvFactor > 0 ? uomConvFactor : 1;
+  const pricingUnitQty =
+    flatQty > 0 ? flatQty : uomConvFactor > 0 ? uomConvFactor : 1;
 
   // 6. Wholesale price from backend (per base unit, same convention as retail_price).
   const wholesalePrice = Number(item.wholesale_price ?? price);
@@ -93,8 +101,12 @@ export function toCatalogProduct(
 
 export function toPosCustomer(item: RawBackendCustomer): PosCustomer {
   const isWholesale = item.type?.toUpperCase() === "WHOLESALE";
-  const creditLimit = isWholesale ? Number(item.wholesale?.credit_limit ?? 0) : 0;
-  const outstandingBalance = isWholesale ? Number(item.wholesale?.outstanding_balance ?? 0) : 0;
+  const creditLimit = isWholesale
+    ? Number(item.wholesale?.credit_limit ?? 0)
+    : 0;
+  const outstandingBalance = isWholesale
+    ? Number(item.wholesale?.outstanding_balance ?? 0)
+    : 0;
   const availableCredit = Math.max(creditLimit - outstandingBalance, 0);
 
   return {
@@ -114,8 +126,10 @@ export function toPosCustomer(item: RawBackendCustomer): PosCustomer {
 // ==========================================
 
 export async function fetchCategoriesApi(): Promise<string[]> {
-  const res = await apiClient.get<Array<{ id: number; name?: string; categoryName?: string }>>("/product-categories");
-  return res.data.map(c => c.name || c.categoryName || `Category ${c.id}`);
+  const res = await apiClient.get<
+    Array<{ id: number; name?: string; categoryName?: string }>
+  >("/product-categories");
+  return res.data.map((c) => c.name || c.categoryName || `Category ${c.id}`);
 }
 
 /**
@@ -132,7 +146,9 @@ export async function fetchProductsApi(): Promise<CatalogProduct[]> {
 
   // 2. Build simple ID -> Name map from database (e.g. { 1: "Bolts", 3: "Washers", ... })
   const categoryMap: Record<number, string> = {};
-  const categoriesList = Array.isArray(categoriesRes.data) ? categoriesRes.data : [];
+  const categoriesList = Array.isArray(categoriesRes.data)
+    ? categoriesRes.data
+    : [];
   categoriesList.forEach((c) => {
     categoryMap[c.id] = c.name || c.categoryName;
   });
@@ -149,7 +165,9 @@ export async function fetchProductsApi(): Promise<CatalogProduct[]> {
  * Async API fetcher: queries /customers from backend (GET /customers?limit=100).
  */
 export async function fetchCustomersApi(): Promise<PosCustomer[]> {
-  const response = await apiClient.get<CustomerApiResponse | RawBackendCustomer[]>("/customers", {
+  const response = await apiClient.get<
+    CustomerApiResponse | RawBackendCustomer[]
+  >("/customers", {
     params: { limit: 100 },
   });
 
@@ -171,15 +189,18 @@ export function buildCheckoutPayload(
   customer: PaymentModalCustomer | null,
   splitPayments?: CheckoutPaymentEntry[],
   discountTotal?: number,
-  override: boolean = false
+  override: boolean = false,
 ): CheckoutPayload {
-  const hasCreditTender = splitPayments?.some((p) => p.payment_method === "CREDIT");
+  const hasCreditTender = splitPayments?.some(
+    (p) => p.payment_method === "CREDIT",
+  );
   const hasWholesaleItem = items.some((i) => i.pricingType === "WHOLESALE");
   // Transaction is WHOLESALE when:
   //   • at least one item uses wholesale pricing, OR
   //   • payment includes CREDIT (backend requires wholesale transaction type for credit payments).
   // A wholesale customer checking out with all-retail items + non-credit payment → RETAIL transaction.
-  const isWholesale = hasWholesaleItem || hasCreditTender || method === "credit";
+  const isWholesale =
+    hasWholesaleItem || hasCreditTender || method === "credit";
   const cash = details?.type === "CASH" ? details : undefined;
   const gcash = details?.type === "GCASH" ? details : undefined;
   const credit = details?.type === "CREDIT" ? details : undefined;
@@ -187,48 +208,61 @@ export function buildCheckoutPayload(
   const totalDiscount =
     discountTotal !== undefined
       ? discountTotal
-      : Number(items.reduce((sum, i) => sum + (i.line_discount ?? 0), 0).toFixed(2));
+      : Number(
+          items.reduce((sum, i) => sum + (i.line_discount ?? 0), 0).toFixed(2),
+        );
 
   return {
     transaction_type: isWholesale ? "WHOLESALE" : "RETAIL",
-    items: items.length > 0
-      ? items.map((i) => ({
-          product_id: i.productId ?? i.id ?? 1,
-          product_name: i.name,
-          quantity: i.quantity,
-          unit_price: i.unitPrice,
-          subtotal: i.subtotal,
-          unit_of_measure: i.unit_of_measure,
-          line_discount: i.line_discount ?? 0,
-          pricingType: i.pricingType,
-        }))
-      : [
-          {
-            product_id: 1,
-            product_name: "POS Transaction Item",
-            quantity: 1,
-            unit_price: total,
-            subtotal: total,
-            line_discount: 0,
-          },
-        ],
-    customer_id: method === "credit" ? (credit?.customerId ?? customer?.id ?? null) : (customer?.id ?? null),
-    customer_name: method === "credit" ? (credit?.customerName ?? customer?.name ?? null) : (customer?.name ?? null),
+    items:
+      items.length > 0
+        ? items.map((i) => ({
+            product_id: i.productId ?? i.id ?? 1,
+            product_name: i.name,
+            quantity: i.quantity,
+            unit_price: i.unitPrice,
+            subtotal: i.subtotal,
+            unit_of_measure: i.unit_of_measure,
+            line_discount: i.line_discount ?? 0,
+            pricingType: i.pricingType,
+          }))
+        : [
+            {
+              product_id: 1,
+              product_name: "POS Transaction Item",
+              quantity: 1,
+              unit_price: total,
+              subtotal: total,
+              line_discount: 0,
+            },
+          ],
+    customer_id:
+      method === "credit"
+        ? (credit?.customerId ?? customer?.id ?? null)
+        : (customer?.id ?? null),
+    customer_name:
+      method === "credit"
+        ? (credit?.customerName ?? customer?.name ?? null)
+        : (customer?.name ?? null),
     discount_total: totalDiscount,
     order_discount: totalDiscount,
     grand_total: total,
-    payment: (splitPayments && splitPayments.length > 0) ? splitPayments[0] : {
-      payment_method: method.toUpperCase() as PaymentMethod,
-      amount_paid: total,
-      cash_tendered: cash?.cashTendered,
-      change_given: cash?.changeDue,
-      reference_number: gcash?.referenceNumber || credit?.poNumber,
-      mobile_number: gcash?.mobileNumber,
-      gcash_mobile_number: gcash?.mobileNumber,
-      credit_due_date: credit?.dueDate,
-      po_number: credit?.poNumber,
-    },
-    payments: (splitPayments && splitPayments.length > 0) ? splitPayments : undefined,
+    payment:
+      splitPayments && splitPayments.length > 0
+        ? splitPayments[0]
+        : {
+            payment_method: method.toUpperCase() as PaymentMethod,
+            amount_paid: total,
+            cash_tendered: cash?.cashTendered,
+            change_given: cash?.changeDue,
+            reference_number: gcash?.referenceNumber || credit?.poNumber,
+            mobile_number: gcash?.mobileNumber,
+            gcash_mobile_number: gcash?.mobileNumber,
+            credit_due_date: credit?.dueDate,
+            po_number: credit?.poNumber,
+          },
+    payments:
+      splitPayments && splitPayments.length > 0 ? splitPayments : undefined,
     override,
   };
 }
@@ -237,9 +271,15 @@ export function buildCheckoutPayload(
  * Checks if a wholesale customer has overdue balances or invoices.
  * GET /customers/wholesale/{customerId}/overdue-status
  */
-export async function checkCustomerOverdueStatusApi(customerId: number | string): Promise<{ isOverdue: boolean; message?: string }> {
+export async function checkCustomerOverdueStatusApi(
+  customerId: number | string,
+): Promise<{ isOverdue: boolean; message?: string }> {
   try {
-    const res = await apiClient.get<{ isOverdue?: boolean; overdue?: boolean; message?: string }>(`/customers/wholesale/${customerId}/overdue-status`);
+    const res = await apiClient.get<{
+      isOverdue?: boolean;
+      overdue?: boolean;
+      message?: string;
+    }>(`/customers/wholesale/${customerId}/overdue-status`);
     const isOverdue = Boolean(res.data?.isOverdue ?? res.data?.overdue);
     return {
       isOverdue,
@@ -255,7 +295,9 @@ export async function checkCustomerOverdueStatusApi(customerId: number | string)
  * Submits real checkout payload directly to backend API (POST /pos/checkout).
  * Maps frontend payload into backend NestJS CheckoutDto schema and parses response.
  */
-export async function submitCheckout(payload: CheckoutPayload): Promise<CheckoutResponse> {
+export async function submitCheckout(
+  payload: CheckoutPayload,
+): Promise<CheckoutResponse> {
   try {
     // Construct exact DTO matching backend NestJS CheckoutDto schema (strictly whitelisted fields)
     const backendDto = {
@@ -269,11 +311,16 @@ export async function submitCheckout(payload: CheckoutPayload): Promise<Checkout
           productId: Number(item.product_id),
           quantity_sold: Number(item.quantity),
           current_uom: item.unit_of_measure || "PCS",
-          transaction_type: item.pricingType || (payload.transaction_type === "WHOLESALE" ? "WHOLESALE" : "RETAIL"),
+          transaction_type:
+            item.pricingType ||
+            (payload.transaction_type === "WHOLESALE" ? "WHOLESALE" : "RETAIL"),
           line_discount: Number(item.line_discount ?? 0),
         };
       }),
-      payments: (payload.payments && payload.payments.length > 0 ? payload.payments : [payload.payment]).map((p) => {
+      payments: (payload.payments && payload.payments.length > 0
+        ? payload.payments
+        : [payload.payment]
+      ).map((p) => {
         const paymentMethod = p.payment_method;
         let details: Record<string, unknown> | undefined;
 
@@ -302,13 +349,20 @@ export async function submitCheckout(payload: CheckoutPayload): Promise<Checkout
       override: payload.override ?? false,
     };
 
-    const response = await apiClient.post<BackendCheckoutResponse>("/pos/checkout", backendDto, {
-      timeout: 10000,
-    });
+    const response = await apiClient.post<BackendCheckoutResponse>(
+      "/pos/checkout",
+      backendDto,
+      {
+        timeout: 10000,
+      },
+    );
     const data = response.data;
     const tx = data?.receipt || data;
-    const resolvedTxId = ("id" in tx && typeof tx.id === "number" ? tx.id : undefined) ?? tx.transactionId ?? 0;
-    
+    const resolvedTxId =
+      ("id" in tx && typeof tx.id === "number" ? tx.id : undefined) ??
+      tx.transactionId ??
+      0;
+
     // Construct frontend Receipt from backend response
     const receipt: Receipt = {
       transactionId: resolvedTxId,
@@ -330,7 +384,10 @@ export async function submitCheckout(payload: CheckoutPayload): Promise<Checkout
         const qty = Number(item.quantity) || 1;
         const grossSubtotal = Number(item.unit_price) * qty;
         const netSubtotal = Number(item.subtotal);
-        const discPrice = qty > 0 ? Number((netSubtotal / qty).toFixed(2)) : Number(item.unit_price);
+        const discPrice =
+          qty > 0
+            ? Number((netSubtotal / qty).toFixed(2))
+            : Number(item.unit_price);
         return {
           productId: Number(item.product_id),
           product_name: item.product_name,
@@ -343,25 +400,48 @@ export async function submitCheckout(payload: CheckoutPayload): Promise<Checkout
           unit_of_measure: item.unit_of_measure || "PCS",
         };
       }),
-      payments: Array.isArray(tx.payments) && tx.payments.length > 0
-        ? tx.payments.map((p: { payment_method: PaymentMethod; amount_paid: number | string; cashPayment?: { cash_tendered?: number | string; change_given?: number | string }; gCashPayment?: { reference_number?: string; gcash_mobile_number?: string } }) => ({
-            payment_method: p.payment_method,
-            amount_paid: Number(p.amount_paid),
-            cash_tendered: p.cashPayment?.cash_tendered !== undefined ? Number(p.cashPayment.cash_tendered) : undefined,
-            change_given: p.cashPayment?.change_given !== undefined ? Number(p.cashPayment.change_given) : undefined,
-            reference_number: p.gCashPayment?.reference_number,
-            mobile_number: p.gCashPayment?.gcash_mobile_number,
-            gcash_mobile_number: p.gCashPayment?.gcash_mobile_number,
-          }))
-        : (payload.payments && payload.payments.length > 0 ? payload.payments : [payload.payment]).map((p) => ({
-            payment_method: p.payment_method,
-            amount_paid: Number(p.amount_paid),
-            cash_tendered: p.cash_tendered,
-            change_given: p.change_given,
-            reference_number: p.reference_number,
-            mobile_number: p.mobile_number,
-            gcash_mobile_number: p.gcash_mobile_number,
-          })),
+      payments:
+        Array.isArray(tx.payments) && tx.payments.length > 0
+          ? tx.payments.map(
+              (p: {
+                payment_method: PaymentMethod;
+                amount_paid: number | string;
+                cashPayment?: {
+                  cash_tendered?: number | string;
+                  change_given?: number | string;
+                };
+                gCashPayment?: {
+                  reference_number?: string;
+                  gcash_mobile_number?: string;
+                };
+              }) => ({
+                payment_method: p.payment_method,
+                amount_paid: Number(p.amount_paid),
+                cash_tendered:
+                  p.cashPayment?.cash_tendered !== undefined
+                    ? Number(p.cashPayment.cash_tendered)
+                    : undefined,
+                change_given:
+                  p.cashPayment?.change_given !== undefined
+                    ? Number(p.cashPayment.change_given)
+                    : undefined,
+                reference_number: p.gCashPayment?.reference_number,
+                mobile_number: p.gCashPayment?.gcash_mobile_number,
+                gcash_mobile_number: p.gCashPayment?.gcash_mobile_number,
+              }),
+            )
+          : (payload.payments && payload.payments.length > 0
+              ? payload.payments
+              : [payload.payment]
+            ).map((p) => ({
+              payment_method: p.payment_method,
+              amount_paid: Number(p.amount_paid),
+              cash_tendered: p.cash_tendered,
+              change_given: p.change_given,
+              reference_number: p.reference_number,
+              mobile_number: p.mobile_number,
+              gcash_mobile_number: p.gcash_mobile_number,
+            })),
     };
 
     return {
@@ -409,7 +489,9 @@ interface BackendTransactionsListResponse {
  */
 export async function fetchTransactionsApi(): Promise<TransactionSummary[]> {
   try {
-    const response = await apiClient.get<BackendTransactionsListResponse | BackendTransactionItem[]>("/transactions", {
+    const response = await apiClient.get<
+      BackendTransactionsListResponse | BackendTransactionItem[]
+    >("/transactions", {
       params: {
         limit: 100,
         includeReturns: true,
@@ -420,12 +502,18 @@ export async function fetchTransactionsApi(): Promise<TransactionSummary[]> {
     const rawList: BackendTransactionItem[] = Array.isArray(payload)
       ? payload
       : Array.isArray(payload?.data)
-      ? payload.data
-      : [];
+        ? payload.data
+        : [];
 
     return rawList.map((item) => {
       const isSplit = Array.isArray(item.payments) && item.payments.length > 1;
-      const paymentMethod = isSplit ? "SPLIT" : ((item.payments?.[0]?.payment_method || "CASH") as "CASH" | "GCASH" | "CREDIT" | "SPLIT");
+      const paymentMethod = isSplit
+        ? "SPLIT"
+        : ((item.payments?.[0]?.payment_method || "CASH") as
+            | "CASH"
+            | "GCASH"
+            | "CREDIT"
+            | "SPLIT");
       let formattedDate = "N/A";
       if (item.date) {
         try {
@@ -465,11 +553,14 @@ export async function fetchReceiptApi(id: string | number): Promise<Receipt> {
   // If id is not a number (e.g. "INV-2026-0004"), search transactions to find its numeric ID
   if (isNaN(numericId)) {
     try {
-      const searchRes = await apiClient.get<BackendTransactionsListResponse>("/transactions", {
-        params: { search: String(id) },
-      });
+      const searchRes = await apiClient.get<BackendTransactionsListResponse>(
+        "/transactions",
+        {
+          params: { search: String(id) },
+        },
+      );
       const match = searchRes.data?.data?.find(
-        (tx) => tx.invoice_number === id || String(tx.id) === id
+        (tx) => tx.invoice_number === id || String(tx.id) === id,
       );
       if (match) {
         numericId = match.id;
@@ -490,9 +581,14 @@ export async function fetchReceiptApi(id: string | number): Promise<Receipt> {
 /**
  * Process a refund request via backend API (POST /returns/refund).
  */
-export async function processRefund(request: RefundRequest): Promise<ReturnResponse> {
+export async function processRefund(
+  request: RefundRequest,
+): Promise<ReturnResponse> {
   try {
-    const response = await apiClient.post<ReturnResponse>('/returns/refund', request);
+    const response = await apiClient.post<ReturnResponse>(
+      "/returns/refund",
+      request,
+    );
     return response.data;
   } catch (error) {
     // Error handling will be done in the modal component
@@ -503,9 +599,14 @@ export async function processRefund(request: RefundRequest): Promise<ReturnRespo
 /**
  * Process an exchange request via backend API (POST /returns/exchange).
  */
-export async function processExchange(request: ExchangeRequest): Promise<ReturnResponse> {
+export async function processExchange(
+  request: ExchangeRequest,
+): Promise<ReturnResponse> {
   try {
-    const response = await apiClient.post<ReturnResponse>('/returns/exchange', request);
+    const response = await apiClient.post<ReturnResponse>(
+      "/returns/exchange",
+      request,
+    );
     return response.data;
   } catch (error) {
     // Error handling will be done in the modal component

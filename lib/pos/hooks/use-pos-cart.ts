@@ -56,12 +56,8 @@ function resolveUomPrice(
 
   if (entry) {
     const explicitPrice = isWholesale
-      ? Number(
-          entry.wholesale_price ?? entry.retail_price ?? entry.price ?? 0,
-        )
-      : Number(
-          entry.retail_price ?? entry.price ?? entry.wholesale_price ?? 0,
-        );
+      ? Number(entry.wholesale_price ?? entry.retail_price ?? entry.price ?? 0)
+      : Number(entry.retail_price ?? entry.price ?? entry.wholesale_price ?? 0);
     if (explicitPrice > 0) return explicitPrice;
   }
 
@@ -81,6 +77,24 @@ export function usePosCart(
   initialCart: PaymentModalItem[] = DEFAULT_INITIAL_CART,
 ) {
   const [cart, setCart] = useState<PaymentModalItem[]>(initialCart);
+
+  // Helper matcher to target the exact line item variant
+  const isSameCartItem = (
+    item: PaymentModalItem,
+    productId: string | number | undefined,
+    uom?: string,
+  ) => {
+    const matchId = (item.productId ?? item.id) === productId;
+    if (!matchId) return false;
+
+    // If uom is provided, match against unit_of_measure; otherwise match item id
+    if (uom) {
+      const currentUom =
+        item.unit_of_measure || item.pricing_uom || item.base_uom || "PCS";
+      return currentUom.toUpperCase() === uom.toUpperCase();
+    }
+    return true;
+  };
 
   // Total of gross items before discount
   const itemsSubtotal = Number(
@@ -110,16 +124,20 @@ export function usePosCart(
   const updateQuantity = (
     productId: string | number | undefined,
     delta: number,
+    uom?: string,
   ) => {
     setCart((prev) =>
       prev
         .map((item) => {
-          if ((item.productId ?? item.id) === productId) {
+          if (isSameCartItem(item, productId, uom)) {
             // For integer quantities or whole step changes, round cleanly to avoid float precision drift (e.g. 0.01)
             const rawQty = item.quantity + delta;
             const newQty = Number(Math.max(0, rawQty).toFixed(4));
             // If whole number, format as integer
-            const cleanQty = Math.round(newQty * 100) % 100 === 0 ? Math.round(newQty) : Number(newQty.toFixed(2));
+            const cleanQty =
+              Math.round(newQty * 100) % 100 === 0
+                ? Math.round(newQty)
+                : Number(newQty.toFixed(2));
             if (cleanQty <= 0) return null;
 
             const { line_discount, subtotal } = calcLineSubtotal(
@@ -145,30 +163,29 @@ export function usePosCart(
   const setItemQuantity = (
     productId: string | number | undefined,
     exactQty: number,
+    uom?: string,
   ) => {
-    const validQty = Math.max(0, Number(exactQty) || 0);
+    // If numeric input is invalid or <= 0, keep item at minimum 1 instead of deleting/filtering out
+    if (!exactQty || exactQty <= 0) return;
+
     setCart((prev) =>
-      prev
-        .map((item) => {
-          if ((item.productId ?? item.id) === productId) {
-            if (validQty <= 0) return null;
+      prev.map((item) => {
+        if (isSameCartItem(item, productId, uom)) {
+          const { line_discount, subtotal } = calcLineSubtotal(
+            exactQty,
+            item.unitPrice,
+            item.line_discount ?? 0,
+          );
 
-            const { line_discount, subtotal } = calcLineSubtotal(
-              validQty,
-              item.unitPrice,
-              item.line_discount ?? 0,
-            );
-
-            return {
-              ...item,
-              quantity: validQty,
-              line_discount,
-              subtotal,
-            };
-          }
-          return item;
-        })
-        .filter((item): item is PaymentModalItem => item !== null),
+          return {
+            ...item,
+            quantity: exactQty,
+            line_discount,
+            subtotal,
+          };
+        }
+        return item;
+      }),
     );
   };
 
@@ -176,11 +193,12 @@ export function usePosCart(
   const updateItemDiscount = (
     productId: string | number | undefined,
     discountAmount: number,
+    uom?: string,
   ) => {
     const validDiscount = Math.max(0, Number(discountAmount) || 0);
     setCart((prev) =>
       prev.map((item) => {
-        if ((item.productId ?? item.id) === productId) {
+        if (isSameCartItem(item, productId, uom)) {
           const { line_discount, subtotal } = calcLineSubtotal(
             item.quantity,
             item.unitPrice,
@@ -201,10 +219,11 @@ export function usePosCart(
   const updateItemUom = (
     productId: string | number | undefined,
     newUom: string,
+    currentUom?: string,
   ) => {
     setCart((prev) =>
       prev.map((item) => {
-        if ((item.productId ?? item.id) === productId) {
+        if (isSameCartItem(item, productId, currentUom)) {
           const nextUnitPrice = resolveUomPrice(
             item,
             newUom,
@@ -231,15 +250,20 @@ export function usePosCart(
   };
 
   // Explicit item removal
-  const removeItem = (productId: string | number | undefined) => {
-    setCart((prev) => prev.filter((item) => (item.productId ?? item.id) !== productId));
+  const removeItem = (productId: string | number | undefined, uom?: string) => {
+    setCart((prev) =>
+      prev.filter((item) => !isSameCartItem(item, productId, uom)),
+    );
   };
 
   // Toggle single item pricing between RETAIL and WHOLESALE
-  const toggleItemPricing = (productId: string | number | undefined) => {
+  const toggleItemPricing = (
+    productId: string | number | undefined,
+    uom?: string,
+  ) => {
     setCart((prev) =>
       prev.map((item) => {
-        if ((item.productId ?? item.id) === productId) {
+        if (isSameCartItem(item, productId, uom)) {
           const nextType: "RETAIL" | "WHOLESALE" =
             item.pricingType === "WHOLESALE" ? "RETAIL" : "WHOLESALE";
 
@@ -297,11 +321,15 @@ export function usePosCart(
     preferredPricing?: "RETAIL" | "WHOLESALE",
   ) => {
     const pricingType = preferredPricing || "RETAIL";
-    const selectedUom = prod.unit_of_measure || prod.pricing_uom || prod.base_uom || "PCS";
+    const selectedUom =
+      prod.unit_of_measure || prod.pricing_uom || prod.base_uom || "PCS";
 
     const baseUom = prod.base_uom || "PCS";
     const pricingUom = prod.pricing_uom || prod.unit_of_measure || baseUom;
-    const pricingUnitQty = prod.pricing_unit_qty && prod.pricing_unit_qty > 0 ? prod.pricing_unit_qty : 1;
+    const pricingUnitQty =
+      prod.pricing_unit_qty && prod.pricing_unit_qty > 0
+        ? prod.pricing_unit_qty
+        : 1;
 
     const retail = Number(prod.retailPrice ?? prod.price);
     const wholesale = Number(prod.wholesalePrice ?? prod.price);
@@ -325,7 +353,8 @@ export function usePosCart(
       const existing = prev.find(
         (item) =>
           (item.productId ?? item.id) === prod.id &&
-          (item.unit_of_measure || "").toUpperCase() === selectedUom.toUpperCase(),
+          (item.unit_of_measure || "").toUpperCase() ===
+            selectedUom.toUpperCase(),
       );
 
       if (existing) {

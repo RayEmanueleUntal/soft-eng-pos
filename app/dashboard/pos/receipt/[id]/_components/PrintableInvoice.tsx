@@ -61,7 +61,10 @@ function formatPriceDifference(diff: number): string {
 
 /** Renders payment-specific details below the payment method row. */
 function PaymentDetails({ payment }: { payment: ReceiptPayment }) {
-  if (payment.payment_method === "CASH" && payment.cash_tendered !== undefined) {
+  if (
+    payment.payment_method === "CASH" &&
+    payment.cash_tendered !== undefined
+  ) {
     return (
       <>
         <ReceiptRow
@@ -79,10 +82,7 @@ function PaymentDetails({ payment }: { payment: ReceiptPayment }) {
   if (payment.payment_method === "GCASH" && payment.reference_number) {
     return (
       <>
-        <ReceiptRow
-          label="GCash ref"
-          value={payment.reference_number}
-        />
+        <ReceiptRow label="GCash ref" value={payment.reference_number} />
       </>
     );
   }
@@ -110,7 +110,9 @@ function ReceiptRow({
 
 /** Renders a dashed divider between receipt sections. */
 function ReceiptDivider() {
-  return <div className="border-t border-dashed border-muted-foreground my-2" />;
+  return (
+    <div className="border-t border-dashed border-muted-foreground my-2" />
+  );
 }
 
 /** Renders a double-line divider for totals emphasis. */
@@ -128,7 +130,9 @@ export function PrintableInvoice({
   className,
   id = "printable-receipt",
 }: PrintableInvoiceProps) {
-  const customerName = receipt.customer?.name.trim() ? receipt.customer.name : "-";
+  const customerName = receipt.customer?.name.trim()
+    ? receipt.customer.name
+    : "-";
   const displayStatus = getReceiptDisplayStatus(receipt);
   const showAdjustments = hasAdjustments(receipt);
   const totalRefunds = computeTotalRefunds(receipt);
@@ -140,7 +144,7 @@ export function PrintableInvoice({
       id={id}
       className={cn(
         "w-full max-w-[80mm] bg-card text-black font-mono text-xs leading-relaxed p-3",
-        className
+        className,
       )}
     >
       <div className="text-center space-y-1">
@@ -174,32 +178,37 @@ export function PrintableInvoice({
 
       {/* Line Items */}
       <div className="space-y-3">
-        {receipt.items.map((item, index) => (
-          <div key={`${item.product_name}-${index}`} className="space-y-0.5">
-            <p className="font-medium wrap-break-word">{item.product_name}</p>
-            <ReceiptRow
-              label={`${formatQuantity(item.quantity)}${item.pricing_uom ? ` ${item.pricing_uom}` : ""}`}
-              value={formatPeso(item.net_price)}
-            />
-            <ReceiptRow
-              label={`@ ${formatPeso(item.applied_price)}${item.pricing_uom ? ` / ${item.pricing_uom}` : ""}`}
-              value=""
-            />
-            {item.subtotal > item.net_price ? (
-              <ReceiptRow
-                label="Discount"
-                value={`-${formatPeso(item.subtotal - item.net_price)}`}
-              />
-            ) : null}
-            {(item.already_returned_qty ?? 0) > 0 && (
-              <p className="text-[10px]">
-                ({item.already_returned_qty} returned)
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
+        {receipt.items.map((item, index) => {
+          // Net price after line discount (subtotal)
+          const lineTotal = item.net_price ?? item.subtotal;
+          const originalSubtotal = item.quantity * item.applied_price;
 
+          return (
+            <div key={`${item.product_name}-${index}`} className="space-y-0.5">
+              <p className="font-medium wrap-break-word">{item.product_name}</p>
+              <ReceiptRow
+                label={`${formatQuantity(item.quantity)}${item.pricing_uom ? ` ${item.pricing_uom}` : ""}`}
+                value={formatPeso(lineTotal)}
+              />
+              <ReceiptRow
+                label={`@ ${formatPeso(item.applied_price)}${item.pricing_uom ? ` / ${item.pricing_uom}` : ""}`}
+                value=""
+              />
+              {originalSubtotal > lineTotal ? (
+                <ReceiptRow
+                  label="Discount"
+                  value={`-${formatPeso(originalSubtotal - lineTotal)}`}
+                />
+              ) : null}
+              {(item.already_returned_qty ?? 0) > 0 && (
+                <p className="text-[10px]">
+                  ({item.already_returned_qty} returned)
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
       <ReceiptDivider />
 
       <div className="space-y-1">
@@ -237,14 +246,18 @@ export function PrintableInvoice({
             <p className="font-semibold text-center">RETURNS</p>
             {receipt.returns.map((ret: ReceiptReturn) => (
               <div key={ret.id} className="space-y-0.5">
-                <p className="font-medium wrap-break-word">{ret.product_name}</p>
+                <p className="font-medium wrap-break-word">
+                  {ret.product_name}
+                </p>
                 <ReceiptRow
                   label={`Qty: ${ret.quantity}`}
                   value={`Refund: ${formatPeso(ret.refund_amount)}`}
                 />
                 <p className="text-[10px]">Reason: {ret.defect_reason}</p>
                 <p className="text-[10px]">Staff: {ret.processed_by_staff}</p>
-                <p className="text-[10px]">Date: {formatReceiptDate(ret.date)}</p>
+                <p className="text-[10px]">
+                  Date: {formatReceiptDate(ret.date)}
+                </p>
               </div>
             ))}
             <ReceiptDivider />
@@ -265,12 +278,16 @@ export function PrintableInvoice({
             <p className="font-semibold text-center">EXCHANGES</p>
             {receipt.exchanges.map((exc: ReceiptExchange) => (
               <div key={exc.id} className="space-y-0.5">
-                <p className="font-medium wrap-break-word">{exc.product_name}</p>
+                <p className="font-medium wrap-break-word">
+                  {exc.product_name}
+                </p>
                 <ReceiptRow
                   label={`Qty: ${exc.quantity}`}
                   value={`Diff: ${formatPriceDifference(exc.price_difference)}`}
                 />
-                <p className="text-[10px]">Date: {formatReceiptDate(exc.date)}</p>
+                <p className="text-[10px]">
+                  Date: {formatReceiptDate(exc.date)}
+                </p>
                 {exc.is_within_7_days && (
                   <p className="text-[10px]">[Within 7-day window]</p>
                 )}
@@ -296,11 +313,7 @@ export function PrintableInvoice({
           <ReceiptDoubleDivider />
           <div className="space-y-1">
             {displayStatus === "FULL_REFUND" ? (
-              <ReceiptRow
-                label="FULLY REFUNDED"
-                value={formatPeso(0)}
-                bold
-              />
+              <ReceiptRow label="FULLY REFUNDED" value={formatPeso(0)} bold />
             ) : (
               <ReceiptRow
                 label="ADJUSTED NET TOTAL"

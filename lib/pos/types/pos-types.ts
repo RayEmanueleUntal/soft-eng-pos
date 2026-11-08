@@ -266,10 +266,10 @@ export interface ReceiptItem {
   quantity: number;
   applied_price: number;
   subtotal: number;
-  discounted_price: number;
-  net_price: number;
+  discounted_price?: number;
+  net_price?: number; // Optional or derived
   pricing_uom?: string;
-  type: TransactionType;
+  type?: TransactionType;
   unit_of_measure?: UnitOfMeasure | string;
   already_returned_qty?: number;
 }
@@ -349,7 +349,7 @@ export interface TransactionSummary {
 // ==========================================
 export enum ItemCondition {
   DEFECTIVE = "DEFECTIVE",
-  CHANGE_OF_MIND = "CHANGE_OF_MIND"
+  CHANGE_OF_MIND = "CHANGE_OF_MIND",
 }
 
 export interface RefundRequest {
