@@ -30,9 +30,12 @@ import {
 import { Search, X, RotateCcw } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { getErrorMessage } from "@/lib/utils";
+import { PageHeader } from "@/components/ui/pageheader";
 
 function includesText(value: unknown, query: string): boolean {
-  return String(value ?? "").toLowerCase().includes(query.toLowerCase());
+  return String(value ?? "")
+    .toLowerCase()
+    .includes(query.toLowerCase());
 }
 
 function movementMatchesProductFilters(
@@ -42,7 +45,7 @@ function movementMatchesProductFilters(
     thread: string;
     material: string;
     categoryId: string;
-  }
+  },
 ): boolean {
   const product = movement.product;
   if (filters.size && !includesText(product?.size_dimensions, filters.size)) {
@@ -51,13 +54,19 @@ function movementMatchesProductFilters(
   if (filters.thread && !includesText(product?.thread_type, filters.thread)) {
     return false;
   }
-  if (filters.material && !includesText(product?.material_grade, filters.material)) {
+  if (
+    filters.material &&
+    !includesText(product?.material_grade, filters.material)
+  ) {
     return false;
   }
   if (filters.categoryId !== "ALL") {
     const productCategoryId =
       product?.categoryId ?? product?.category?.id ?? null;
-    if (productCategoryId == null || String(productCategoryId) !== filters.categoryId) {
+    if (
+      productCategoryId == null ||
+      String(productCategoryId) !== filters.categoryId
+    ) {
       return false;
     }
   }
@@ -119,7 +128,9 @@ export default function InventoryAdjustmentsPage() {
   const [endDate, setEndDate] = useState<string>("");
 
   // Categories & Staff cache
-  const [categoriesList, setCategoriesList] = useState<Array<{ id: number; name: string }>>([]);
+  const [categoriesList, setCategoriesList] = useState<
+    Array<{ id: number; name: string }>
+  >([]);
   const [staffMap, setStaffMap] = useState<Record<number, string>>({});
   const staffMapRef = useRef(staffMap);
 
@@ -141,18 +152,25 @@ export default function InventoryAdjustmentsPage() {
   // Fetch categories once for category filter
   useEffect(() => {
     apiClient
-      .get<Array<{ id: number; name?: string; categoryName?: string }>>("/product-categories")
+      .get<Array<{ id: number; name?: string; categoryName?: string }>>(
+        "/product-categories",
+      )
       .then((res) => {
         if (Array.isArray(res.data)) {
           setCategoriesList(
             res.data.map((c) => ({
               id: c.id,
               name: c.name || c.categoryName || `Category #${c.id}`,
-            }))
+            })),
           );
         }
       })
-      .catch((err) => console.error("Failed to fetch categories:", getErrorMessage(err, "Failed to fetch categories.")));
+      .catch((err) =>
+        console.error(
+          "Failed to fetch categories:",
+          getErrorMessage(err, "Failed to fetch categories."),
+        ),
+      );
   }, []);
 
   // Fetch movements from GET /inventory/movements
@@ -189,7 +207,8 @@ export default function InventoryAdjustmentsPage() {
             size: debouncedSize || undefined,
             thread: debouncedThread || undefined,
             material: debouncedMaterial || undefined,
-            categoryId: categoryFilter !== "ALL" ? Number(categoryFilter) : undefined,
+            categoryId:
+              categoryFilter !== "ALL" ? Number(categoryFilter) : undefined,
           });
           if (allowedProductIds.size === 1) {
             queryParams.productId = Array.from(allowedProductIds)[0];
@@ -197,7 +216,7 @@ export default function InventoryAdjustmentsPage() {
         } catch (err) {
           console.error(
             "Failed to resolve product filters:",
-            getErrorMessage(err, "Failed to resolve product filters.")
+            getErrorMessage(err, "Failed to resolve product filters."),
           );
         }
       }
@@ -215,7 +234,7 @@ export default function InventoryAdjustmentsPage() {
             thread: debouncedThread,
             material: debouncedMaterial,
             categoryId: categoryFilter,
-          })
+          }),
         );
       }
 
@@ -225,12 +244,16 @@ export default function InventoryAdjustmentsPage() {
             includesText(m.product?.name, debouncedSearch) ||
             includesText(m.product?.sku, debouncedSearch) ||
             includesText(m.productId, debouncedSearch) ||
-            includesText(m.reason, debouncedSearch)
+            includesText(m.reason, debouncedSearch),
         );
       }
 
       setMovements(list);
-      setTotalPages(res.totalPages || Math.ceil((res.total || list.length) / PAGE_LIMIT) || 1);
+      setTotalPages(
+        res.totalPages ||
+          Math.ceil((res.total || list.length) / PAGE_LIMIT) ||
+          1,
+      );
       setTotalCount(res.total ?? list.length);
 
       // Resolve staff names for all staffIds present in the batch
@@ -239,8 +262,8 @@ export default function InventoryAdjustmentsPage() {
         new Set(
           list
             .map((m) => m.staffId)
-            .filter((id) => Boolean(id) && !knownStaff[id])
-        )
+            .filter((id) => Boolean(id) && !knownStaff[id]),
+        ),
       );
 
       if (missingStaffIds.length > 0) {
@@ -248,11 +271,13 @@ export default function InventoryAdjustmentsPage() {
           missingStaffIds.map((id) =>
             fetchStaffUserById(id)
               .then((user) => {
-                const name = `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.username;
+                const name =
+                  `${user.first_name || ""} ${user.last_name || ""}`.trim() ||
+                  user.username;
                 return { id, name };
               })
-              .catch(() => ({ id, name: `Staff #${id}` }))
-          )
+              .catch(() => ({ id, name: `Staff #${id}` })),
+          ),
         ).then((results) => {
           setStaffMap((prev) => {
             const next = { ...prev };
@@ -289,7 +314,7 @@ export default function InventoryAdjustmentsPage() {
   // When a new adjustment is submitted via modal, refresh the movements
   const handleAdjustmentSuccess = (
     _movement: StockMovementResponse,
-    _item: InventoryItem
+    _item: InventoryItem,
   ) => {
     setPage(1);
     loadMovements();
@@ -318,9 +343,9 @@ export default function InventoryAdjustmentsPage() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background min-h-[calc(100vh-4rem)] p-6 space-y-5">
+    <div className="flex flex-col h-full bg-background min-h-[calc(100vh-4rem)]space-y-5">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card p-4 rounded-[4px] border border-border shadow-sm">
+      {/* <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card p-4 rounded-[4px] border border-border shadow-sm">
         <div>
           <h1 className="text-[22px] font-bold font-heading tracking-tight text-foreground">
             Stock Adjustments & Movements
@@ -329,6 +354,15 @@ export default function InventoryAdjustmentsPage() {
             Audit inventory logs, filter movements, and record physical count adjustments.
           </p>
         </div>
+        <StockAdjustmentModal onSuccess={handleAdjustmentSuccess} />
+      </div> */}
+
+      <div className="shrink-0 mt-4 mb-4 flex justify-between">
+        {/* Header Bar */}
+        <PageHeader
+          header="Stock Adjustments & Movements"
+          subheader="Audit inventory logs, filter movements, and record physical count adjustments."
+        />
         <StockAdjustmentModal onSuccess={handleAdjustmentSuccess} />
       </div>
 
@@ -359,12 +393,24 @@ export default function InventoryAdjustmentsPage() {
               <SelectValue placeholder="Movement Type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL" className="text-xs">All Types</SelectItem>
-              <SelectItem value="IN" className="text-xs font-mono">IN</SelectItem>
-              <SelectItem value="OUT" className="text-xs font-mono">OUT</SelectItem>
-              <SelectItem value="ADJUSTMENT" className="text-xs font-mono">ADJUSTMENT</SelectItem>
-              <SelectItem value="SALE" className="text-xs font-mono">SALE</SelectItem>
-              <SelectItem value="RETURN" className="text-xs font-mono">RETURN</SelectItem>
+              <SelectItem value="ALL" className="text-xs">
+                All Types
+              </SelectItem>
+              <SelectItem value="IN" className="text-xs font-mono">
+                IN
+              </SelectItem>
+              <SelectItem value="OUT" className="text-xs font-mono">
+                OUT
+              </SelectItem>
+              <SelectItem value="ADJUSTMENT" className="text-xs font-mono">
+                ADJUSTMENT
+              </SelectItem>
+              <SelectItem value="SALE" className="text-xs font-mono">
+                SALE
+              </SelectItem>
+              <SelectItem value="RETURN" className="text-xs font-mono">
+                RETURN
+              </SelectItem>
             </SelectContent>
           </Select>
 
@@ -381,16 +427,22 @@ export default function InventoryAdjustmentsPage() {
                   {(val: string | null) => {
                     if (!val || val === "ALL") return "All Categories";
                     return (
-                      categoriesList.find((cat) => String(cat.id) === val)?.name ??
-                      "Category"
+                      categoriesList.find((cat) => String(cat.id) === val)
+                        ?.name ?? "Category"
                     );
                   }}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL" className="text-xs">All Categories</SelectItem>
+                <SelectItem value="ALL" className="text-xs">
+                  All Categories
+                </SelectItem>
                 {categoriesList.map((cat) => (
-                  <SelectItem key={cat.id} value={String(cat.id)} className="text-xs">
+                  <SelectItem
+                    key={cat.id}
+                    value={String(cat.id)}
+                    className="text-xs"
+                  >
                     {cat.name}
                   </SelectItem>
                 ))}

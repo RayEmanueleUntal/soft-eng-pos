@@ -25,6 +25,7 @@ import { getErrorMessage } from "@/lib/utils";
 import { CancelPurchaseOrderDialog } from "./_components/CancelPurchaseOrderDialog";
 import { CreatePurchaseOrderModal } from "./_components/CreatePurchaseOrderModal";
 import { PurchaseOrderTable } from "./_components/PurchaseOrderTable";
+import { PageHeader } from "@/components/ui/pageheader";
 
 const PAGE_LIMIT = 10;
 
@@ -39,10 +40,13 @@ export default function PurchaseOrdersPage() {
   const [page, setPage] = React.useState(1);
   const [totalPages, setTotalPages] = React.useState(1);
   const [total, setTotal] = React.useState(0);
-  const [statusFilter, setStatusFilter] = React.useState<POStatus | "ALL">("ALL");
+  const [statusFilter, setStatusFilter] = React.useState<POStatus | "ALL">(
+    "ALL",
+  );
 
   const [createOpen, setCreateOpen] = React.useState(false);
-  const [cancelTarget, setCancelTarget] = React.useState<PurchaseOrderDto | null>(null);
+  const [cancelTarget, setCancelTarget] =
+    React.useState<PurchaseOrderDto | null>(null);
 
   // Loads the current page of purchase orders for the active status filter.
   const loadOrders = React.useCallback(async () => {
@@ -85,8 +89,8 @@ export default function PurchaseOrdersPage() {
   };
 
   return (
-    <div className="flex-1 space-y-6 p-8 font-sans">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+    <div className="flex-1 space-y-6 font-sans">
+      {/* <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Purchase Orders</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -96,6 +100,23 @@ export default function PurchaseOrdersPage() {
 
         {canCreatePO(role) && (
           <Button onClick={() => setCreateOpen(true)} className="gap-2 font-semibold">
+            <Plus className="h-4 w-4" /> New Purchase Order
+          </Button>
+        )}
+      </div> */}
+
+      <div className="shrink-0 mt-4 mb-4 flex justify-between">
+        {/* Header Bar */}
+        <PageHeader
+          header="Purchase Orders"
+          subheader="Create orders from low-stock items, inspect line items and track their status."
+        />
+
+        {canCreatePO(role) && (
+          <Button
+            onClick={() => setCreateOpen(true)}
+            className="h-8 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm"
+          >
             <Plus className="h-4 w-4" /> New Purchase Order
           </Button>
         )}
@@ -134,7 +155,9 @@ export default function PurchaseOrdersPage() {
             disabled={loading}
             className="h-9 gap-1.5 text-xs"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
         </div>

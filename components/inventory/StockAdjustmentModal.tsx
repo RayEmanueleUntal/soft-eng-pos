@@ -30,6 +30,7 @@ import {
 } from "@/lib/inventory/stock-movement-api";
 import { allowsDecimals, roundQty } from "@/lib/inventory/uom";
 import { ProductPicker } from "./ProductPicker";
+import { Plus } from "lucide-react";
 
 interface UomOption {
   uom: string;
@@ -51,7 +52,11 @@ interface AdjustmentFormProps {
 }
 
 // Form body; it unmounts when the dialog closes, so its state resets on every open.
-function AdjustmentForm({ initialItem, onCancel, onSaved }: AdjustmentFormProps) {
+function AdjustmentForm({
+  initialItem,
+  onCancel,
+  onSaved,
+}: AdjustmentFormProps) {
   const [selectedItem, setSelectedItem] = React.useState<InventoryItem | null>(
     initialItem,
   );
@@ -285,14 +290,27 @@ function AdjustmentForm({ initialItem, onCancel, onSaved }: AdjustmentFormProps)
                 Unit of Measure (UoM)
               </Label>
               {availableUoms.length > 1 ? (
-                <Select value={selectedUom} onValueChange={(val) => setSelectedUom(val ?? "")}>
-                  <SelectTrigger id="adjust-uom" className="h-9 font-mono text-xs rounded-[2px]">
+                <Select
+                  value={selectedUom}
+                  onValueChange={(val) => setSelectedUom(val ?? "")}
+                >
+                  <SelectTrigger
+                    id="adjust-uom"
+                    className="h-9 font-mono text-xs rounded-[2px]"
+                  >
                     <SelectValue placeholder="Select UoM" />
                   </SelectTrigger>
                   <SelectContent>
                     {availableUoms.map((opt) => (
-                      <SelectItem key={opt.uom} value={opt.uom} className="font-mono text-xs">
-                        {opt.uom} {opt.conversionFactor !== 1 ? `(×${opt.conversionFactor})` : "(Base)"}
+                      <SelectItem
+                        key={opt.uom}
+                        value={opt.uom}
+                        className="font-mono text-xs"
+                      >
+                        {opt.uom}{" "}
+                        {opt.conversionFactor !== 1
+                          ? `(×${opt.conversionFactor})`
+                          : "(Base)"}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -312,26 +330,31 @@ function AdjustmentForm({ initialItem, onCancel, onSaved }: AdjustmentFormProps)
           {!Number.isNaN(parsedCount) && (
             <div className="bg-muted/40 p-2.5 rounded-[4px] border border-border space-y-1 text-xs">
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Base Unit Equivalent:</span>
+                <span className="text-muted-foreground">
+                  Base Unit Equivalent:
+                </span>
                 <span className="font-mono font-bold text-foreground">
                   {baseCountedQuantity} {selectedItem.base_uom}
                   {conversionFactor !== 1 && (
                     <span className="text-[10px] text-muted-foreground font-normal ml-1">
-                      (1 {selectedUom} = {conversionFactor} {selectedItem.base_uom})
+                      (1 {selectedUom} = {conversionFactor}{" "}
+                      {selectedItem.base_uom})
                     </span>
                   )}
                 </span>
               </div>
               {difference !== null && (
                 <div className="flex justify-between items-center pt-1 border-t border-border/50">
-                  <span className="text-muted-foreground">Net Stock Delta:</span>
+                  <span className="text-muted-foreground">
+                    Net Stock Delta:
+                  </span>
                   <span
                     className={`font-mono font-bold tabular-nums ${
                       difference > 0
                         ? "text-primary"
                         : difference < 0
-                        ? "text-destructive"
-                        : "text-muted-foreground"
+                          ? "text-destructive"
+                          : "text-muted-foreground"
                     }`}
                   >
                     {difference > 0 ? "+" : ""}
@@ -355,7 +378,9 @@ function AdjustmentForm({ initialItem, onCancel, onSaved }: AdjustmentFormProps)
           )}
 
           <div className="space-y-1.5">
-            <Label htmlFor="reason" className="text-xs">Reason</Label>
+            <Label htmlFor="reason" className="text-xs">
+              Reason
+            </Label>
             <Input
               id="reason"
               placeholder="e.g. Damaged, recount discrepancy, audit"
@@ -422,7 +447,10 @@ export function StockAdjustmentModal({
     onOpenChange?.(next);
   };
 
-  const handleSaved = (movement: StockMovementResponse, saved: InventoryItem) => {
+  const handleSaved = (
+    movement: StockMovementResponse,
+    saved: InventoryItem,
+  ) => {
     onSuccess?.(movement, saved);
     setOpen(false);
   };
@@ -433,8 +461,9 @@ export function StockAdjustmentModal({
         <DialogTrigger
           render={
             trigger ?? (
-              <Button className="h-9 rounded-[4px] bg-primary px-4 py-2 font-heading font-semibold text-primary-foreground shadow hover:bg-primary/90">
-                Adjust Stock
+              <Button className="h-8 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm">
+                <Plus className="h-3.5 w-3.5" />
+                <span>Adjust Stock</span>
               </Button>
             )
           }

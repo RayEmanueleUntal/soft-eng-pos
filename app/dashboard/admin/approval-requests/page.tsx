@@ -42,6 +42,7 @@ import {
   FileCheck,
   User,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/pageheader";
 
 export default function ApprovalRequestsPage() {
   const [requests, setRequests] = useState<ApprovalRequestResponseDto[]>([]);
@@ -155,9 +156,9 @@ export default function ApprovalRequestsPage() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="mx-auto space-y-6">
       {/* Header & Refresh */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      {/* <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
             <FileCheck className="w-7 h-7 text-primary shrink-0" /> Admin
@@ -168,6 +169,25 @@ export default function ApprovalRequestsPage() {
             exception requests.
           </p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={loadRequests}
+          disabled={loading}
+          className="gap-2 self-start"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />{" "}
+          Refresh
+        </Button>
+      </div> */}
+      <div className="shrink-0 mt-4 mb-4 flex justify-between">
+        {/* Header Bar */}
+        <PageHeader
+          header="Approval Requests"
+          subheader="Review, approve, or reject store manager overrides and staff
+            exception requests."
+        />
+
         <Button
           variant="outline"
           size="sm"

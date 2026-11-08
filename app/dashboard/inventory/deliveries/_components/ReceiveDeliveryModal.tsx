@@ -33,6 +33,7 @@ import {
   Pencil,
   RotateCcw,
   Truck,
+  Plus,
 } from "lucide-react";
 
 interface ReceiveDeliveryModalProps {
@@ -262,8 +263,8 @@ export function ReceiveDeliveryModal({
       <DialogTrigger
         render={
           trigger ?? (
-            <Button className="rounded-md gap-2 font-medium text-xs">
-              <PackagePlus className="h-4 w-4" /> Receive Delivery
+            <Button className="h-8 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm">
+              <Plus className="h-3.5 w-3.5" /> Receive Delivery
             </Button>
           )
         }

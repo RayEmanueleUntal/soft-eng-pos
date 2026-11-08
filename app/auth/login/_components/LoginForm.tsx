@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 
 import { apiClient } from "@/lib/api";
+import { setAuthSession } from "@/lib/auth/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,20 +32,24 @@ export default function LoginForm() {
         password,
       });
 
-      const token = response.data.access_token ?? response.data.accessToken;
+      const accessToken = response.data.access_token;
+      const refreshToken = response.data.refresh_token;
 
-      if (!token) {
+      if (!accessToken) {
         throw new Error("No access token returned");
       }
-      localStorage.setItem("access_token", token);
 
+      // 1. Save tokens and user details to localStorage via centralized helper
+      setAuthSession(accessToken, refreshToken, username);
+
+      // 2. Set server-side session cookie
       const sessionResponse = await fetch("/api/auth/session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          access_token: token,
+          access_token: accessToken,
         }),
       });
 

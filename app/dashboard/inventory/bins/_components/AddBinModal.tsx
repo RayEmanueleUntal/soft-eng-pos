@@ -78,10 +78,10 @@ export function AddBinModal({ onSuccess }: AddBinModalProps) {
         className="h-8 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm"
       >
         <Plus className="h-3.5 w-3.5" />
-        <span>ADD BIN LOCATION</span>
-        <span className="ml-1 text-[10px] font-mono opacity-90 bg-white/20 px-1 rounded-sm border border-white/20">
+        <span>Add Bin Location</span>
+        {/* <span className="ml-1 text-[10px] font-mono opacity-90 bg-white/20 px-1 rounded-sm border border-white/20">
           [F2]
-        </span>
+        </span> */}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>

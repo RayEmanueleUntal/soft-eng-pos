@@ -11,6 +11,7 @@ import { useCurrentRole } from "@/lib/auth/use-current-role";
 import { canManageStock } from "@/lib/auth/permissions";
 import { getErrorMessage } from "@/lib/utils";
 import { RefreshCw } from "lucide-react";
+import { PageHeader } from "@/components/ui/pageheader";
 
 export default function DeliveriesPage() {
   const role = useCurrentRole();
@@ -64,9 +65,9 @@ export default function DeliveriesPage() {
   };
 
   return (
-    <div className="flex-1 space-y-6 p-8 font-sans">
+    <div className="flex-1 space-y-6 font-sans">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Deliveries</h2>
           <p className="text-muted-foreground text-sm mt-1">
@@ -74,6 +75,18 @@ export default function DeliveriesPage() {
             Purchase Orders.
           </p>
         </div>
+
+        {canManageStock(role) && (
+          <ReceiveDeliveryModal onSuccess={loadDeliveries} />
+        )}
+      </div> */}
+
+      <div className="shrink-0 mt-4 mb-4 flex justify-between">
+        {/* Header Bar */}
+        <PageHeader
+          header="Bin Locations"
+          subheader="Store aisles, physical shelf identifiers, and digital coordinates."
+        />
 
         {canManageStock(role) && (
           <ReceiveDeliveryModal onSuccess={loadDeliveries} />

@@ -8,7 +8,6 @@ export const apiClient = axios.create({
   },
 });
 
-// Flag and subscribers queue to handle concurrent 401 requests during token refresh
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (token: string) => void;
@@ -30,16 +29,21 @@ const processQueue = (error: any, token: string | null = null) => {
 // 1. Request Interceptor: Attach Access Token & Idempotency Key
 // ----------------------------------------------------------------------
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const isBrowser = typeof window !== "undefined";
+
   // 1. Attach Access JWT token from storage if available
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  const token = isBrowser ? localStorage.getItem("access_token") : null;
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // 2. Attach Idempotency-Key for mutating routes (POST, PUT, PATCH)
+  // 2. Attach Idempotency-Key for mutating routes (POST, PUT, PATCH) - BROWSER ONLY
   const mutatingMethods = ["post", "put", "patch"];
-  if (config.method && mutatingMethods.includes(config.method.toLowerCase())) {
+  if (
+    isBrowser &&
+    config.method &&
+    mutatingMethods.includes(config.method.toLowerCase())
+  ) {
     const requestPath = config.url || "";
     let idempotencyKey = sessionStorage.getItem(`idempotency_${requestPath}`);
 
@@ -61,11 +65,13 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 // ----------------------------------------------------------------------
 apiClient.interceptors.response.use(
   (response) => {
+    const isBrowser = typeof window !== "undefined";
+
     // Clear Idempotency Key upon successful mutating response
     const mutatingMethods = ["post", "put", "patch"];
     const method = response.config.method?.toLowerCase();
 
-    if (method && mutatingMethods.includes(method)) {
+    if (isBrowser && method && mutatingMethods.includes(method)) {
       const requestPath = response.config.url || "";
       sessionStorage.removeItem(`idempotency_${requestPath}`);
     }
@@ -73,14 +79,16 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
+    const isBrowser = typeof window !== "undefined";
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
 
-    // Clear idempotency key on bad user requests (400 validation error) so they can fix input and retry
+    // Clear idempotency key on bad user requests (400 validation error)
     const method = originalRequest?.method?.toLowerCase();
     const mutatingMethods = ["post", "put", "patch"];
     if (
+      isBrowser &&
       method &&
       mutatingMethods.includes(method) &&
       error.response?.status &&
@@ -98,7 +106,6 @@ apiClient.interceptors.response.use(
       !originalRequest.url?.includes("/auth/signin") &&
       !originalRequest.url?.includes("/auth/refresh")
     ) {
-      // If refresh is already in progress, queue failed requests until refresh completes
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -115,10 +122,9 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken =
-        typeof window !== "undefined"
-          ? localStorage.getItem("refresh_token")
-          : null;
+      const refreshToken = isBrowser
+        ? localStorage.getItem("refresh_token")
+        : null;
 
       if (!refreshToken) {
         isRefreshing = false;
@@ -127,7 +133,6 @@ apiClient.interceptors.response.use(
       }
 
       try {
-        // Call backend /auth/refresh endpoint
         const response = await axios.post(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/refresh`,
           { refreshToken },
@@ -135,8 +140,7 @@ apiClient.interceptors.response.use(
 
         const { access_token, refresh_token } = response.data;
 
-        // Persist rotated tokens
-        if (typeof window !== "undefined") {
+        if (isBrowser) {
           localStorage.setItem("access_token", access_token);
           localStorage.setItem("refresh_token", refresh_token);
         }
@@ -161,12 +165,10 @@ apiClient.interceptors.response.use(
   },
 );
 
-// Helper function to clear tokens and safely redirect to login
 function handleLogoutRedirect() {
   if (typeof window !== "undefined") {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
-    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = "/auth/login";
   }
 }

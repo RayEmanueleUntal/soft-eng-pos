@@ -6,27 +6,30 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 
 import {
   Boxes,
+  ChevronDown,
   ChevronRight,
-  ClipboardList,
-  LayoutDashboard,
   LogOut,
-  Menu,
   Package,
   Settings,
   ShoppingCart,
   Users,
   UserRound,
   Truck,
+  UserStar,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { canManageStock } from "@/lib/auth/permissions";
 import { Role, ROLE_PERMISSIONS } from "@/lib/auth/roles";
 import { useCurrentRole } from "@/lib/auth/use-current-role";
+import { clearAuthSession, useCurrentUserName } from "@/lib/auth/storage";
+import Image from "next/image";
+
+import { STORE_CONFIG } from "@/lib/pos";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -49,14 +52,15 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   {
-    name: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
     name: "POS",
     href: "/dashboard/pos",
     icon: ShoppingCart,
+    children: [
+      {
+        name: "Receipts",
+        href: "/dashboard/pos/receipt",
+      },
+    ],
   },
   {
     name: "Inventory",
@@ -64,7 +68,7 @@ const navigation: NavItem[] = [
     icon: Boxes,
     children: [
       { name: "ROP", href: "/dashboard/inventory/rop" },
-      { name: "Bin Locations", href: "/dashboard/inventory/bins" }, // <-- Added Bin Locations subpage
+      { name: "Bin Locations", href: "/dashboard/inventory/bins" },
       {
         name: "Adjustments",
         href: "/dashboard/inventory/adjustments",
@@ -102,35 +106,64 @@ const navigation: NavItem[] = [
     icon: UserRound,
   },
   {
-    name: "System Settings",
+    name: "Admin",
     href: "/dashboard/admin/system-settings",
-    icon: Settings,
-    allowedRoles: ROLE_PERMISSIONS["/dashboard/admin/system-settings"],
+    icon: UserStar,
+    allowedRoles: ROLE_PERMISSIONS["/dashboard/admin"],
+    children: [
+      {
+        name: "System Settings",
+        href: "/dashboard/admin/system-settings",
+      },
+      {
+        name: "Request Approvals",
+        href: "/dashboard/admin/approval-requests",
+      },
+    ],
   },
 ];
 
-// Renders the dashboard shell with role-filtered navigation around the current page.
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const role = useCurrentRole();
+  const username = useCurrentUserName();
+
+  // State initialized with all parent hrefs containing children so they start open by default.
+  const [openItems, setOpenItems] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    navigation.forEach((item) => {
+      if (item.children && item.children.length > 0) {
+        initial[item.href] = true;
+      }
+    });
+    return initial;
+  });
+
+  const toggleSubmenu = (href: string) => {
+    setOpenItems((prev) => ({
+      ...prev,
+      [href]: !prev[href],
+    }));
+  };
 
   const visibleNavigation = navigation.filter(
-    (item) => !item.allowedRoles || (!!role && item.allowedRoles.includes(role as Role)),
+    (item) =>
+      !item.allowedRoles ||
+      (!!role && item.allowedRoles.includes(role as Role)),
   );
 
-  // Returns the sub-links of a nav item that the current role may see.
   function getVisibleChildren(item: NavItem): NavChild[] {
     return (item.children ?? []).filter(
       (child) =>
         (!child.requiresStockRole || canManageStock(role)) &&
-        (!child.allowedRoles || (!!role && child.allowedRoles.includes(role as Role))),
+        (!child.allowedRoles ||
+          (!!role && child.allowedRoles.includes(role as Role))),
     );
   }
 
-  // Clears the stored token and session cookie, then returns to the login page.
   async function handleLogout() {
-    localStorage.removeItem("access_token");
+    clearAuthSession();
 
     await fetch("/api/auth/logout", {
       method: "POST",
@@ -140,7 +173,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     router.refresh();
   }
 
-  // Items with sub-links match exactly so the parent is not highlighted on its sub-pages.
   function isActive(href: string, exact = false) {
     if (href === "/dashboard" || exact) {
       return pathname === href;
@@ -156,17 +188,26 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ========================= */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r bg-background md:flex md:flex-col">
         {/* Logo */}
-        <div className="flex h-12 items-center border-b px-6">
-          <Link href="/dashboard" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
-              P
+        <div className="flex h-auto min-h-[4rem] items-center border-b px-4 py-3">
+          <Link href="/dashboard" className="flex items-center gap-3 w-full">
+            <div className="relative h-10 w-10 shrink-0">
+              <Image
+                src={"/images/logo.png"}
+                alt="logo"
+                fill
+                priority
+                sizes="40px"
+                className="object-contain"
+              />
             </div>
 
-            <div className="flex flex-col">
-              <span className="text-sm font-bold tracking-tight">
-                POS System
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="text-xs font-bold leading-tight tracking-tight text-foreground break-words">
+                {STORE_CONFIG.name}
               </span>
-              <span className="text-xs text-muted-foreground">Management</span>
+              <span className="text-[11px] text-muted-foreground mt-0.5">
+                POS & Inventory System
+              </span>
             </div>
           </Link>
         </div>
@@ -180,42 +221,66 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {visibleNavigation.map((item) => {
             const Icon = item.icon;
             const children = getVisibleChildren(item);
-            const active = isActive(item.href, !!item.children);
+            const hasChildren = children.length > 0;
+            const isOpen = !!openItems[item.href];
+            const active = isActive(item.href, hasChildren);
 
             return (
               <div key={item.href} className="space-y-1">
-                <Link
-                  href={item.href}
-                  className={`group flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                    active
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
+                <div className="flex items-center">
+                  <Link
+                    href={item.href}
+                    className={`group flex flex-1 items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                      active
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span>{item.name}</span>
+                  </Link>
 
-                  <span>{item.name}</span>
-
-                  {active && <ChevronRight className="ml-auto h-4 w-4" />}
-                </Link>
-
-                {children.map((child) => {
-                  const childActive = isActive(child.href, true);
-
-                  return (
-                    <Link
-                      key={child.href}
-                      href={child.href}
-                      className={`ml-6 flex items-center rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                        childActive
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      }`}
+                  {/* Toggle button for collapsible sub-items */}
+                  {hasChildren && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => toggleSubmenu(item.href)}
+                      className="ml-1 h-8 w-8 text-muted-foreground hover:text-foreground"
+                      aria-label={`Toggle ${item.name} sub-menu`}
                     >
-                      {child.name}
-                    </Link>
-                  );
-                })}
+                      {isOpen ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </Button>
+                  )}
+                </div>
+
+                {/* Sub-links (visible when open) */}
+                {hasChildren && isOpen && (
+                  <div className="ml-4 space-y-1 border-l pl-2">
+                    {children.map((child) => {
+                      const childActive = isActive(child.href, true);
+
+                      return (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          className={`flex items-center rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                            childActive
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          }`}
+                        >
+                          {child.name}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -229,11 +294,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
 
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium">Staff User</p>
-
-              <p className="truncate text-xs text-muted-foreground">
-                Staff Account
-              </p>
+              <p className="truncate text-sm font-medium">{username}</p>
+              <p className="truncate text-xs text-muted-foreground">{role}</p>
             </div>
           </div>
 

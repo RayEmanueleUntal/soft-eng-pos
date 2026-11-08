@@ -80,5 +80,5 @@ export const ROLE_PERMISSIONS: Record<string, Role[]> = {
 
   "/dashboard/staff": [ROLES.ADMIN, ROLES.MANAGER],
 
-  "/dashboard/admin/system-settings": [ROLES.ADMIN, ROLES.MANAGER],
+  "/dashboard/admin": [ROLES.ADMIN, ROLES.MANAGER],
 };
