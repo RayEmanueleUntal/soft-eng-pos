@@ -25,7 +25,13 @@ export function AddProductModal({ onSaved }: AddProductModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button>+ Add Product</Button>} />
+      <DialogTrigger
+        render={
+          <Button className="h-8 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm">
+            + Add Product
+          </Button>
+        }
+      />
 
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[700px]">
         <DialogHeader>

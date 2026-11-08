@@ -22,6 +22,7 @@ import {
   BinLocation,
   BinLocationMeta,
 } from "@/lib/bin-locations/bin-locations";
+import { PageHeader } from "@/components/ui/pageheader";
 
 export default function BinLocationsPage() {
   const [bins, setBins] = useState<BinLocation[]>([]);
@@ -127,9 +128,22 @@ export default function BinLocationsPage() {
   };
 
   return (
-    <div className="space-y-3 max-w-[1400px] mx-auto">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3.5 bg-white border border-[#CBD5E1] rounded-sm gap-2">
+    <div className="space-y-3  mx-auto">
+      <div className="shrink-0 mt-4 mb-4 flex justify-between">
+        {/* Header Bar */}
+        <PageHeader
+          header="Bin Locations"
+          subheader="Store aisles, physical shelf identifiers, and digital coordinates."
+        />
+        <AddBinModal
+          onSuccess={() => {
+            setPage(1);
+            fetchBins(1);
+          }}
+        />
+      </div>
+
+      {/* <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3.5 bg-white border border-[#CBD5E1] rounded-sm gap-2">
         <div>
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-[#0060B2]" />
@@ -151,7 +165,7 @@ export default function BinLocationsPage() {
             fetchBins(1);
           }}
         />
-      </div>
+      </div> */}
 
       {/* Filter / Search Toolbars */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5">

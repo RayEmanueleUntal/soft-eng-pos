@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { getErrorMessage } from "@/lib/utils";
 import { fetchTransactionsApi, type TransactionSummary } from "@/lib/pos";
+import { PageHeader } from "@/components/ui/pageheader";
 
 export default function TransactionHistoryPage() {
   const router = useRouter();
@@ -103,9 +104,39 @@ export default function TransactionHistoryPage() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="shrink-0 mt-4 mb-4 flex justify-between">
+        <div>
+          {/* <Link href="/dashboard/pos">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1 pl-0 text-muted-foreground hover:text-foreground text-xs font-sans rounded-[4px]"
+            >
+              <ArrowLeft className="w-4 h-4" /> Back to POS Terminal
+            </Button>
+          </Link> */}
+          <PageHeader
+            header="Historical Transaction Logs"
+            subheader="Browse completed sales, search past receipts, and view detailed
+            printable invoices."
+          />
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          className="gap-2 self-start"
+        >
+          <RefreshCw
+            className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`}
+          />{" "}
+          Refresh
+        </Button>
+      </div>
+      {/* <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Link href="/dashboard/pos">
@@ -139,7 +170,7 @@ export default function TransactionHistoryPage() {
           />{" "}
           Refresh
         </Button>
-      </div>
+      </div> */}
 
       {/* Search Bar */}
       <div className="flex items-center gap-4 max-w-md">
@@ -222,8 +253,7 @@ export default function TransactionHistoryPage() {
                       {tx.date}
                     </TableCell>
                     <TableCell className="font-medium text-foreground text-xs font-sans">
-                      {tx.customerName &&
-                      tx.customerName !== ""
+                      {tx.customerName && tx.customerName !== ""
                         ? tx.customerName
                         : "-"}
                     </TableCell>

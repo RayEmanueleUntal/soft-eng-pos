@@ -11,13 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  CheckCircle2,
-  CreditCard,
-  MoreVertical,
-  Plus,
-  X,
-} from "lucide-react";
+import { CheckCircle2, CreditCard, MoreVertical, Plus, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,9 +60,7 @@ export function CustomerTable() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null,
   );
-  const [paymentCustomer, setPaymentCustomer] = useState<Customer | null>(
-    null,
-  );
+  const [paymentCustomer, setPaymentCustomer] = useState<Customer | null>(null);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [paymentNotice, setPaymentNotice] = useState<PaymentNotice | null>(
     null,
@@ -183,7 +175,10 @@ export function CustomerTable() {
           {total} customer{total === 1 ? "" : "s"}
         </p>
 
-        <Button onClick={() => setIsAddOpen(true)}>
+        <Button
+          className="h-8 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm"
+          onClick={() => setIsAddOpen(true)}
+        >
           <Plus className="mr-2 h-4 w-4" /> Add Customer
         </Button>
       </div>
@@ -309,15 +304,16 @@ export function CustomerTable() {
                           Edit Profile
                         </DropdownMenuItem>
 
-                        {customer.type === "WHOLESALE" && customer.wholesale && (
-                          <DropdownMenuItem
-                            className="cursor-pointer"
-                            onClick={() => handleSettleCredit(customer)}
-                          >
-                            <CreditCard className="mr-2 h-4 w-4" />
-                            Settle Credit
-                          </DropdownMenuItem>
-                        )}
+                        {customer.type === "WHOLESALE" &&
+                          customer.wholesale && (
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onClick={() => handleSettleCredit(customer)}
+                            >
+                              <CreditCard className="mr-2 h-4 w-4" />
+                              Settle Credit
+                            </DropdownMenuItem>
+                          )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

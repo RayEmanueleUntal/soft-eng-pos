@@ -3,14 +3,21 @@
 // Composes the settings header and the settings table components.
 "use client";
 
-import { SystemSettingsHeader } from "@/app/dashboard/admin/system-settings/_components/SystemSettingsHeader";
 import { SystemSettingsTable } from "@/app/dashboard/admin/system-settings/_components/SystemSettingsTable";
+import { PageHeader } from "@/components/ui/pageheader";
 
 // Renders the System Settings page layout.
 export default function SystemSettingsPage() {
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 bg-background min-h-[calc(100vh-4rem)]">
-      <SystemSettingsHeader />
+    <div className="mx-auto space-y-6 bg-background min-h-[calc(100vh-4rem)]">
+      <div className="shrink-0 mt-4 mb-4 flex justify-between">
+        {/* Header Bar */}
+        <PageHeader
+          header="System Settings"
+          subheader="Manage store-wide business rules such as the return window, tax rate,
+        and receipt text."
+        />
+      </div>
       <SystemSettingsTable />
     </div>
   );

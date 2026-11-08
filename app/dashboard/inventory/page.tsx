@@ -12,6 +12,7 @@ import { canEditROP, canManageStock } from "@/lib/auth/permissions";
 import { useCurrentRole } from "@/lib/auth/use-current-role";
 import { getStockStatus } from "@/lib/inventory/stock-status";
 import { useInventory } from "@/lib/inventory/useInventory";
+import { PageHeader } from "@/components/ui/pageheader";
 
 type StatusTab = "all" | "low" | "adequate";
 
@@ -62,13 +63,20 @@ export default function InventoryPage() {
   };
 
   return (
-    <div className="flex-1 space-y-6 p-8">
-      <div>
+    <div className="flex-1 space-y-6">
+      <div className="shrink-0 mt-4 mb-4">
+        {/* 1. Top Header */}
+        <PageHeader
+          header="Inventory"
+          subheader="Manage and monitor your inventory."
+        />
+      </div>
+      {/* <div>
         <h2 className="text-2xl font-bold tracking-tight">Inventory</h2>
         <p className="text-muted-foreground text-sm mt-1">
           Manage and monitor your inventory.
         </p>
-      </div>
+      </div> */}
 
       <div className="bg-card p-6 rounded-lg shadow-sm border border-border flex flex-col gap-4">
         <InventoryFilterBar

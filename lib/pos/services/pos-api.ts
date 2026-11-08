@@ -24,6 +24,7 @@ import type {
   ExchangeRequest,
   ReturnResponse,
 } from "../types/pos-types";
+import { getStoredUserName, useCurrentUserName } from "@/lib/auth/storage";
 
 // Re-export all types so consumers can import types and service functions together
 export type * from "../types/pos-types";
@@ -373,7 +374,7 @@ export async function submitCheckout(
       order_discount: Number(tx.order_discount ?? payload.order_discount ?? 0),
       transaction_type: tx.transaction_type || payload.transaction_type,
       status: tx.status,
-      cashier_name: "POS Cashier",
+      cashier_name: getStoredUserName() || "POS Cashier",
       customer: payload.customer_name
         ? {
             name: payload.customer_name,

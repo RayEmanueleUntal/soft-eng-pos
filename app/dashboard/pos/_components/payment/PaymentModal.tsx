@@ -299,7 +299,8 @@ export default function PaymentModal({
         onSuccess?.(res.receipt);
         handleClose();
       } else {
-        const errorMsg = res.message || "Failed to process checkout. Please try again.";
+        const errorMsg =
+          res.message || "Failed to process checkout. Please try again.";
         setCheckoutError(errorMsg);
 
         // Check if error is override-eligible (credit limit, overdue, or inventory limit)
@@ -312,7 +313,10 @@ export default function PaymentModal({
         }
       }
     } catch (err: unknown) {
-      const errorMsg = getErrorMessage(err, "An unexpected error occurred during checkout.");
+      const errorMsg = getErrorMessage(
+        err,
+        "An unexpected error occurred during checkout.",
+      );
       setCheckoutError(errorMsg);
 
       const isEligible =
@@ -370,17 +374,20 @@ export default function PaymentModal({
                   Manager Override Required
                 </p>
                 <p className="text-amber-800 dark:text-amber-300">
-                  Authorized manager override allows bypassing overdue credit status or stock limits.
+                  Authorized manager override allows bypassing overdue credit
+                  status or stock limits.
                 </p>
               </div>
             </div>
             <Button
               type="button"
               size="sm"
-              onClick={() => {
+              onClick={async () => {
                 setOverrideActive(true);
                 setCheckoutError(null);
-                handleCompleteSale(true);
+                setManagerOverrideRequired(false);
+
+                await handleCompleteSale(true);
               }}
               disabled={isSubmitting}
               className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 rounded-[4px] gap-1.5"
@@ -394,7 +401,9 @@ export default function PaymentModal({
         {overrideActive && !managerOverrideRequired && (
           <div className="flex items-center gap-2 p-2 rounded-[4px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs">
             <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            <span className="font-medium">Manager override authorized: Bypassing stock & overdue checks.</span>
+            <span className="font-medium">
+              Manager override authorized: Bypassing stock & overdue checks.
+            </span>
           </div>
         )}
 
