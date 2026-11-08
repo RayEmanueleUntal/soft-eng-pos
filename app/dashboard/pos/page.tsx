@@ -89,7 +89,6 @@ export default function PosPage() {
     updateQuantity,
     setItemQuantity,
     updateItemDiscount,
-    updateItemUom,
     removeItem,
     toggleItemPricing,
     toggleAllPricing,
@@ -158,7 +157,9 @@ export default function PosPage() {
             onAddToCart={(prod) =>
               addItemToCart(
                 prod,
-                selectedCustomer?.type === "WHOLESALE" ? "WHOLESALE" : "RETAIL",
+                selectedCustomer?.type?.toUpperCase() === "WHOLESALE"
+                  ? "WHOLESALE"
+                  : "RETAIL"
               )
             }
           />
@@ -176,7 +177,6 @@ export default function PosPage() {
             onUpdateQuantity={updateQuantity}
             onSetQuantity={setItemQuantity}
             onUpdateDiscount={updateItemDiscount}
-            onUpdateUom={updateItemUom}
             onRemoveItem={removeItem}
             onClearCart={clearCart}
             selectedCustomerId={selectedCustomerId}

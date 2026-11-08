@@ -67,19 +67,28 @@ export default function CreditPaymentForm({
       }));
   }, [customers]);
 
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(() => {
+  // const [selectedCustomerId, setSelectedCustomerId] = useState<string>(() => {
+  //   return initialCustomerId ? String(initialCustomerId) : "";
+  // });
+  const [selectedCustomerId] = useState<string>(() => {
     return initialCustomerId ? String(initialCustomerId) : "";
   });
 
-  const effectiveCustomerId =
-    selectedCustomerId || (initialCustomerId ? String(initialCustomerId) : wholesaleCustomers[0]?.id || "");
+  // Locked strictly to initialCustomerId passed down from transaction/cart
+  const effectiveCustomerId = initialCustomerId
+    ? String(initialCustomerId)
+    : selectedCustomerId;
+  // const effectiveCustomerId =
+  //   selectedCustomerId || (initialCustomerId ? String(initialCustomerId) : wholesaleCustomers[0]?.id || "");
 
   // Default payment due date to Net 30
   const [dueDate, setDueDate] = useState<string>(() => getFutureDateString(30));
   const [selectedTermDays, setSelectedTermDays] = useState<number | null>(30);
   const [poNumber, setPoNumber] = useState("");
 
-  const selectedCustomer = wholesaleCustomers.find((c) => c.id === effectiveCustomerId);
+  const selectedCustomer = wholesaleCustomers.find(
+    (c) => c.id === effectiveCustomerId,
+  );
 
   // Check overdue status for the selected customer
   const [isOverdue, setIsOverdue] = useState(false);
@@ -96,7 +105,9 @@ export default function CreditPaymentForm({
     checkCustomerOverdueStatusApi(selectedCustomer.id).then((res) => {
       if (!ignore) {
         setIsOverdue(res.isOverdue);
-        setOverdueMessage(res.message || "Customer has overdue credit invoices.");
+        setOverdueMessage(
+          res.message || "Customer has overdue credit invoices.",
+        );
       }
     });
 
@@ -108,19 +119,25 @@ export default function CreditPaymentForm({
   // Available credit calculation: credit_limit - outstanding_balance
   const creditLimit = selectedCustomer?.credit_limit ?? 0;
   const outstandingBalance = selectedCustomer?.outstanding_balance ?? 0;
-  const availableCredit = selectedCustomer ? Math.max(creditLimit - outstandingBalance, 0) : 0;
+  const availableCredit = selectedCustomer
+    ? Math.max(creditLimit - outstandingBalance, 0)
+    : 0;
   const remainingCreditAfterPurchase = availableCredit - amountDue;
 
   // Validation rules
   const isInactive = selectedCustomer ? !selectedCustomer.isActive : false;
   const isExceeded = selectedCustomer ? amountDue > availableCredit : true;
-  const isDateInvalid = !dueDate || new Date(dueDate) < new Date(formatDateToInput(new Date()));
+  const isDateInvalid =
+    !dueDate || new Date(dueDate) < new Date(formatDateToInput(new Date()));
 
   let errorMessage = "";
   if (!selectedCustomer) {
-    errorMessage = isCustomersLoading ? "Loading accounts..." : "Please select a wholesale customer.";
+    errorMessage = isCustomersLoading
+      ? "Loading accounts..."
+      : "Please select a wholesale customer.";
   } else if (isInactive) {
-    errorMessage = "Selected wholesale account is inactive. Credit sales disabled.";
+    errorMessage =
+      "Selected wholesale account is inactive. Credit sales disabled.";
   } else if (isExceeded) {
     errorMessage = `Insufficient available credit (₱${availableCredit.toLocaleString("en-PH", { minimumFractionDigits: 2 })}). Transaction exceeds limit.`;
   } else if (isDateInvalid) {
@@ -170,14 +187,18 @@ export default function CreditPaymentForm({
     setSelectedTermDays(null);
   };
 
-  const creditUsagePercent = creditLimit > 0
-    ? Math.min(Math.round(((outstandingBalance + amountDue) / creditLimit) * 100), 100)
-    : 0;
+  const creditUsagePercent =
+    creditLimit > 0
+      ? Math.min(
+          Math.round(((outstandingBalance + amountDue) / creditLimit) * 100),
+          100,
+        )
+      : 0;
 
   return (
     <div className="space-y-4 py-3">
       {/* Customer Selection */}
-      <div className="grid gap-1.5">
+      {/* <div className="grid gap-1.5">
         <div className="flex items-center justify-between">
           <Label htmlFor="wholesale-customer" className="font-sans text-xs font-semibold text-foreground">
             Wholesale Customer Account
@@ -207,7 +228,7 @@ export default function CreditPaymentForm({
             ))
           )}
         </select>
-      </div>
+      </div> */}
 
       {/* Overdue Warning Alert */}
       {isOverdue && selectedCustomer && (
@@ -215,44 +236,67 @@ export default function CreditPaymentForm({
           <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <div className="flex-1">
             <span className="font-bold">Overdue Invoices Detected:</span>{" "}
-            <span>{overdueMessage || "Customer has past-due credit accounts. Manager override will be required to proceed."}</span>
+            <span>
+              {overdueMessage ||
+                "Customer has past-due credit accounts. Manager override will be required to proceed."}
+            </span>
           </div>
         </div>
       )}
 
       {/* Credit Balance Card */}
       {selectedCustomer && (
-        <div className={`rounded-[4px] border p-3.5 space-y-3 shadow-[0px_4px_0px_rgba(15,23,42,0.08)] transition-colors ${
-          isExceeded || isInactive
-            ? "bg-destructive/10 border-destructive/30"
-            : "bg-muted/50 border-input"
-        }`}>
+        <div
+          className={`rounded-[4px] border p-3.5 space-y-3 shadow-[0px_4px_0px_rgba(15,23,42,0.08)] transition-colors ${
+            isExceeded || isInactive
+              ? "bg-destructive/10 border-destructive/30"
+              : "bg-muted/50 border-input"
+          }`}
+        >
           <div className="flex items-center justify-between text-xs font-mono text-muted-foreground border-b border-border pb-2">
             <span className="flex items-center gap-1.5 font-semibold text-foreground font-sans">
               <CreditCard className="h-3.5 w-3.5 text-primary" />
               Accounts Receivable Status
             </span>
-            <span className="text-foreground font-mono">{selectedCustomer.contactInfo}</span>
+            <span className="text-foreground font-mono">
+              {selectedCustomer.contactInfo}
+            </span>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div>
-              <p className="text-xs text-muted-foreground font-sans">Credit Limit</p>
-              <p className="font-semibold text-foreground font-mono">{formatPeso(creditLimit)}</p>
+              <p className="text-xs text-muted-foreground font-sans">
+                Credit Limit
+              </p>
+              <p className="font-semibold text-foreground font-mono">
+                {formatPeso(creditLimit)}
+              </p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground font-sans">Outstanding Balance</p>
-              <p className="font-semibold text-amber-700 font-mono">{formatPeso(outstandingBalance)}</p>
+              <p className="text-xs text-muted-foreground font-sans">
+                Outstanding Balance
+              </p>
+              <p className="font-semibold text-amber-700 font-mono">
+                {formatPeso(outstandingBalance)}
+              </p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground font-sans">Available Credit</p>
-              <p className={`font-bold font-mono ${availableCredit >= amountDue ? "text-emerald-600" : "text-destructive"}`}>
+              <p className="text-xs text-muted-foreground font-sans">
+                Available Credit
+              </p>
+              <p
+                className={`font-bold font-mono ${availableCredit >= amountDue ? "text-emerald-600" : "text-destructive"}`}
+              >
                 {formatPeso(availableCredit)}
               </p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground font-sans">Remaining After Sale</p>
-              <p className={`font-semibold font-mono ${remainingCreditAfterPurchase >= 0 ? "text-foreground" : "text-destructive"}`}>
+              <p className="text-xs text-muted-foreground font-sans">
+                Remaining After Sale
+              </p>
+              <p
+                className={`font-semibold font-mono ${remainingCreditAfterPurchase >= 0 ? "text-foreground" : "text-destructive"}`}
+              >
                 {formatPeso(remainingCreditAfterPurchase)}
               </p>
             </div>
@@ -261,8 +305,12 @@ export default function CreditPaymentForm({
           {/* Credit Limit Usage Progress Bar */}
           <div className="space-y-1 pt-1">
             <div className="flex justify-between text-xs font-mono">
-              <span className="text-muted-foreground font-sans">Credit Utilization (incl. current)</span>
-              <span className={`font-medium ${creditUsagePercent >= 90 ? "text-destructive" : "text-foreground"}`}>
+              <span className="text-muted-foreground font-sans">
+                Credit Utilization (incl. current)
+              </span>
+              <span
+                className={`font-medium ${creditUsagePercent >= 90 ? "text-destructive" : "text-foreground"}`}
+              >
                 {creditUsagePercent}%
               </span>
             </div>
@@ -272,8 +320,8 @@ export default function CreditPaymentForm({
                   isExceeded
                     ? "bg-destructive"
                     : creditUsagePercent >= 80
-                    ? "bg-amber-500"
-                    : "bg-emerald-600"
+                      ? "bg-amber-500"
+                      : "bg-emerald-600"
                 }`}
                 style={{ width: `${Math.min(creditUsagePercent, 100)}%` }}
               />
@@ -286,7 +334,10 @@ export default function CreditPaymentForm({
       {isInactive && (
         <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 p-2.5 rounded-[4px] border border-destructive/20 font-sans">
           <ShieldAlert className="h-4 w-4 shrink-0" />
-          <span>This account has been flagged as inactive. Contact the manager or finance team to reactivate.</span>
+          <span>
+            This account has been flagged as inactive. Contact the manager or
+            finance team to reactivate.
+          </span>
         </div>
       )}
 
@@ -294,8 +345,9 @@ export default function CreditPaymentForm({
         <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 p-2.5 rounded-[4px] border border-destructive/20 font-sans">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>
-            Sale exceeds available credit by {formatPeso(Math.abs(remainingCreditAfterPurchase))}.
-            Requires manager override or partial payment.
+            Sale exceeds available credit by{" "}
+            {formatPeso(Math.abs(remainingCreditAfterPurchase))}. Requires
+            manager override or partial payment.
           </span>
         </div>
       )}
@@ -331,7 +383,10 @@ export default function CreditPaymentForm({
       {/* Custom Due Date & PO Number Fields */}
       <div className="grid grid-cols-2 gap-3 pt-1">
         <div className="grid gap-1.5">
-          <Label htmlFor="due-date" className="text-xs text-muted-foreground flex items-center gap-1 font-sans">
+          <Label
+            htmlFor="due-date"
+            className="text-xs text-muted-foreground flex items-center gap-1 font-sans"
+          >
             <Calendar className="h-3.5 w-3.5" /> Due Date
           </Label>
           <Input
@@ -345,7 +400,10 @@ export default function CreditPaymentForm({
         </div>
 
         <div className="grid gap-1.5">
-          <Label htmlFor="po-number" className="text-xs text-muted-foreground font-sans">
+          <Label
+            htmlFor="po-number"
+            className="text-xs text-muted-foreground font-sans"
+          >
             Customer PO # (Optional)
           </Label>
           <Input
@@ -361,4 +419,3 @@ export default function CreditPaymentForm({
     </div>
   );
 }
-

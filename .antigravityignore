@@ -1,0 +1,30 @@
+# JavaScript/Node
+node_modules/
+dist/
+build/
+.next/
+.vite/
+coverage/
+*.lock
+package-lock.json
+yarn.lock
+
+# .NET
+**/bin/
+**/obj/
+**/.vs/
+**/TestResults/
+
+# Generated files
+**/Migrations/*.Designer.cs
+
+# Logs
+*.log
+logs/
+
+# Secrets — NEVER index these
+appsettings.Production.json
+appsettings.Staging.json
+.env.local
+.env.production
+secrets.json

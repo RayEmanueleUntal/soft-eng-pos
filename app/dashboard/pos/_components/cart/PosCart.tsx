@@ -39,10 +39,6 @@ interface PosCartProps {
     productId: string | number | undefined,
     discount: number,
   ) => void;
-  onUpdateUom?: (
-    productId: string | number | undefined,
-    uom: string,
-  ) => void;
   onRemoveItem?: (
     productId: string | number | undefined,
   ) => void;
@@ -66,7 +62,6 @@ export function PosCart({
   onUpdateQuantity,
   onSetQuantity,
   onUpdateDiscount,
-  onUpdateUom,
   onRemoveItem,
   onUpdateOrderDiscountPercent,
   onToggleItemPricing,
@@ -331,7 +326,6 @@ export function PosCart({
                     onUpdateQuantity={onUpdateQuantity}
                     onSetQuantity={onSetQuantity}
                     onUpdateDiscount={onUpdateDiscount}
-                    onUpdateUom={onUpdateUom}
                     onRemoveItem={onRemoveItem}
                     onTogglePricingType={onToggleItemPricing}
                   />
