@@ -33,7 +33,7 @@ app/
 │   ├── admin/             <-- Admin-restricted operations
 │   │   ├── approval-requests/page.tsx
 │   │   └── system-settings/page.tsx
-│   ├── analytics/         <-- Analytics & reporting (Admin & Manager only)
+│   │   └── analytics/         <-- Analytics & reporting (Admin & Manager only)
 │   ├── customers/page.tsx
 │   ├── forwarders/        <-- Logistics & carrier master data
 │   │   └── page.tsx
