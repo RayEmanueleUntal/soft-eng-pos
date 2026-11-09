@@ -102,8 +102,10 @@ The repository enforces modular co-location and strict domain boundaries:
 │   ├── auth/                   <-- Login & session flows
 │   │   └── _components/        <-- Route-exclusive components
 │   └── dashboard/              <-- Main Authenticated Dashboard Shell
-│       ├── admin/              <-- System Settings & Approval Requests (Admin only)
-│       ├── analytics/          <-- Embedded Financial & Velocity Analytics
+│       ├── admin/              <-- (Admin only)
+│       │   └── analytics/      <-- Embedded Financial & Velocity Analytics
+│       │   └── approval-requests/      <-- Approval Request for the Admin
+│       │   └── system-settings     <-- System Settings
 │       ├── customers/          <-- Customer Profiles & Wholesale Accounts
 │       ├── forwarders/         <-- Logistics Forwarder Profiles
 │       ├── inventory/          <-- Stock management, ROP, Bins, Deliveries, Shipments
