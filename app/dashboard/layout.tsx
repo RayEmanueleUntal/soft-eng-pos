@@ -112,6 +112,10 @@ const navigation: NavItem[] = [
     allowedRoles: ROLE_PERMISSIONS["/dashboard/admin"],
     children: [
       {
+        name: "Analytics",
+        href: "/dashboard/admin/analytics",
+      },
+      {
         name: "System Settings",
         href: "/dashboard/admin/system-settings",
       },
