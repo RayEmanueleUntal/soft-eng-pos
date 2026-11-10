@@ -116,6 +116,10 @@ const navigation: NavItem[] = [
         href: "/dashboard/admin/analytics",
       },
       {
+        name: "Expenses",
+        href: "/dashboard/admin/expenses",
+      },
+      {
         name: "System Settings",
         href: "/dashboard/admin/system-settings",
       },
