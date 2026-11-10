@@ -1,7 +1,7 @@
 // API helpers and hooks for the Executive Analytics Dashboard.
 // All requests go through apiClient (lib/api.ts); errors surface via getErrorMessage.
 // Source contracts: soft-eng-pos-api/src/analytics
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiClient } from "@/lib/api";
 import { getErrorMessage } from "@/lib/utils";
 import type {
@@ -104,12 +104,16 @@ interface AnalyticsState<T> {
   data: T | null;
   loading: boolean;
   error: string | null;
+  // True when a refresh re-fetches while previous data stays visible.
+  refreshing: boolean;
 }
 
-// Shared fetch lifecycle for analytics queries. `deps` are the primitive
-// values that should retrigger the request; `refreshKey` bumps on global refresh.
+// Shared fetch lifecycle for analytics queries. `queryDeps` are the primitive
+// filter values; a change clears stale data, while `refreshKey` bumps (global
+// refresh or local refetch) keep previous figures visible with `refreshing`.
 function useAnalyticsResource<T>(
-  deps: ReadonlyArray<unknown>,
+  queryDeps: ReadonlyArray<unknown>,
+  refreshKey: number,
   enabled: boolean,
   fetcher: () => Promise<T>,
 ): AnalyticsState<T> & { refetch: () => void } {
@@ -117,27 +121,40 @@ function useAnalyticsResource<T>(
     data: null,
     loading: true,
     error: null,
+    refreshing: false,
   });
   const [reloadKey, setReloadKey] = useState(0);
+  const depsSignature = JSON.stringify(queryDeps);
+  const lastSignature = useRef(depsSignature);
 
   useEffect(() => {
+    // Parameter changes clear stale figures; a bare refresh keeps them visible.
+    const paramsChanged = lastSignature.current !== depsSignature;
+    lastSignature.current = depsSignature;
+
     if (!enabled) {
-      setState({ data: null, loading: false, error: null });
+      setState({ data: null, loading: false, error: null, refreshing: false });
       return;
     }
 
     let mounted = true;
-    setState((prev) => ({ ...prev, loading: true, error: null }));
+    setState((prev) =>
+      paramsChanged
+        ? { data: null, loading: true, error: null, refreshing: false }
+        : { ...prev, loading: true, refreshing: true, error: null },
+    );
 
     fetcher()
       .then((data) => {
-        if (mounted) setState({ data, loading: false, error: null });
+        if (mounted)
+          setState({ data, loading: false, error: null, refreshing: false });
       })
       .catch((err: unknown) => {
         if (mounted) {
           setState({
             data: null,
             loading: false,
+            refreshing: false,
             error: getErrorMessage(
               err,
               "Failed to load analytics data. Please try again.",
@@ -149,8 +166,8 @@ function useAnalyticsResource<T>(
     return () => {
       mounted = false;
     };
-    // deps is a dynamic spread; callers pass primitive query values.
-  }, [...deps, enabled, reloadKey]);
+    // depsSignature is derived from queryDeps; callers pass primitive values.
+  }, [...queryDeps, depsSignature, refreshKey, enabled, reloadKey]);
 
   const refetch = () => setReloadKey((key) => key + 1);
 
@@ -163,7 +180,8 @@ export function useDashboardSummary(
   enabled = true,
 ) {
   return useAnalyticsResource(
-    [params.startDate, params.endDate, refreshKey],
+    [params.startDate, params.endDate],
+    refreshKey,
     enabled,
     () => getDashboardSummary(params),
   );
@@ -175,7 +193,8 @@ export function useSalesPerformance(
   enabled = true,
 ) {
   return useAnalyticsResource(
-    [params.startDate, params.endDate, params.interval, refreshKey],
+    [params.startDate, params.endDate, params.interval],
+    refreshKey,
     enabled,
     () => getSalesPerformance(params),
   );
@@ -201,8 +220,8 @@ export function useExpenseAnalytics(
       params.payment_method,
       params.page,
       params.limit,
-      refreshKey,
     ],
+    refreshKey,
     enabled,
     () => getExpenseAnalytics(params),
   );
@@ -226,8 +245,8 @@ export function useInventoryVelocity(
       params.agingDays,
       params.sortBy,
       params.limit,
-      refreshKey,
     ],
+    refreshKey,
     enabled,
     () => getInventoryVelocity(params),
   );
@@ -239,7 +258,8 @@ export function useAccountsReceivable(
   enabled = true,
 ) {
   return useAnalyticsResource(
-    [params.limit, refreshKey],
+    [params.limit],
+    refreshKey,
     enabled,
     () => getAccountsReceivable(params),
   );

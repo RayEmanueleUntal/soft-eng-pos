@@ -40,11 +40,14 @@ function yearToDateInput(): { start: string; end: string } {
   };
 }
 
-// Sends the picked calendar day as a UTC ISO-8601 bound.
+// Converts locally picked calendar days to UTC ISO-8601 instants, so the
+// selected day covers 00:00:00.000–23:59:59.999 in the viewer's timezone.
 function toIsoParams(startInput: string, endInput: string): AnalyticsDateParams {
+  const start = startInput ? new Date(`${startInput}T00:00:00.000`) : null;
+  const end = endInput ? new Date(`${endInput}T23:59:59.999`) : null;
   return {
-    startDate: startInput ? `${startInput}T00:00:00.000Z` : undefined,
-    endDate: endInput ? `${endInput}T23:59:59.999Z` : undefined,
+    startDate: start ? start.toISOString() : undefined,
+    endDate: end ? end.toISOString() : undefined,
   };
 }
 

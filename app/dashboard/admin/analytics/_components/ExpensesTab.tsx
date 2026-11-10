@@ -41,6 +41,7 @@ import {
   AnalyticsError,
   AnalyticsLoading,
   InvalidRangeNotice,
+  UpdatingBadge,
 } from "./AnalyticsFeedback";
 import { colorForIndex } from "./chart-theme";
 
@@ -56,6 +57,22 @@ const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
 };
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
+
+const EXPENSE_DATE_FORMAT: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+};
+
+// Backend returns full ISO datetimes, but guard date-only values which parse
+// as UTC midnight and would render as the previous day in some timezones.
+function formatExpenseDate(value: string): string {
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  const date = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(value);
+  return date.toLocaleDateString("en-PH", EXPENSE_DATE_FORMAT);
+}
 
 export function ExpensesTab({
   params,
@@ -83,7 +100,7 @@ export function ExpensesTab({
     refreshKey,
     enabled,
   );
-  const { data, loading, error, refetch } = query;
+  const { data, loading, error, refreshing, refetch } = query;
 
   // Reset to first page whenever filters or the global range change.
   useEffect(() => {
@@ -144,6 +161,7 @@ export function ExpensesTab({
           </SelectContent>
         </Select>
 
+        <UpdatingBadge show={refreshing} />
         <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
           <span>Total OpEx</span>
           <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
@@ -258,11 +276,7 @@ export function ExpensesTab({
                     data.expense_list.map((expense) => (
                       <TableRow key={expense.id}>
                         <TableCell className="font-mono text-xs tabular-nums whitespace-nowrap">
-                          {new Date(expense.date).toLocaleDateString("en-PH", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })}
+                          {formatExpenseDate(expense.date)}
                         </TableCell>
                         <TableCell className="max-w-[160px] whitespace-normal break-words">
                           {EXPENSE_CATEGORY_LABELS[expense.category] ??

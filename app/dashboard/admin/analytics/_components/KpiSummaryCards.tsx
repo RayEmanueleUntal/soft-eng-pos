@@ -5,7 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { useDashboardSummary } from "@/lib/analytics/analytics-api";
 import type { AnalyticsDateParams } from "@/lib/analytics/types";
 import { formatPeso } from "@/lib/utils";
-import { AnalyticsError, AnalyticsLoading } from "./AnalyticsFeedback";
+import {
+  AnalyticsError,
+  AnalyticsLoading,
+  UpdatingBadge,
+} from "./AnalyticsFeedback";
 
 interface KpiCardProps {
   label: string;
@@ -47,7 +51,7 @@ export function KpiSummaryCards({
   refreshKey: number;
   enabled: boolean;
 }) {
-  const { data, loading, error, refetch } = useDashboardSummary(
+  const { data, loading, error, refreshing, refetch } = useDashboardSummary(
     params,
     refreshKey,
     enabled,
@@ -60,7 +64,9 @@ export function KpiSummaryCards({
   if (!data) return null;
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+    <div className="space-y-2">
+      <UpdatingBadge show={refreshing} />
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
       <KpiCard
         label="Total Sales Revenue"
         value={formatPeso(data.total_sales_revenue)}
@@ -94,6 +100,7 @@ export function KpiSummaryCards({
         value={formatPeso(data.total_active_receivables)}
         hint="Outstanding wholesale credit"
       />
+      </div>
     </div>
   );
 }

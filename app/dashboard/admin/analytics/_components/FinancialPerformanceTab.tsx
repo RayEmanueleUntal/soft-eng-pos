@@ -35,6 +35,7 @@ import {
   AnalyticsError,
   AnalyticsLoading,
   InvalidRangeNotice,
+  UpdatingBadge,
 } from "./AnalyticsFeedback";
 import { CHART_COLORS, PAYMENT_METHOD_COLORS, colorForIndex } from "./chart-theme";
 
@@ -59,7 +60,7 @@ export function FinancialPerformanceTab({
   enabled: boolean;
 }) {
   const [interval, setInterval] = useState<GroupingInterval>("DAILY");
-  const { data, loading, error, refetch } = useSalesPerformance(
+  const { data, loading, error, refreshing, refetch } = useSalesPerformance(
     { ...params, interval },
     refreshKey,
     enabled,
@@ -79,7 +80,8 @@ export function FinancialPerformanceTab({
         <p className="text-sm text-muted-foreground">
           Revenue and net profit trends with payment method mix.
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <UpdatingBadge show={refreshing} />
           <span className="text-xs text-muted-foreground">Interval</span>
           <Select
             value={interval}

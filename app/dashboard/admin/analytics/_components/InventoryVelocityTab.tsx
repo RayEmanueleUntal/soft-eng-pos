@@ -36,6 +36,7 @@ import {
   AnalyticsError,
   AnalyticsLoading,
   InvalidRangeNotice,
+  UpdatingBadge,
 } from "./AnalyticsFeedback";
 
 const ROW_LIMIT_OPTIONS = [10, 25, 50];
@@ -57,7 +58,7 @@ export function InventoryVelocityTab({
   const [sortBy, setSortBy] = useState<VelocitySortBy>("QUANTITY");
   const [limit, setLimit] = useState(10);
 
-  const { data, loading, error, refetch } = useInventoryVelocity(
+  const { data, loading, error, refreshing, refetch } = useInventoryVelocity(
     {
       startDate: params.startDate,
       endDate: params.endDate,
@@ -79,6 +80,7 @@ export function InventoryVelocityTab({
 
   return (
     <div className="space-y-4">
+      <UpdatingBadge show={refreshing} />
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>Dead stock older than</span>

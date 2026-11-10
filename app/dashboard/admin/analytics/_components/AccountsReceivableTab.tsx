@@ -25,6 +25,7 @@ import {
   AnalyticsEmpty,
   AnalyticsError,
   AnalyticsLoading,
+  UpdatingBadge,
 } from "./AnalyticsFeedback";
 
 const ROW_LIMIT_OPTIONS = [10, 25, 50];
@@ -50,7 +51,7 @@ function AgingCell({ value, severity }: { value: number; severity: "warn" | "hig
 export function AccountsReceivableTab({ refreshKey }: { refreshKey: number }) {
   const [limit, setLimit] = useState(10);
   // AR analytics is point-in-time — the endpoint accepts no date range.
-  const { data, loading, error, refetch } = useAccountsReceivable(
+  const { data, loading, error, refreshing, refetch } = useAccountsReceivable(
     { limit },
     refreshKey,
   );
@@ -65,6 +66,7 @@ export function AccountsReceivableTab({ refreshKey }: { refreshKey: number }) {
 
   return (
     <div className="space-y-4">
+      <UpdatingBadge show={refreshing} />
       {/* Credit portfolio overview */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Card size="sm" className="gap-1">
