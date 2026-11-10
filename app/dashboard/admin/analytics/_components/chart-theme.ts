@@ -25,7 +25,7 @@ export const PAYMENT_METHOD_COLORS: Record<string, string> = {
   CREDIT: "var(--chart-3)",
   CHECK: "var(--chart-9)",
   BANK_TRANSFER: "var(--chart-5)",
-  UNCATEGORIZED: "var(--chart-9)",
+  UNCATEGORIZED: "var(--chart-10)",
 };
 
 export function colorForIndex(index: number): string {
