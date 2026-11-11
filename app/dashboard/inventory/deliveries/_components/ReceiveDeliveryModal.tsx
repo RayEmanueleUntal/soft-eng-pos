@@ -517,7 +517,7 @@ export function ReceiveDeliveryModal({
                           onClick={() => updateLine(id, { confirming: true })}
                           className="h-8 text-xs gap-1.5 text-muted-foreground"
                         >
-                          <Pencil className="h-3.5 w-3.5" /> Edit UoM, factor or base qty
+                          <Pencil className="h-3.5 w-3.5" />Edit UoM, Conv. Factor, or Actual Base Qty
                         </Button>
                       )}
 
