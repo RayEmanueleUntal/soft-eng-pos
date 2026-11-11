@@ -101,6 +101,11 @@ const navigation: NavItem[] = [
     icon: Truck,
   },
   {
+    name: "Forwarders",
+    href: "/dashboard/forwarders",
+    icon: Truck,
+  },
+  {
     name: "Staff",
     href: "/dashboard/staff",
     icon: UserRound,
