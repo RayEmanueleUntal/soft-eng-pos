@@ -84,8 +84,9 @@ export default function DeliveriesPage() {
       <div className="shrink-0 mt-4 mb-4 flex justify-between">
         {/* Header Bar */}
         <PageHeader
-          header="Bin Locations"
-          subheader="Store aisles, physical shelf identifiers, and digital coordinates."
+          header="Deliveries"
+          subheader="Record incoming stock from suppliers and match deliveries against
+            Purchase Orders."
         />
 
         {canManageStock(role) && (
