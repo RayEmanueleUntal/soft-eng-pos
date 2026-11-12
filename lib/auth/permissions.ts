@@ -47,3 +47,32 @@ export function canCreatePO(role: string | null | undefined): boolean {
 export function canManagePOStatus(role: string | null | undefined): boolean {
   return !!role && PO_STATUS_ROLES.includes(role as Role);
 }
+export const SHIPMENT_CREATE_ROLES: Role[] = [
+  ROLES.ADMIN,
+  ROLES.MANAGER,
+  ROLES.CASHIER,
+  ROLES.STOCK_MANAGEMENT,
+];
+
+export const SHIPMENT_UPDATE_ROLES: Role[] = [
+  ROLES.ADMIN,
+  ROLES.MANAGER,
+  ROLES.STOCK_MANAGEMENT,
+];
+
+export const SHIPMENT_DELETE_ROLES: Role[] = [ROLES.ADMIN, ROLES.MANAGER];
+
+// Returns true if the role may log a shipment (backend: POST /shipments).
+export function canCreateShipment(role: string | null | undefined): boolean {
+  return !!role && SHIPMENT_CREATE_ROLES.includes(role as Role);
+}
+
+// Returns true if the role may edit a shipment or change its status (backend: PATCH /shipments/{id}[/status]).
+export function canUpdateShipment(role: string | null | undefined): boolean {
+  return !!role && SHIPMENT_UPDATE_ROLES.includes(role as Role);
+}
+
+// Returns true if the role may cancel/remove a shipment (backend: DELETE /shipments/{id}).
+export function canDeleteShipment(role: string | null | undefined): boolean {
+  return !!role && SHIPMENT_DELETE_ROLES.includes(role as Role);
+}
