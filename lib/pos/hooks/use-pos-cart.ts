@@ -48,7 +48,7 @@ function resolveUomPrice(
       : Number(item.retailPrice ?? item.unitPrice ?? 0);
   }
 
-  // 2. Alternate UoM: look up explicit price from uoms array
+  // 2. Alternate UoM: look up backend-calculated or explicit price from uoms array
   const uoms = item.uoms ?? [];
   const entry = uoms.find(
     (u: BackendProductUom) => u.uom && u.uom.toUpperCase() === target,
@@ -56,8 +56,22 @@ function resolveUomPrice(
 
   if (entry) {
     const explicitPrice = isWholesale
-      ? Number(entry.wholesale_price ?? entry.retail_price ?? entry.price ?? 0)
-      : Number(entry.retail_price ?? entry.price ?? entry.wholesale_price ?? 0);
+      ? Number(
+          entry.calculated_wholesale_price ??
+            entry.wholesale_price ??
+            entry.calculated_retail_price ??
+            entry.retail_price ??
+            entry.price ??
+            0,
+        )
+      : Number(
+          entry.calculated_retail_price ??
+            entry.retail_price ??
+            entry.price ??
+            entry.calculated_wholesale_price ??
+            entry.wholesale_price ??
+            0,
+        );
     if (explicitPrice > 0) return explicitPrice;
   }
 
@@ -65,12 +79,24 @@ function resolveUomPrice(
   const basePrice = isWholesale
     ? Number(item.wholesalePrice ?? item.unitPrice ?? 0)
     : Number(item.retailPrice ?? item.unitPrice ?? 0);
-  const pricingUnitQty =
-    item.pricing_unit_qty && item.pricing_unit_qty > 0
-      ? item.pricing_unit_qty
-      : 1;
 
-  return Number((basePrice * pricingUnitQty).toFixed(2));
+  const entryFactor = entry
+    ? Number(
+        entry.conversion_factor ??
+          entry.conversionFactor ??
+          entry.multiplier ??
+          0,
+      )
+    : 0;
+
+  const factor =
+    entryFactor > 0
+      ? entryFactor
+      : item.pricing_unit_qty && item.pricing_unit_qty > 0
+        ? item.pricing_unit_qty
+        : 1;
+
+  return Number((basePrice * factor).toFixed(2));
 }
 
 export function usePosCart(

@@ -196,12 +196,11 @@ export function buildCheckoutPayload(
     (p) => p.payment_method === "CREDIT",
   );
   const hasWholesaleItem = items.some((i) => i.pricingType === "WHOLESALE");
-  // Transaction is WHOLESALE when:
-  //   • at least one item uses wholesale pricing, OR
-  //   • payment includes CREDIT (backend requires wholesale transaction type for credit payments).
-  // A wholesale customer checking out with all-retail items + non-credit payment → RETAIL transaction.
-  const isWholesale =
-    hasWholesaleItem || hasCreditTender || method === "credit";
+  // Backend rule (pos.service.ts):
+  // - WHOLESALE transaction_type requires >= 1 WHOLESALE item
+  // - RETAIL transaction_type requires 0 WHOLESALE items
+  // - CREDIT payment only checks customer.type === WHOLESALE (works on both RETAIL & WHOLESALE transactions)
+  const isWholesale = hasWholesaleItem;
   const cash = details?.type === "CASH" ? details : undefined;
   const gcash = details?.type === "GCASH" ? details : undefined;
   const credit = details?.type === "CREDIT" ? details : undefined;
