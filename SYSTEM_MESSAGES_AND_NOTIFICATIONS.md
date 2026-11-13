@@ -81,20 +81,43 @@ Within each functional area, user-facing errors, validation messages, and succes
 
 ---
 
+## Forwarders Page (Logistics)
+
+### User Errors, Validation & Success
+
+| Message Type | Meaning | Recommended Action | Page Found In | How to Reproduce |
+|--------------|---------|-------------------|---------------|------------------|
+| Company Name and Contact Info are required. | One or both required fields left empty | Enter company name and tracking contact info | Create Forwarder Modal (`app/dashboard/forwarders/_components/CreateForwarderModal.tsx`) | Submit form with empty company name or contact info |
+| Forwarder updated successfully. | Existing forwarder details saved | None | Forwarders Page (`app/dashboard/forwarders/page.tsx`, `EditForwarderModal`) | Edit a forwarder in the modal and save |
+| Forwarder created successfully. | New forwarder added | None | Forwarders Page (`app/dashboard/forwarders/page.tsx`, `CreateForwarderModal`) | Add a new forwarder in the modal and save |
+| Forwarder deleted successfully. | Forwarder removed from the list | None | Forwarders Page (`app/dashboard/forwarders/page.tsx`, `DeleteForwarderModal`) | Delete a forwarder from the table |
+
+### Backend / API Failures
+
+| Message Type | Meaning | Recommended Action | Page Found In | How to Reproduce |
+|--------------|---------|-------------------|---------------|------------------|
+| Failed to load forwarders. | Forwarder list could not be fetched | Retry / refresh; check connection | Forwarders Page (`app/dashboard/forwarders/page.tsx`) | `GET /forwarders` endpoint fails |
+| Failed to create forwarder. | Create API call failed | Try again; check backend message | Create Forwarder Modal (`app/dashboard/forwarders/_components/CreateForwarderModal.tsx`, `handleSubmit` catch) | `POST /forwarders` endpoint fails |
+| Failed to update forwarder. | Update API call failed | Try again; check backend message | Edit Forwarder Modal (`app/dashboard/forwarders/_components/EditForwarderModal.tsx`, `handleSubmit` catch) | `PATCH /forwarders/{id}` endpoint fails |
+| Failed to delete forwarder. | Delete API call failed | Try again; check backend message | Delete Forwarder Modal (`app/dashboard/forwarders/_components/DeleteForwarderModal.tsx`, `handleDelete` catch) | `DELETE /forwarders/{id}` endpoint fails |
+
+---
+
 ## Approval Requests Page (Admin)
 
 ### User Errors, Validation & Success
 
 | Message Type | Meaning | Recommended Action | Page Found In | How to Reproduce |
 |--------------|---------|-------------------|---------------|------------------|
-| (none) | | | | |
+| An error occurred while processing your request. | Approve or reject API call failed; error message returned by backend | Review the error message and try again | Approval Requests Page (`app/dashboard/admin/approval-requests/page.tsx`, `handleConfirmApprove` / `handleConfirmReject`) | Collapse a request, then confirm approve or reject when backend rejects |
 
 ### Backend / API Failures
 
 | Message Type | Meaning | Recommended Action | Page Found In | How to Reproduce |
 |--------------|---------|-------------------|---------------|------------------|
-| Failed to approve request. | Approve API call failed | Try again; check permissions | Approval Requests Page (`app/dashboard/admin/approval-requests/page.tsx`, `handleConfirmApprove`) | Click Approve when backend rejects |
-| Failed to reject request. | Reject API call failed | Try again; check permissions | Approval Requests Page (`app/dashboard/admin/approval-requests/page.tsx`, `handleConfirmReject`) | Click Reject when backend rejects |
+| Failed to load approval requests. | Approval requests list could not be fetched | Refresh / retry; check connection | Approval Requests Page (`app/dashboard/admin/approval-requests/page.tsx`) | `GET /approval` endpoint fails |
+| Failed to approve request. | Approve API call failed | Try again; check backend message | Approval Requests Page (`app/dashboard/admin/approval-requests/page.tsx`, `handleConfirmApprove`) | Click Approve when backend rejects |
+| Failed to reject request. | Reject API call failed | Try again; check backend message | Approval Requests Page (`app/dashboard/admin/approval-requests/page.tsx`, `handleConfirmReject`) | Click Reject when backend rejects |
 
 ---
 
