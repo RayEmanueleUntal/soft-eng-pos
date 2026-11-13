@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { AlertCircle, Barcode, Loader2, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,21 +16,30 @@ interface PosCatalogProps {
 
 export function PosCatalog({ searchInputRef, onAddToCart }: PosCatalogProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(undefined);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const { products, loading, error, refetch } = usePosCatalog();
 
   // Extract unique categories dynamically from loaded products
-  const { products, categories, loading, error, refetch } = usePosCatalog({
-    search: debouncedSearch,
-    categoryId: selectedCategoryId,
-  });
+  const categories = useMemo(() => {
+    const set = new Set(products.map((p) => p.category?.trim()).filter(Boolean));
+    return ["All", ...Array.from(set)];
+  }, [products]);
+
+  // Real-time filtering by search query AND selected category
+  const filteredProducts = useMemo(() => {
+    return products.filter((prod) => {
+      const matchesSearch =
+        prod.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        prod.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        prod.category.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesCategory =
+        selectedCategory === "All" ||
+        prod.category.toLowerCase() === selectedCategory.toLowerCase();
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, searchQuery, selectedCategory]);
 
   return (
     <div className="lg:col-span-6 flex flex-col gap-3 overflow-hidden">
@@ -55,35 +64,20 @@ export function PosCatalog({ searchInputRef, onAddToCart }: PosCatalogProps) {
       </div>
 
       {/* Category Filter Pills */}
-      {categories.length > 0 && (
+      {categories.length > 1 && (
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 shrink-0 scrollbar-none text-xs">
-          {/* "All" Button to reset category */}
-          <button
-            type="button"
-            onClick={() => setSelectedCategoryId(undefined)}
-            className={`px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-              selectedCategoryId === undefined
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            }`}
-          >
-            All
-          </button>
-          {/* Individual Category Chips (clicking an active chip toggles it off) */}
           {categories.map((cat) => (
             <button
-              key={cat.id}
+              key={cat}
               type="button"
-              onClick={() =>
-                setSelectedCategoryId((prev) => (prev === cat.id ? undefined : cat.id))
-              }
+              onClick={() => setSelectedCategory(cat)}
               className={`px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-                selectedCategoryId === cat.id
+                selectedCategory === cat
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
-              {cat.name}
+              {cat}
             </button>
           ))}
         </div>
@@ -105,15 +99,15 @@ export function PosCatalog({ searchInputRef, onAddToCart }: PosCatalogProps) {
               <RefreshCw className="h-3.5 w-3.5" /> Retry
             </Button>
           </div>
-        ) : products.length === 0 ? (
+        ) : filteredProducts.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground text-xs">
-            {searchQuery || selectedCategoryId !== undefined
+            {searchQuery || selectedCategory !== "All"
               ? "No products match your search or filter."
               : "No products available in database."}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
-            {products.map((prod) => (
+            {filteredProducts.map((prod) => (
               <ProductCard
                 key={prod.id}
                 product={prod}
