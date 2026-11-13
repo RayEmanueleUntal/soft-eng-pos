@@ -52,7 +52,7 @@ const UOM_OPTIONS = [
   "HUNDRED",
   "GROSS",
   "SACK",
-  "SACKs",
+  "SMALL_BOX",
 ];
 
 interface LineInput {
