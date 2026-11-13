@@ -4,9 +4,9 @@
 import { Badge } from "@/components/ui/badge";
 import { POStatus } from "@/lib/inventory/purchase-order-types";
 
-const STATUS_STYLES: Record<POStatus, string> = {
-  PENDING: "border-amber-500/40 bg-amber-500/10 text-amber-700",
-  PARTIALLY_FULFILLED: "border-primary/30 bg-primary/5 text-primary",
+const STATUS_STYLES: Record<string, string> = {
+  PENDING: "border-primary/30 bg-primary/5 text-primary",
+  PARTIALLY_FULFILLED: "border-amber-500/40 bg-amber-500/10 text-amber-700",
   FULFILLED: "border-transparent bg-primary text-primary-foreground",
   CANCELLED: "border-destructive/30 bg-destructive/10 text-destructive",
 };

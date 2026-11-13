@@ -286,7 +286,7 @@ export function ReceiveDeliveryModal({
         </DialogHeader>
 
         {successInfo && (
-          <div className="p-4 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 flex items-center gap-3 text-sm">
+          <div className="p-4 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-700 flex items-center gap-3 text-sm">
             <CheckCircle2 className="h-5 w-5 shrink-0" />
             <div>
               <p className="font-semibold">{successInfo.message}</p>
@@ -356,7 +356,7 @@ export function ReceiveDeliveryModal({
                     disabled={isSubmitting}
                     className="rounded-md gap-1.5 text-xs h-9 shrink-0"
                   >
-                    <ArrowLeft className="h-3.5 w-3.5" /> Change PO
+                    <RotateCcw className="h-3.5 w-3.5" /> Change PO
                   </Button>
                 </div>
 

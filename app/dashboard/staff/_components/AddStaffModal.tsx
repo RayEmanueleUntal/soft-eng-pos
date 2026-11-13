@@ -143,7 +143,7 @@ export function AddStaffModal({
           <div className="grid gap-3 py-4">
             <div className="grid gap-1.5">
               <label htmlFor="username" className="text-xs font-sans font-medium text-foreground">
-                Username
+                Username <span className="text-destructive">*</span>
               </label>
               <Input
                 id="username"
@@ -159,7 +159,13 @@ export function AddStaffModal({
 
             <div className="grid gap-1.5">
               <label htmlFor="password" className="text-xs font-sans font-medium text-foreground">
-                {editStaff ? "New Password (Optional)" : "Password"}
+              {editStaff ? (
+                    "New Password (Optional)"
+                  ) : (
+                    <>
+                      Password <span className="text-destructive">*</span>
+                    </>
+                  )}
               </label>
               <Input
                 id="password"
@@ -187,7 +193,7 @@ export function AddStaffModal({
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1.5">
                 <label htmlFor="first_name" className="text-xs font-sans font-medium text-foreground">
-                  First Name
+                  First Name <span className="text-destructive">*</span>
                 </label>
                 <Input
                   id="first_name"
@@ -201,7 +207,7 @@ export function AddStaffModal({
               </div>
               <div className="grid gap-1.5">
                 <label htmlFor="last_name" className="text-xs font-sans font-medium text-foreground">
-                  Last Name
+                  Last Name <span className="text-destructive">*</span>
                 </label>
                 <Input
                   id="last_name"

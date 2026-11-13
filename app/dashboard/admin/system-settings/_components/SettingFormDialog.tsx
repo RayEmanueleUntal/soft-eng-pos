@@ -123,7 +123,7 @@ export function SettingFormDialog({
           <div className="grid gap-3 py-4">
             <div className="grid gap-1.5">
               <label htmlFor="setting-key" className="text-xs font-sans font-medium text-foreground">
-                Key
+                Key <span className="text-destructive">*</span>
               </label>
               {isEdit ? (
                 <p
@@ -149,7 +149,7 @@ export function SettingFormDialog({
 
             <div className="grid gap-1.5">
               <label htmlFor="setting-value" className="text-xs font-sans font-medium text-foreground">
-                Value
+                Value <span className="text-destructive">*</span> 
               </label>
               <Input
                 id="setting-value"

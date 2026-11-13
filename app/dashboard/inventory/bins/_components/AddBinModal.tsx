@@ -17,6 +17,7 @@ import {
   createBinLocation,
   CreateBinPayload,
   BinLocation,
+  searchBinLocationExact,
 } from "@/lib/bin-locations/bin-locations";
 
 interface AddBinModalProps {
@@ -33,7 +34,11 @@ export function AddBinModal({ onSuccess }: AddBinModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!aisleNumber.trim() || !shelfLocation.trim()) {
+
+    const normalizedAisle = aisleNumber.trim().toUpperCase();
+    const normalizedShelf = shelfLocation.trim().toUpperCase();
+
+    if (!normalizedAisle || !normalizedShelf) {
       setErrorMsg("Aisle number and shelf location are required.");
       return;
     }
@@ -42,9 +47,31 @@ export function AddBinModal({ onSuccess }: AddBinModalProps) {
     setErrorMsg(null);
 
     try {
+      // Pre-check for duplicate bin location case-insensitively using searchBinLocationExact
+      try {
+        const existingBin = await searchBinLocationExact({
+          aisle_number: normalizedAisle,
+          shelf_location: normalizedShelf,
+        });
+
+        if (existingBin) {
+          setErrorMsg(
+            "Conflict: A bin location with this aisle and shelf already exists.",
+          );
+          setLoading(false);
+          return;
+        }
+      } catch (searchErr: any) {
+        // If 404, it means the bin location does not exist yet, which is the expected case to proceed
+        if (searchErr?.response?.status !== 404) {
+          // If the lookup failed with another error (e.g., 400 or other), continue and let createBinLocation handle it
+          console.warn("Exact lookup check failed:", searchErr);
+        }
+      }
+
       const payload: CreateBinPayload = {
-        aisle_number: aisleNumber.trim(),
-        shelf_location: shelfLocation.trim(),
+        aisle_number: normalizedAisle,
+        shelf_location: normalizedShelf,
       };
 
       const createdBin = await createBinLocation(payload);
@@ -109,10 +136,10 @@ export function AddBinModal({ onSuccess }: AddBinModalProps) {
               </Label>
               <Input
                 id="aisle_number"
-                placeholder="e.g. Aisle-01"
+                placeholder="e.g. AISLE-01"
                 value={aisleNumber}
-                onChange={(e) => setAisleNumber(e.target.value)}
-                className="h-8 text-xs font-mono border-[#CBD5E1] focus-visible:ring-1 focus-visible:ring-[#0060B2] rounded-sm"
+                onChange={(e) => setAisleNumber(e.target.value.toUpperCase())}
+                className="h-8 text-xs font-mono uppercase border-[#CBD5E1] focus-visible:ring-1 focus-visible:ring-[#0060B2] rounded-sm"
                 required
               />
             </div>
@@ -127,10 +154,10 @@ export function AddBinModal({ onSuccess }: AddBinModalProps) {
               </Label>
               <Input
                 id="shelf_location"
-                placeholder="e.g. Shelf-B"
+                placeholder="e.g. SHELF-B"
                 value={shelfLocation}
-                onChange={(e) => setShelfLocation(e.target.value)}
-                className="h-8 text-xs font-mono border-[#CBD5E1] focus-visible:ring-1 focus-visible:ring-[#0060B2] rounded-sm"
+                onChange={(e) => setShelfLocation(e.target.value.toUpperCase())}
+                className="h-8 text-xs font-mono uppercase border-[#CBD5E1] focus-visible:ring-1 focus-visible:ring-[#0060B2] rounded-sm"
                 required
               />
             </div>

@@ -91,7 +91,7 @@ export function ExpenseFormFields({
     <div className="grid gap-3 py-4">
       <div className="grid gap-1.5">
         <label htmlFor={`${idPrefix}-amount`} className={labelClass}>
-          Amount (PHP)
+          Amount (PHP) <span className="text-destructive">*</span> 
         </label>
         <Input
           id={`${idPrefix}-amount`}
@@ -111,7 +111,7 @@ export function ExpenseFormFields({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="grid gap-1.5">
-          <span className={labelClass}>Category</span>
+          <span className={labelClass}>Category <span className="text-destructive">*</span></span>
           <Select
             value={values.category || null}
             disabled={disabled}

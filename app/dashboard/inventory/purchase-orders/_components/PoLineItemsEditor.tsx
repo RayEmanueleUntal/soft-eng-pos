@@ -151,13 +151,13 @@ export function PoLineItemsEditor({
   return (
     <div className="space-y-2">
       <div className="overflow-x-auto rounded-md border border-border">
-        <Table>
+        <Table className="table">
           <TableHeader className="bg-muted/50">
             <TableRow>
-              <TableHead>SKU</TableHead>
+              <TableHead className="w-10">SKU</TableHead>
               <TableHead>Product</TableHead>
               <TableHead className="w-44">UoM</TableHead>
-              <TableHead className="w-28 text-right">Qty</TableHead>
+              <TableHead className="w-22 min-w-12 text-right">Qty</TableHead>
               <TableHead className="w-32 text-right">Unit cost</TableHead>
               <TableHead className="text-right">Est. total</TableHead>
               <TableHead className="w-10" />
@@ -188,12 +188,12 @@ export function PoLineItemsEditor({
                 return (
                   <TableRow key={line.productId}>
                     <TableCell className="font-mono text-muted-foreground">
-                      {line.sku ?? "—"}
-                    </TableCell>
-                    <TableCell className="font-medium text-foreground">
-                      <span className="block max-w-[240px] truncate" title={line.name}>
-                        {line.name}
+                      <span className="block max-w-[120px] truncate" title={line.sku ?? undefined}>
+                        {line.sku ?? "—"}
                       </span>
+                    </TableCell>
+                    <TableCell className="whitespace-normal font-medium text-foreground">
+                        {line.name}
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
@@ -261,7 +261,7 @@ export function PoLineItemsEditor({
                                 const snapshot = line;
                                 window.setTimeout(() => onFactorBlur(snapshot), 0);
                               }}
-                              className="h-7 w-16 rounded-[4px] text-right font-mono text-xs tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                              className="h-7 w-16 rounded-[4px] text-right font-mono text-xs tabular-nums [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             />
                             {factorOverridden && (
                               <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
@@ -285,7 +285,7 @@ export function PoLineItemsEditor({
                         onChange={(e) =>
                           onQuantityChange(line.productId, e.target.value)
                         }
-                        className="h-7 rounded-[4px] text-right font-mono text-xs tabular-nums"
+                        className="h-7 rounded-[4px] text-right font-mono text-xs tabular-nums [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
                     </TableCell>
                     <TableCell>
@@ -302,7 +302,7 @@ export function PoLineItemsEditor({
                         onChange={(e) =>
                           onUnitCostChange(line.productId, e.target.value)
                         }
-                        className="h-7 rounded-[4px] text-right font-mono text-xs tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        className="h-7 rounded-[4px] text-right font-mono text-xs tabular-nums [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
                     </TableCell>
                     <TableCell className="text-right font-mono font-semibold tabular-nums">

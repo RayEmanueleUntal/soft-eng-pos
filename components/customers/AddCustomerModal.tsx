@@ -143,7 +143,7 @@ export function AddCustomerModal({
         {/* All inputs: Name, Contact, Type (Retail vs Wholesale), Company, Credit */}
         <div className="grid gap-3 py-4">
         <div className="grid gap-2">
-          <label className="text-sm font-medium">Customer Name</label>
+          <label className="text-sm font-medium">Customer <span className="text-destructive">*</span></label>
 
           <Input
             placeholder="e.g. Juan Dela Cruz"
@@ -154,7 +154,7 @@ export function AddCustomerModal({
         </div>
 
         <div className="grid gap-2">
-          <label className="text-sm font-medium">Contact Number</label>
+          <label className="text-sm font-medium">Contact Number <span className="text-destructive">*</span></label>
 
           <Input
             placeholder="e.g. 09171234567"
@@ -165,7 +165,7 @@ export function AddCustomerModal({
         </div>
 
         <div className="grid gap-2">
-          <label className="text-sm font-medium">Customer Type</label>
+          <label className="text-sm font-medium">Customer Type </label>
 
           <select
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -181,7 +181,7 @@ export function AddCustomerModal({
         {type === "WHOLESALE" && (
           <>
             <div className="grid gap-2">
-              <label className="text-sm font-medium">Company Name</label>
+              <label className="text-sm font-medium">Company Name<span className="text-destructive">*</span></label>
 
               <Input
                 placeholder="e.g. Dela Cruz Trading Enterprises"
@@ -192,7 +192,7 @@ export function AddCustomerModal({
             </div>
 
             <div className="grid gap-2">
-              <label className="text-sm font-medium">Credit Limit (PHP)</label>
+              <label className="text-sm font-medium">Credit Limit (PHP)<span className="text-destructive">*</span></label>
 
               <Input
                 type="number"

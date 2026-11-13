@@ -32,8 +32,8 @@ const createEmptyForm = (): ProductFormData => ({
   material_grade: "",
 
   base_uom: "PCS",
-  current_quantity: "0",
-  reorder_point_ROP: "0",
+  current_quantity: "",
+  reorder_point_ROP: "",
 
   cost_price: "0",
   retail_price: "",
@@ -529,7 +529,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="name">Product Name *</Label>
+          <Label htmlFor="name">Product Name <span className="text-destructive">*</span></Label>
           <Input
             id="name"
             value={formData.name}
@@ -548,12 +548,12 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
             onChange={(e) => updateField("sku", e.target.value)}
           />
           <p className="text-xs text-muted-foreground">
-            Leave empty to let the backend generate the SKU.
+            Leave empty to generate default SKU.
           </p>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="categoryId">Category *</Label>
+          <Label htmlFor="categoryId">Category <span className="text-destructive">*</span></Label>
           <select
             id="categoryId"
             value={formData.categoryId}
@@ -641,11 +641,12 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="current_quantity">Initial Quantity</Label>
+            <Label htmlFor="current_quantity">Initial Quantity <span className="text-destructive">*</span></Label>
             <Input
               id="current_quantity"
               type="number"
-              min="0"
+              placeholder="0"
+              required
               className="font-mono"
               value={formData.current_quantity}
               disabled={isEdit}
@@ -659,10 +660,12 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="reorder_point_ROP">Reorder Point</Label>
+            <Label htmlFor="reorder_point_ROP">Reorder Point <span className="text-destructive">*</span></Label>
             <Input
               id="reorder_point_ROP"
               type="number"
+              placeholder="0"
+              required
               min="0"
               className="font-mono"
               value={formData.reorder_point_ROP}
@@ -699,6 +702,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
               type="number"
               min="0"
               step="0.01"
+              placeholder="0"
               className="font-mono"
               value={formData.cost_price}
               onChange={(e) => updateField("cost_price", e.target.value)}
@@ -706,13 +710,14 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="retail_price">Retail Price *</Label>
+            <Label htmlFor="retail_price">Retail Price <span className="text-destructive">*</span></Label>
             <Input
               id="retail_price"
               type="number"
               min="0"
               step="0.01"
               className="font-mono"
+              placeholder="0"
               value={formData.retail_price}
               onChange={(e) => updateField("retail_price", e.target.value)}
               required
@@ -726,6 +731,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
               type="number"
               min="0"
               step="0.01"
+              placeholder="Optional"
               className="font-mono"
               value={formData.wholesale_price}
               onChange={(e) => updateField("wholesale_price", e.target.value)}
