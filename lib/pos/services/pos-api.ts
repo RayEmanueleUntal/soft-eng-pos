@@ -125,38 +125,22 @@ export function toPosCustomer(item: RawBackendCustomer): PosCustomer {
 // ==========================================
 // 2. API Functions
 // ==========================================
-export interface ProductCategoryItem {
-  id: number;
-  name: string;
-}
 
-export async function fetchCategoriesApi(): Promise<ProductCategoryItem[]> {
+export async function fetchCategoriesApi(): Promise<string[]> {
   const res = await apiClient.get<
     Array<{ id: number; name?: string; categoryName?: string }>
   >("/product-categories");
-  return res.data.map((c) => ({
-    id: c.id,
-    name: c.name || c.categoryName || `Category ${c.id}`
-  }));
+  return res.data.map((c) => c.name || c.categoryName || `Category ${c.id}`);
 }
 
 /**
  * Fetch and map catalog products from backend API (GET /products).
  */
-export async function fetchProductsApi(params?: {
-  search?: string;
-  categoryId?: number;
-  page?: number;
-  limit?: number;
-}): Promise<CatalogProduct[]> {
+export async function fetchProductsApi(): Promise<CatalogProduct[]> {
   // 1. Fetch both products and live categories from database
   const [productsRes, categoriesRes] = await Promise.all([
     apiClient.get<{ data: BackendProduct[] } | BackendProduct[]>("/products", {
-      params: {         
-        limit: params?.limit ?? 100,
-        page: params?.page ?? 1,
-        search: params?.search || undefined,
-        categoryId: params?.categoryId || undefined,},
+      params: { limit: 100 },
     }),
     apiClient.get<any[]>("/product-categories").catch(() => ({ data: [] })),
   ]);
