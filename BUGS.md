@@ -14,6 +14,13 @@ Whole-app audit: frontend `lib/*` + components vs. backend controllers/DTOs/serv
 | Mutation | Detail |
 |---|---|
 | Customers created | `BUGTEST Alpha` (id 8), `BUGTEST Probe Two DIFFERENT` — test artifacts from idempotency probe |
+| Staff users created | `test_secretary` (id 5, SECRETARY), `test_sales_clerk` (id 6, SALES_CLERK) — seeded to close RBAC test gap; password `TestPass123!` |
+| Forwarder created | `BUGTEST Forwarder` (id 3) |
+| Expense created | id 13 — UTILITIES ₱1.50 dated 2026-01-01, notes "BUGTEST" |
+| Purchase order created | id 7 — supplier 2, product 5 ×5 PCS; **transitioned PENDING→FULFILLED with zero deliveries** (BUG-036 proof) |
+| Shipment created | id 2 — transaction 9, forwarder 3, tracking `BUGTEST-TRK`; walked PENDING→DISPATCHED→PENDING (BUG-042 proof) |
+| Approval requests created | ids 1–2 — `REFUND_TRANSACTION` with empty/garbage payloads (BUG-023 proof); approve attempt → 500, stays PENDING |
+| Product catalog scaled | CSV seed run (`scripts/run-csv-seed.ts`): **+2,571 products, +2,324 UoMs → 2,576 total SKUs** for latency/scale testing |
 | Checkouts | 2 × CASH checkout of 500 PCS product #5 (₱600 each) — product #5 stock is now **1500** (correct serialized value would be 1000 — see BUG-014 proof) |
 | Wholesale balance | Customer #6 (Vanguard): two ₱100 payments recorded (ledger −₱200) but balance only fell ₱100 (BUG-032 proof); then a ₱1.20 fully-cash sale added phantom +₱5 AR via CREDIT payment (BUG-016 proof). Balance now 79,905 vs credit_limit 80,000 |
 
@@ -26,10 +33,10 @@ Whole-app audit: frontend `lib/*` + components vs. backend controllers/DTOs/serv
 - **Receipt detail** (`/pos/receipt/9`): shows "Cash tendered ₱600 / Change ₱50" correctly (persisted receipt endpoint flattens properly); Refund/Exchange buttons present.
 
 ### Round 2 — multi-role sweep, modals, mobile, perf
-- **RBAC matrix (live, 4 roles × 18 routes):**
+- **RBAC matrix (live, 6 roles × 18 routes):**
   - ADMIN & MANAGER: all routes accessible.
   - CASHIER: blocked from adjustments/deliveries/POs/staff/admin pages (redirect to `/dashboard/pos`) — correct. **`/dashboard/suppliers` loads but `GET /suppliers` → 403** (BUG-044 confirmed live). `/dashboard/inventory/rop` loads with **no API error** — BUG-001's `/products` fetch accidentally masks the `/inventory/rop` 403.
-  - **STOCK_MANAGEMENT (`stock_alex`): `ERR_TOO_MANY_REDIRECTS` on every navigation — see BUG-113.**
+  - **STOCK_MANAGEMENT, SECRETARY, SALES_CLERK: `ERR_TOO_MANY_REDIRECTS` on every navigation — BUG-113 confirmed for all three non-POS roles.** (SECRETARY/SALES_CLERK verified with newly seeded `test_secretary`/`test_sales_clerk` accounts.) SALES_CLERK `/dashboard/inventory/bins` loads (ungated route — BUG-044).
 - **Modal sweep:** 12/12 create dialogs open cleanly (products 14 fields, customers, suppliers, staff, forwarders, bins, deliveries, POs, shipments "Log Shipment", expenses, system-settings) + inventory row-actions menu (Stock In/Out/Adjust/Assign Bin/Edit ROP) → Stock In dialog opens. Zero pageerrors.
 - **Mobile viewport (390×844):** all 17 routes render; only `/inventory/adjustments` overflows by 1px (scrollW=391) — cosmetic.
 - **Search perf:** `GET /products?search=` ~16–40ms across terms at current 5-product scale — trivially fast now; BUG-021 (no trigram indexes) remains a scale risk at 8k SKUs.
@@ -42,7 +49,7 @@ Whole-app audit: frontend `lib/*` + components vs. backend controllers/DTOs/serv
 |---|---|
 | High | 24 |
 | Medium | ~47 |
-| Low | ~52 |
+| Low | ~54 |
 | Informational | 5 |
 
 Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
@@ -56,9 +63,10 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - `GET /products?limit=100` + client-side `current_quantity <= reorder_point_ROP` filter. Only first 100 products evaluated; backend `GET /inventory/rop` → `{items, totalAlerts}` exists and works (verified live).
 - **Fix:** Call `/inventory/rop`.
 
-## BUG-002 — POS catalog truncated to first 100 products
+## BUG-002 — POS catalog truncated to first 100 products **[now demonstrable]**
 - **Location:** `lib/pos/services/pos-api.ts:139-163`
 - Single `GET /products?limit=100`; client-side search/filter. ~7,900 of 8,000 SKUs unfindable/unbuyable; `ExchangeModal` picker affected too.
+- **Scale proof:** after CSV seed the catalog holds **2,576 products** — the POS can only see/search the first ~100 (**~4% of catalog**).
 
 ## BUG-003 — POS customer picker truncated to first 100 customers
 - **Location:** `lib/pos/services/pos-api.ts:168-180`
@@ -139,17 +147,19 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - `refreshSecret = JWT_REFRESH_SECRET || JWT_SECRET`. If unset, refresh tokens sign with the access secret; the refresh payload passes `JwtStrategy.validate()` → a 7-day refresh token works as a bearer access token on every guarded route, defeating the 15-min access design.
 - **Fix:** Mandate `JWT_REFRESH_SECRET` at boot or reject refresh tokens in the access strategy (e.g., check `tokenId` presence).
 
-## BUG-021 — Backend: product search cannot meet <100ms rule — no trigram/full-text indexes
+## BUG-021 — Backend: product search cannot meet <100ms rule — no trigram/full-text indexes **[measured]**
 - **Location:** `prisma/schema.prisma:329-376`; query `products.service.ts:44-67`
 - Search = AND of per-keyword OR `contains … insensitive` across name/sku/size/thread/material. Only `@@index([name])` btree — useless for `ILIKE '%kw%'`. No pg_trgm GIN or tsvector despite AGENT.md mandate. Every search = sequential scan.
+- **Measured at 2,576 SKUs (live):** `search=screw` 30–40ms, `search=hexagonal` ~32–39ms, `search=anchor` 33–62ms, multi-keyword `m6 x 100 zinc` ~75ms, `size`/`thread`/`material` filters ~28–34ms, `/inventory/rop` ~12–18ms. Still under 100ms at 2.5k rows, but seq-scan cost grows ~linearly — at the 8,000+ SKU target the worst multi-keyword queries will likely exceed the rule. Add pg_trgm GIN indexes before scale-up.
 
 ## BUG-022 — Backend: idempotency interceptor is non-atomic and unscoped
 - **Location:** `src/common/interceptors/idempotency.interceptor.ts:34-59`
 - `get → check → set(IN_PROGRESS)` has no atomic NX — two concurrent same-key requests both execute the handler (double checkout/expense/approval). Cache key `idempotency:${key}` has **no user/route scope** → cross-endpoint/cross-user replay of cached bodies. `tap` doesn't await caching; crash leaves `IN_PROGRESS` → 409 for 24h.
 
-## BUG-023 — Backend: approval double-approve race + self-approval + unscoped reads
+## BUG-023 — Backend: approval double-approve race + self-approval + unscoped reads **[LIVE-CONFIRMED]**
 - **Location:** `src/approval/approval.service.ts:55-90,92-124`, `approval.controller.ts`
 - Check-then-act on `status===PENDING` under READ COMMITTED → concurrent approves both execute handler (double refund/restock). No `requestedById !== reviewerId` check → managers can approve own requests. `GET /approval` has no `@Roles` → any authenticated CASHIER enumerates all requests incl. payload JSON. `createRequest` payload `IsObject`-only; handlers trust client-supplied breakdown values.
+- **Live proof:** `POST /approval {type:"REFUND_TRANSACTION", payload:{}}` → **201 PENDING**; same with `payload:{transaction_id:"abc"}` → **201**. `PATCH /approval/1/approve` (as the same admin who created it — no self-approval block) → **500**, request stays PENDING forever → zombie un-approvable requests. `GET /approval?status=BOGUS` → **500** `{statusCode,message}` (no `details` wrapper — also BUG-058/111).
 
 ---
 
@@ -159,7 +169,7 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - `receipt/[id]/page.tsx:293-309` reads `creditDebtCancellation`/`cashPayout`/`totalRefund`; backend stores `{totalRefundAmount, creditDebtReduction, cashPayoutAmount, originalPayments}` → pending card always ₱0.00.
 
 ## BUG-025 — Backend error messages swallowed: components read `data.message`, backend sends `data.details.message` **[LIVE-CONFIRMED shape]**
-- **Locations:** `SupplierTable.tsx:96,121,142`; `StaffTable.tsx:123-127,209-212`; `AddStaffModal.tsx:104-111`; `RefundModal.tsx:62-76`; `ExchangeModal.tsx` ~95; `bins/page.tsx:70`
+- **Locations:** `SupplierTable.tsx:96,121,142`; `StaffTable.tsx:123-127,209-212`; `AddStaffModal.tsx:104-111`; `RefundModal.tsx:62-76`; `ExchangeModal.tsx` ~95; `bins/page.tsx:70`; `bins/_components/AddBinModal.tsx:91`; `products/_components/DeleteProductDialog.tsx:54-55`
 - **Live proof:** error body keys are `{statusCode, timestamp, path, details}` — no top-level `message`. Every backend error in these components shows a generic string (e.g., duplicate-username 409 → "Failed to save staff member.").
 
 ## BUG-026 — Stock movement history filters apply only to current page of 20
@@ -192,8 +202,9 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 ## BUG-035 — Duplicate-contact 409 has no recovery path
 - `AddCustomerModal.tsx:115-120`; backend `allowDuplicate` + structured `DUPLICATE_CUSTOMER_CONTACT` payload unused.
 
-## BUG-036 — Backend: PO status allows arbitrary transitions
+## BUG-036 — Backend: PO status allows arbitrary transitions **[LIVE-CONFIRMED]**
 - `purchase-orders.service.ts:357-419` — `PENDING→FULFILLED` with zero deliveries, regressions, etc. No state machine.
+- **Live proof:** created PO #7 (PENDING, 0 deliveries) → `PATCH /purchase-orders/7/status {po_status:"FULFILLED"}` → **200, status now FULFILLED**.
 
 ## BUG-037 — Backend: credit-limit check TOCTOU on `outstanding_balance`
 - `pos.service.ts:128-145` + `customers.service.ts:401-432` — concurrent credit checkouts both pass.
@@ -211,8 +222,9 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 ## BUG-041 — Backend: exchange valuation ignores tier/UoM/discounts; price difference never settled
 - `exchange-approval.handler.ts:77-115` — always retail price; `price_difference` stored but no payment/refund/AR adjustment → upgrade collects nothing, downgrade refunds nothing.
 
-## BUG-042 — Backend: shipment state machine regressions + racy dup check + hard delete
+## BUG-042 — Backend: shipment state machine regressions + racy dup check + hard delete **[LIVE-CONFIRMED partial]**
 - `shipments.service.ts:93-107,206-226,412-428` — `DISPATCHED→PENDING` allowed; same-status no-ops; dup check outside tx; `deleteShipment` hard-deletes audit trail.
+- **Live proof:** shipment #2 walked `PENDING → DISPATCHED → PENDING` via `PATCH /shipments/2/status` — both 200, regression accepted. Duplicate active shipment for same transaction correctly 409s.
 
 ## BUG-043 — Backend: `endDate` `lte` excludes entire end day **[LIVE-CONFIRMED]**
 - `analytics.service.ts:66,178,387,523`; `transactions.service.ts:63-68`; `deliveries.service.ts:328-332`; `purchase-orders.service.ts:301-309`; `inventory.service.ts:497-503`; `expenses.service.ts`
@@ -357,7 +369,7 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 ## BUG-113 — Roles without POS access get infinite redirect loop — app unusable **[BROWSER-CONFIRMED]**
 - **Severity:** High
 - **Locations:** `app/dashboard/page.tsx:42` (unconditional `redirect("/dashboard/pos")`), `proxy.ts:58-59` + `lib/auth/roles.ts:25` (`/dashboard/pos` = ADMIN/MANAGER/CASHIER only)
-- **What:** `/dashboard` always redirects to `/dashboard/pos`. For STOCK_MANAGEMENT, SECRETARY, and SALES_CLERK the proxy then bounces `/dashboard/pos` → `/dashboard` → `/dashboard/pos` → … `ERR_TOO_MANY_REDIRECTS`. **Live proof:** `stock_alex` login landed on `/dashboard`, then every route navigation redirect-looped.
+- **What:** `/dashboard` always redirects to `/dashboard/pos`. For STOCK_MANAGEMENT, SECRETARY, and SALES_CLERK the proxy then bounces `/dashboard/pos` → `/dashboard` → `/dashboard/pos` → … `ERR_TOO_MANY_REDIRECTS`. **Live proof:** confirmed for all three roles — `stock_alex`, `test_secretary`, `test_sales_clerk` each landed on `/dashboard` then redirect-looped on every route.
 - **Impact:** Three of six roles cannot use the application at all via normal navigation (direct URLs to permitted pages like `/dashboard/inventory` still work, but login lands in the loop).
 - **Fix:** Make `/dashboard` role-aware (redirect to first permitted route per role) or remove the hard redirect.
 
@@ -399,9 +411,17 @@ BUG-115–121 continue the register numbering.
 - **Severity:** Low
 - `useState` initialized once from props; currently safe only because parents key-remount (`key={formSession}`, `key={edit-${id}}`). Any future caller that doesn't will show stale values when switching records. Document or reset-on-open.
 
-## BUG-122 — Bins page keeps stale `searchQuery` after exact lookup
+## BUG-123 — Adjustments page: zero-match attribute filters produce phantom pagination
+- **Severity:** Low-Medium
+- `adjustments/page.tsx:213-267` — when size/thread/material/category filters match **no** products, `fetchMatchingProductIds` returns an empty set; the code still fetches `/inventory/movements` **without** `productId` (only sent when exactly 1 match), so the server returns the unfiltered total. Client then filters the 20-row page to 0 rows → "Total records: N" and page count reflect invisible data; pagination walks an unseen dataset. Companion to BUG-026.
+
+## BUG-124 — Dead `AdjustmentForm` inside `StockMovementModal.tsx` contains latent bugs
+- **Severity:** Low (dead code / maintenance trap)
+- `components/inventory/StockMovementModal.tsx:41-141` — an entire unused `AdjustmentForm` component: sets a fake "adjusted successfully" banner on item select (before any save), sends `reason: ""` which violates `AdjustInventoryDto @IsNotEmpty` → guaranteed 400, and lacks the validation the live `StockAdjustmentModal` has. Delete it or fix before reuse.
+
+## BUG-122 — Bins page keeps stale `searchQuery` **and** stale `page` after exact lookup
 - **Severity:** Low
-- `bins/page.tsx` — after an exact-location lookup replaces results with one row, `searchQuery` retains old text; a subsequent page change refetches with the stale filter. `AddBinModal` also rendered ungated (backend POST requires ADMIN/MANAGER/SECRETARY → CASHIER/STOCK_MANAGEMENT 403 — part of BUG-044).
+- `bins/page.tsx` — after an exact-location lookup replaces results with one row, `searchQuery` retains old text AND `page` state stays >1 while `meta` is overwritten to page 1. A subsequent page change refetches with the stale filter/page → mixed state (filtered list under exact-lookup UI). `AddBinModal` also rendered ungated (backend POST requires ADMIN/MANAGER/SECRETARY → CASHIER/STOCK_MANAGEMENT 403 — part of BUG-044).
 
 ---
 
