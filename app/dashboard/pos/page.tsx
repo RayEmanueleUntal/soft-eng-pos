@@ -11,7 +11,6 @@ import {
   usePosCart,
   usePosShortcuts,
   usePosCustomers,
-  usePosCatalog,
   type Receipt,
 } from "@/lib/pos";
 import { PageHeader } from "@/components/ui/pageheader";
@@ -79,13 +78,6 @@ const MOCK_SWAGGER_RECEIPT = {
 };
 
 export default function PosPage() {
-  const {
-    products,
-    loading: isCatalogLoading,
-    error: catalogError,
-    refetch: refetchProducts,
-  } = usePosCatalog();
-
   const {
     cart,
     cartTotal,
@@ -162,10 +154,7 @@ export default function PosPage() {
           {/* Left: Quick Catalog / Product Grid */}
           <PosCatalog
             searchInputRef={searchInputRef}
-            products={products}
-            loading={isCatalogLoading}
-            error={catalogError}
-            refetch={refetchProducts}
+            refreshTrigger={lastCompletedSale} // <-- Triggers catalog refetch on checkout success!
             onAddToCart={(prod) =>
               addItemToCart(
                 prod,
@@ -213,7 +202,6 @@ export default function PosPage() {
             );
             setCompletedReceipt(receipt);
             clearCart();
-            refetchProducts(); // Refreshes stock counts immediately
             refetchCustomers(); // Optional: also updates customer credit balance if paid via credit
           }}
         />
