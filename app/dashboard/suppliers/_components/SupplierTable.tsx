@@ -290,11 +290,14 @@ export function SupplierTable() {
                     <TableCell className="font-mono">{leadTime} Days</TableCell>
                     <TableCell>
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        className={`inline-flex items-center px-2 py-0.5 rounded-sm text-[11px] font-mono font-semibold ${
                           status === "ACTIVE"
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                             : "bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-300"
                         }`}
+
+ 
+
                       >
                         {status}
                       </span>

@@ -347,6 +347,7 @@ export function ProductTable() {
                         variant="ghost"
                         size="icon"
                         onClick={() => setProductToDelete(product)}
+                        className="h-7 w-7 rounded-[2px] hover:bg-red-50 hover:text-red-700 inline-flex items-center justify-center"
                         title="Delete product"
                       >
                         <Trash2 />

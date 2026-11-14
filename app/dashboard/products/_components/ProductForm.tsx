@@ -705,7 +705,7 @@ const handleSubmit = async (event: React.FormEvent) => {
               id="cost_price"
               type="number"
               min="0"
-              step="0.01"
+              step="1"
               placeholder="0"
               className="font-mono"
               value={formData.cost_price}
@@ -719,7 +719,7 @@ const handleSubmit = async (event: React.FormEvent) => {
               id="retail_price"
               type="number"
               min="0"
-              step="0.01"
+              step="1"
               className="font-mono"
               placeholder="0"
               value={formData.retail_price}
@@ -734,7 +734,7 @@ const handleSubmit = async (event: React.FormEvent) => {
               id="wholesale_price"
               type="number"
               min="0"
-              step="0.01"
+              step="1"
               placeholder="Optional"
               className="font-mono"
               value={formData.wholesale_price}
@@ -793,7 +793,7 @@ const handleSubmit = async (event: React.FormEvent) => {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-1.5 top-1.5 h-7 w-7"
+                    className="absolute right-1.5 top-1.5 h-7 w-7 hover:bg-red-50 text-muted-foreground hover:text-red-700"
                     onClick={() => removeUomRow(row.key)}
                     title="Remove UoM"
                   >
@@ -843,7 +843,7 @@ const handleSubmit = async (event: React.FormEvent) => {
                       <Input
                         type="number"
                         min="0"
-                        step="0.01"
+                        step="1"
                         className="font-mono"
                         value={row.cost_price}
                         onChange={(e) =>
@@ -857,7 +857,7 @@ const handleSubmit = async (event: React.FormEvent) => {
                       <Input
                         type="number"
                         min="0"
-                        step="0.01"
+                        step="1"
                         className="font-mono"
                         value={row.retail_price}
                         onChange={(e) =>
@@ -871,7 +871,7 @@ const handleSubmit = async (event: React.FormEvent) => {
                       <Input
                         type="number"
                         min="0"
-                        step="0.01"
+                        step="1"
                         className="font-mono"
                         value={row.wholesale_price}
                         onChange={(e) =>

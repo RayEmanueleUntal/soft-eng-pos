@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 
 interface ReceiveDeliveryModalProps {
-  onSuccess?: () => void;
+  onSuccess?: (info: { message: string; isPartial: boolean }) => void;
   trigger?: React.ReactElement;
 }
 
@@ -230,15 +230,16 @@ export function ReceiveDeliveryModal({
     setIsSubmitting(true);
     setError(null);
 
-    try {
+try {
       const res = await createDelivery(payload);
-      setSuccessInfo({
-        message:
-          res.message || "Delivery recorded successfully and stock updated.",
+      const message =
+        res.message || "Delivery recorded successfully and stock updated.";
+
+      onSuccess?.({
+        message,
         isPartial: res.isPartial,
       });
-      onSuccess?.();
-      setTimeout(() => setOpen(false), 1500);
+      handleOpenChange(false);
     } catch (err) {
       setError(
         getErrorMessage(err, "Failed to record delivery. Please try again."),
