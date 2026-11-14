@@ -20,7 +20,7 @@ Whole-app audit: frontend `lib/*` + components vs. backend controllers/DTOs/serv
 | Purchase order created | id 7 — supplier 2, product 5 ×5 PCS; **transitioned PENDING→FULFILLED with zero deliveries** (BUG-036 proof) |
 | Shipment created | id 2 — transaction 9, forwarder 3, tracking `BUGTEST-TRK`; walked PENDING→DISPATCHED→PENDING (BUG-042 proof) |
 | Approval requests created | ids 1–2 — `REFUND_TRANSACTION` with empty/garbage payloads (BUG-023 proof); approve attempt → 500, stays PENDING |
-| Product catalog scaled | CSV seed run (`scripts/run-csv-seed.ts`): **+2,571 products, +2,324 UoMs → 2,576 total SKUs** for latency/scale testing |
+| Product catalog scaled | CSV seed run (`scripts/run-csv-seed.ts`): +2,571 products → then `scripts/scale-products.ts` added **+5,500 synthetic SKUs → 8,076 total** for latency testing |
 | Checkouts | 2 × CASH checkout of 500 PCS product #5 (₱600 each) — product #5 stock is now **1500** (correct serialized value would be 1000 — see BUG-014 proof) |
 | Wholesale balance | Customer #6 (Vanguard): two ₱100 payments recorded (ledger −₱200) but balance only fell ₱100 (BUG-032 proof); then a ₱1.20 fully-cash sale added phantom +₱5 AR via CREDIT payment (BUG-016 proof). Balance now 79,905 vs credit_limit 80,000 |
 
@@ -66,7 +66,7 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 ## BUG-002 — POS catalog truncated to first 100 products **[now demonstrable]**
 - **Location:** `lib/pos/services/pos-api.ts:139-163`
 - Single `GET /products?limit=100`; client-side search/filter. ~7,900 of 8,000 SKUs unfindable/unbuyable; `ExchangeModal` picker affected too.
-- **Scale proof:** after CSV seed the catalog holds **2,576 products** — the POS can only see/search the first ~100 (**~4% of catalog**).
+- **Scale proof:** catalog now holds **8,076 products** (target scale) — the POS can only see/search the first ~100 (**~1.2% of catalog**).
 
 ## BUG-003 — POS customer picker truncated to first 100 customers
 - **Location:** `lib/pos/services/pos-api.ts:168-180`
@@ -150,7 +150,9 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 ## BUG-021 — Backend: product search cannot meet <100ms rule — no trigram/full-text indexes **[measured]**
 - **Location:** `prisma/schema.prisma:329-376`; query `products.service.ts:44-67`
 - Search = AND of per-keyword OR `contains … insensitive` across name/sku/size/thread/material. Only `@@index([name])` btree — useless for `ILIKE '%kw%'`. No pg_trgm GIN or tsvector despite AGENT.md mandate. Every search = sequential scan.
-- **Measured at 2,576 SKUs (live):** `search=screw` 30–40ms, `search=hexagonal` ~32–39ms, `search=anchor` 33–62ms, multi-keyword `m6 x 100 zinc` ~75ms, `size`/`thread`/`material` filters ~28–34ms, `/inventory/rop` ~12–18ms. Still under 100ms at 2.5k rows, but seq-scan cost grows ~linearly — at the 8,000+ SKU target the worst multi-keyword queries will likely exceed the rule. Add pg_trgm GIN indexes before scale-up.
+- **Measured live:**
+  - **2,576 SKUs:** `search=screw` 30–40ms, `search=hexagonal` ~32–39ms, `search=anchor` 33–62ms, multi-keyword ~75ms — under the rule.
+  - **8,076 SKUs (target scale):** `search=screw` 46–104ms, `search=cable tie m6` **88–119ms**, `search=bolt m8 zinc` ~83ms, `search=hexagonal` ~55ms, attribute filters ~28–35ms, plain pages ~26–52ms, `/inventory/rop` ~12–20ms. **Multi-keyword searches breach the <100ms rule at target scale** — seq-scan cost scales linearly. Add pg_trgm GIN indexes before production.
 
 ## BUG-022 — Backend: idempotency interceptor is non-atomic and unscoped
 - **Location:** `src/common/interceptors/idempotency.interceptor.ts:34-59`
