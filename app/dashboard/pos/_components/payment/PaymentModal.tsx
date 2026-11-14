@@ -304,10 +304,13 @@ export default function PaymentModal({
         setCheckoutError(errorMsg);
 
         // Check if error is override-eligible (credit limit, overdue, or inventory limit)
+        // const isEligible =
+        //   /overdue|credit|stock|inventory|limit|exception/i.test(errorMsg) ||
+        //   errorMsg.includes("OverdueCreditException") ||
+        //   errorMsg.includes("InsufficientCreditException");
         const isEligible =
-          /overdue|credit|stock|inventory|limit|exception/i.test(errorMsg) ||
-          errorMsg.includes("OverdueCreditException") ||
-          errorMsg.includes("InsufficientCreditException");
+          /overdue|stock|inventory|insufficient/i.test(errorMsg) ||
+          errorMsg.includes("OverdueCreditException");
         if (isEligible) {
           setManagerOverrideRequired(true);
         }

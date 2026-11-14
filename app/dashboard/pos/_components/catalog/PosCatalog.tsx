@@ -12,16 +12,29 @@ export type { CatalogProduct } from "@/lib/pos";
 interface PosCatalogProps {
   searchInputRef: React.RefObject<HTMLInputElement | null>;
   onAddToCart: (product: CatalogProduct) => void;
+  products: CatalogProduct[];
+  loading: boolean;
+  error: string | null;
+  refetch: () => Promise<void> | void;
 }
 
-export function PosCatalog({ searchInputRef, onAddToCart }: PosCatalogProps) {
+export function PosCatalog({
+  searchInputRef,
+  onAddToCart,
+  products,
+  loading,
+  error,
+  refetch,
+}: PosCatalogProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const { products, loading, error, refetch } = usePosCatalog();
+  // const { products, loading, error, refetch } = usePosCatalog();
 
   // Extract unique categories dynamically from loaded products
   const categories = useMemo(() => {
-    const set = new Set(products.map((p) => p.category?.trim()).filter(Boolean));
+    const set = new Set(
+      products.map((p) => p.category?.trim()).filter(Boolean),
+    );
     return ["All", ...Array.from(set)];
   }, [products]);
 
@@ -93,9 +106,16 @@ export function PosCatalog({ searchInputRef, onAddToCart }: PosCatalogProps) {
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-12 text-center text-xs text-muted-foreground gap-2">
             <AlertCircle className="h-6 w-6 text-destructive" />
-            <p className="text-foreground font-medium">Failed to load product catalog</p>
+            <p className="text-foreground font-medium">
+              Failed to load product catalog
+            </p>
             <p className="text-muted-foreground">{error}</p>
-            <Button variant="outline" size="sm" onClick={refetch} className="mt-2 gap-1.5 text-xs rounded-[4px]">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={refetch}
+              className="mt-2 gap-1.5 text-xs rounded-[4px]"
+            >
               <RefreshCw className="h-3.5 w-3.5" /> Retry
             </Button>
           </div>

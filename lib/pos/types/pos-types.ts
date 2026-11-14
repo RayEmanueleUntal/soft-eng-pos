@@ -16,7 +16,7 @@ export type UnitOfMeasure =
   | "METER"
   | "HUNDRED"
   | "GROSS"
-  | "SACKs";
+  | "SMALL_BOX";
 
 export type TransactionStatus =
   | "COMPLETED"
@@ -52,6 +52,8 @@ export interface BackendProductUom {
   price?: number;
   retail_price?: number;
   wholesale_price?: number;
+  calculated_retail_price?: number;
+  calculated_wholesale_price?: number | null;
 }
 
 export interface BackendProduct {

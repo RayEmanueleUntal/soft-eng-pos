@@ -74,7 +74,7 @@ const navigation: NavItem[] = [
         href: "/dashboard/inventory/adjustments",
         requiresStockRole: true,
       },
-     {
+      {
         name: "Deliveries",
         href: "/dashboard/inventory/deliveries",
       },
@@ -116,7 +116,7 @@ const navigation: NavItem[] = [
   },
   {
     name: "Admin",
-    href: "/dashboard/admin/system-settings",
+    href: "/dashboard/admin/analytics",
     icon: UserStar,
     allowedRoles: ROLE_PERMISSIONS["/dashboard/admin"],
     children: [
