@@ -51,9 +51,9 @@ Whole-app audit: frontend `lib/*` + components vs. backend controllers/DTOs/serv
 
 | Severity | Count |
 |---|---|
-| High | 33 |
-| Medium | ~73 |
-| Low | ~73 |
+| High | 34 |
+| Medium | ~78 |
+| Low | ~79 |
 | Informational | 7 |
 
 Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
@@ -257,6 +257,12 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - **Live proof:** `POST /pos/checkout` customer 4, CREDIT ₱0.90 **without details** → 201; `outstanding_balance` 0→0.90 but AR aging shows the customer with `total=0.9` and **all buckets 0** — debt exists in the macro balance but is invisible to aging buckets, overdue checks (`hasOverdue:false`), and FIFO settlement.
 - **Scenario:** Any API client (or future UI regression) checks out on credit without a due date — the customer's balance grows, but no invoice exists: AR aging shows ₱0 in every bucket, the customer never goes overdue, and payments can't be allocated against the debt. Bad debt accumulates silently.
 - **Fix:** Require `details` for CREDIT (`@IsNotEmpty` conditional) or always create the CreditPayment row with a default date.
+
+## BUG-179 — MANAGER can create/promote ADMIN accounts and modify/deactivate admins — no role hierarchy **[code-verified]**
+- **Severity:** High
+- **Locations:** `staff-user.controller.ts:39-57` (POST allows ADMIN/MANAGER), `:95-117` (PATCH allows ADMIN/MANAGER); DTOs accept any `AssignedRole` incl. ADMIN; `staff-user.service.ts` has no actor/target hierarchy or self-modification checks; `jwt.strategy.ts:33-47` reloads role from DB per request → escalation is effective on existing tokens immediately.
+- **Scenario:** A manager creates a staff account with `assigned_role:"ADMIN"` and a password they know — instant full admin access. Or PATCHes an existing admin's password/`is_active:false` — locking out the real admin. Any manager can silently take over the system.
+- **Fix:** Restrict ADMIN-role assignment and admin-target modifications to ADMIN only; block self-role-change; add hierarchy checks.
 
 ---
 
@@ -583,6 +589,27 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - **Scenario:** In a catalog with legitimate same-spec products (the CSV seed created thousands), an admin edits a product's price or reorder point — save fails with a duplicate-attributes 409 unless they happen to tick 'allow duplicate', a checkbox meant for creation. Confusing, and the generic error path (BUG-025) hides the real cause.
 - **Fix:** Skip the duplicate check when `size_dimensions`/`thread_type`/`material_grade`/`categoryId` are unchanged by the PATCH.
 
+## BUG-180 — No error boundary / not-found / loading / global-error files anywhere in `app/` **[code-verified]**
+- Glob for `**/{error,global-error,not-found,loading,default}.tsx` → zero matches.
+- **Scenario:** Any render exception — e.g., a malformed API payload reaching `.toFixed()` on `undefined` — unmounts the whole route to Next.js's bare production error screen with no recovery or sign-out path. For non-technical POS staff, one bad payload bricks the till UI until manual reload. Unmatched URLs also get the default 404.
+- **Fix:** Add `app/dashboard/error.tsx` (reset + sign-out) and `app/not-found.tsx`.
+
+## BUG-181 — Deliveries and Purchase-Orders list pages fetch with no out-of-order response guard **[code-verified]**
+- `deliveries/page.tsx:38-64`, `purchase-orders/page.tsx:50-72` — same unguarded pattern as BUG-166 (expenses); shipments page shows the correct `requestId` guard to copy.
+- **Scenario:** User clicks page 2 then quickly page 3 — whichever request resolves last wins; the table can show page-2 rows under a "page 3" indicator until manual refresh. Wrong receiving/PO data shown to staff.
+
+## BUG-182 — Seeded `RETURN_WINDOW_DAYS = "14"` contradicts the strict 7-day return policy **[code-verified]**
+- `system-settings.seed.ts:29-34` seeds 14; `returns.service.ts:36-51` consumes it via `getNumber(...,7)` → fresh seeded DBs accept returns for 14 days (+ BUG-040 off-by-one), violating AGENT.md's strict 7-day policy.
+- **Scenario:** On a fresh deployment, a customer returns an item on day 10 — accepted, because the seed value overrides the intended 7-day window. Policy enforcement silently depends on whoever last edited the setting.
+
+## BUG-183 — Dependent seeds violate inventory/AR invariants **[code-verified]**
+- `transactions.seed.ts` creates CREDIT sales + `CreditPayment` rows without updating `Product.current_quantity`, `WholeSaleCustomer.outstanding_balance`, or movements; `deliveries.seed.ts` inserts rows bypassing `processDelivery` WAC/restock; `stock-movements.seed.ts` reasons reference wrong invoice numbers; `returns-exchanges.seed.ts` creates Return/Exchange rows with no side effects.
+- **Scenario:** After mock-mode seeding, `current_quantity` ≠ opening + movements − sales; AR shows credit invoices the customer balance never recorded; analytics/ROP/velocity are wrong on a fresh environment — and anyone debugging 'real' data inherits phantom inconsistencies.
+
+## BUG-184 — `PATCH /products/:id` accepts but silently ignores `current_quantity` **[code-verified]**
+- `update-product.dto.ts` inherits `current_quantity` via `PartialType`; `products.service.ts:379-395,565-596` never writes it → 200 with product unchanged.
+- **Scenario:** An integration PATCHes `{current_quantity: 999}` to correct stock — gets 200, assumes it worked; stock stays wrong and there's no signal the field was dropped.
+
 ---
 
 # LOW SEVERITY
@@ -635,7 +662,7 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 | BUG-138 |`inventory.service.ts:293-299`|`needsRecount` flag set inside rolled-back transaction never persists| A product repeatedly fails stock checks — the recount flag is set then rolled back with the failed checkout, so it's never marked. Staff never know which products need physical recounts. |
 | BUG-139 |`inventory.service.ts:409-439`|`assignBin` catches P2002 only — missing product throws P2025 → 500 not 404| PATCH /inventory/:id/bin with a deleted product ID → 500 instead of a clean 404. Frontend shows 'server error' instead of 'product not found'. |
 | BUG-140 |`stock-out.dto.ts:20-23`, `inventory.service.ts:339`|`date` accepted in stock-out DTO but silently ignored — movement always stamped now| Stock-in and adjust honor backdating; stock-out doesn't. A manager backdating a stock-out for last week's audit gets today's timestamp — the movement history doesn't match reality. |
-| BUG-141 |`forwarder.service.ts:94`|`findAllForwarders` returns `totalPages: 0` on empty result — inconsistent envelope| Forwarder list is empty and a consumer computes totalPages=0 — pagination UI shows 'Page 1 of 0' or div-by-zero instead of the standard totalPages>=1 envelope every other endpoint returns. |
+| BUG-141 |`forwarder.service.ts:94` + paginated response DTOs (`paginated-products-response.dto.ts:36`, `paginated-transactions-response.dto.ts:24`, `paginated-staff-users-response.dto.ts:24`, `paginated-stock-movements-response.dto.ts:40`, `paginated-bin-locations-response.dto.ts:24`)|`totalPages: 0` on empty results — NOT just forwarders; most paginated endpoints share the defect| Any paginated list returns empty — products search with no match, empty transactions/staff/movements/bins/forwarders — and a consumer computes totalPages=0: pagination UI shows 'Page 1 of 0' or div-by-zero instead of the standard totalPages>=1 envelope. |
 | BUG-142 |`get-shipments-query.dto.ts:34-40`, `shipments.service.ts:232-338`|`status` query param accepted but silently ignored by both list endpoints| Caller requests /shipments/active?status=DELIVERED — validation passes, but the service hardcodes its own status split, so the caller gets the wrong dataset with a 200 and no warning. |
 | BUG-143 |`system-settings.controller.ts:47,57`|Settings GET endpoints have no `@Roles` — any authenticated user reads all operational config| A cashier reads RETURN_WINDOW_DAYS, credit thresholds, and any future secrets-in-settings — today it's probably fine, but there's no key allowlist so a sensitive key added later is exposed by default. |
 | BUG-144 |`schema.prisma:228`, `shipments.service.ts:186-193`|`Shipment.dispatch_date` set at creation, never updated on DISPATCHED transition| Ops sorts active deliveries by dispatch_date expecting actual dispatch times — they get creation order instead, so the oldest-created (not oldest-dispatched) shipments surface first. |
@@ -650,6 +677,12 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 | BUG-170 |`StaffTable.tsx:162,518-550`|Client-side pagination never clamps `page` when `filteredStaff` shrinks on refetch| On page 2+ with an active filter, enough rows leave the set after a refetch that the page empties — pagination hides entirely (≤LIMIT) and the table shows 'No staff members match' with no Previous button. Dead end until the user guesses to change a filter. |
 | BUG-175 |`inventory.service.ts:206,340`; `analytics.service.ts:572-579,638-641`; `schema.prisma:691-695`|`MovementType.SALE`/`RETURN` never written — sales, exchange issues, and return restocks all log as generic IN/OUT| A product issued only via exchanges shows a fresh 'last sale' date with zero sales volume — velocity reports it as recently sold while it's actually dead stock. Auditors can't distinguish a return restock from a supplier stock-in except by parsing reason strings. |
 | BUG-176 |`deliveries.service.ts:217-220,122-136,157-179,233-241`|WAC intake cost uses the PO's conversion factor, not the delivered UoM's; `productMap` snapshot read before `$transaction`| PO ordered in BOX (factor 12) but received in pieces — stock adds base units correctly while `cost_price` WAC divides by the PO's factor, silently skewing valuation; concurrent sales make the WAC denominator stale too. |
+| BUG-185 |`create-po-item.dto.ts:5-8`, `get-products.dto.ts:18-21`, `stock-in/out.dto.ts:15-18`, `adjust-inventory.dto.ts:15-18`, `assign-bin.dto.ts:5-8`|Multiple DTOs use `@IsNumber()`/`@IsPositive()` without `@IsInt()` on ID fields — fractional IDs reach Prisma Int columns as 500s| `POST /inventory/stock-in {"productId":1.5}` or `PATCH /inventory/:id/bin {"binId":1.5}` passes validation then dies inside Prisma as a 500 instead of a clean 400 — same class as BUG-164 but across five more endpoints. |
+| BUG-186 |`create-customer-payment.dto.ts:12-15,29-36`; `customers.service.ts:451-455,552-562`|Settlement DTO declares `SettlementPaymentMethod = CASH\|GCASH` but validates the broader `PaymentMethod` enum — CHECK/BANK_TRANSFER accepted with no reference required| `POST /customers/wholesale/:id/payments {payment_method:"CHECK"}` succeeds, decrements AR, and settles FIFO invoices with no check number or bank detail — bypasses the intended settlement contract and its audit trail. |
+| BUG-188 |`bin-location.service.ts:52-54,90-92` (+ log sites in staff-user/product-categories services)|User-facing errors contain literal template syntax — `\(aisle_number}` / `\)shelf_location}` instead of interpolated values| Creating a duplicate bin returns a 409 whose message shows broken template text instead of which aisle/shelf conflicted — users can't tell what went wrong; same malformed strings appear in logs. |
+| BUG-189 |`prisma/seeds/admin.seed.ts:6-9`, `staff.seed.ts:6-29`|Seeds create known-credential ADMIN/MANAGER/CASHIER/STOCK accounts (`admin123`/`staff123456`)| If `prisma/seed.ts` ever runs against staging/production, well-known credentials immediately grant ADMIN and MANAGER access — conditional on seed misuse outside local dev. |
+| BUG-190 |`lib/inventory/useROPItems.ts:48-69`|ROP hook refetches from 3 concurrent sources (mount, window focus, 30s interval) with no sequencing or unmount guard| An older slower `/products?limit=100` response resolves after a newer one and overwrites fresher ROP rows; `setResult` can also fire after unmount. Compounds BUG-001's truncated data with staleness. |
+| BUG-191 |`lib/inventory/shipment-utils.ts:43-58`|`splitShipmentNotes` reclassifies any user text matching the log-line regex as system log| A note containing a line like `[2026-01-01 Status -> DELIVERED]:` (pasted correspondence, seeded data, format change) causes all subsequent real notes to be hidden inside parsed log entries — the drawer shows truncated user text. |
 
 ## BUG-113 — Roles without POS access get infinite redirect loop — app unusable **[BROWSER-CONFIRMED]**
 - **Severity:** High
