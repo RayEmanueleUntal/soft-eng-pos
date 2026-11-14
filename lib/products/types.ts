@@ -11,7 +11,7 @@ export const PRODUCT_UOMS = [
   "HUNDRED",
   "GROSS",
   "SACK",
-  "SACKs",
+  "SMALL_BOX",
 ] as const;
 
 export type UnitOfMeasure = (typeof PRODUCT_UOMS)[number];

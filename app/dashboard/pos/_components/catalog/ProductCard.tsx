@@ -13,12 +13,17 @@ interface ProductCardProps {
 export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const baseUom = product.base_uom || "PCS";
   const pricingUom = product.pricing_uom || product.unit_of_measure || baseUom;
-  const pricingUnitQty = product.pricing_unit_qty && product.pricing_unit_qty > 0 ? product.pricing_unit_qty : 1;
+  const pricingUnitQty =
+    product.pricing_unit_qty && product.pricing_unit_qty > 0
+      ? product.pricing_unit_qty
+      : 1;
 
   // Show the switcher if the flat fields differ OR if the uoms array has any non-base entry
   const hasAlternateUom =
     baseUom.toUpperCase() !== pricingUom.toUpperCase() ||
-    (product.uoms ?? []).some((u) => u.uom && u.uom.toUpperCase() !== baseUom.toUpperCase());
+    (product.uoms ?? []).some(
+      (u) => u.uom && u.uom.toUpperCase() !== baseUom.toUpperCase(),
+    );
 
   const [selectedUom, setSelectedUom] = useState<string>(pricingUom);
 
@@ -26,36 +31,59 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   //   • For the base UoM → use product.retailPrice (retail_price from API, per base unit)
   //   • For an alternate UoM → use uoms[].retail_price if present, else multiply base × convFactor
   const baseRetailPrice = Number(product.retailPrice ?? product.price ?? 0);
-  const baseWholesalePrice = Number(product.wholesalePrice ?? product.price ?? 0);
+  const baseWholesalePrice = Number(
+    product.wholesalePrice ?? product.price ?? 0,
+  );
 
   const resolvePrice = (uom: string, basePrice: number): number => {
     if (uom.toUpperCase() === baseUom.toUpperCase()) return basePrice;
     const entry = (product.uoms ?? []).find(
-      (u) => u.uom && u.uom.toUpperCase() === uom.toUpperCase()
+      (u) => u.uom && u.uom.toUpperCase() === uom.toUpperCase(),
     );
     if (!entry) return basePrice;
-    // Prefer the backend-supplied price for this UoM
-    const entryRetail = Number(entry.retail_price ?? entry.price ?? 0);
+
+    // 1. Prefer backend-calculated or explicit UoM retail price
+    const entryRetail = Number(
+      entry.calculated_retail_price ?? entry.retail_price ?? entry.price ?? 0,
+    );
     if (entryRetail > 0) return entryRetail;
-    // Fall back: multiply base-unit price by conversion factor
+
+    // 2. Fallback: base-unit price * conversion factor
     const factor = Number(
-      entry.conversion_factor ?? entry.conversionFactor ?? entry.multiplier ?? 1
+      entry.conversion_factor ??
+        entry.conversionFactor ??
+        entry.multiplier ??
+        1,
     );
     return Number((basePrice * (factor || 1)).toFixed(2));
   };
 
   const displayPrice = resolvePrice(selectedUom, baseRetailPrice);
+
   const displayWholesalePrice = (() => {
-    if (selectedUom.toUpperCase() === baseUom.toUpperCase()) return baseWholesalePrice;
+    if (selectedUom.toUpperCase() === baseUom.toUpperCase())
+      return baseWholesalePrice;
     const entry = (product.uoms ?? []).find(
-      (u) => u.uom && u.uom.toUpperCase() === selectedUom.toUpperCase()
+      (u) => u.uom && u.uom.toUpperCase() === selectedUom.toUpperCase(),
     );
     if (!entry) return baseWholesalePrice;
-    const entryWholesale = Number(entry.wholesale_price ?? 0);
+
+    const entryWholesale = Number(
+      entry.calculated_wholesale_price ?? entry.wholesale_price ?? 0,
+    );
     if (entryWholesale > 0) return entryWholesale;
-    const entryRetail = Number(entry.retail_price ?? entry.price ?? 0);
+
+    const entryRetail = Number(
+      entry.calculated_retail_price ?? entry.retail_price ?? entry.price ?? 0,
+    );
     if (entryRetail > 0) return entryRetail;
-    const factor = Number(entry.conversion_factor ?? entry.conversionFactor ?? entry.multiplier ?? 1);
+
+    const factor = Number(
+      entry.conversion_factor ??
+        entry.conversionFactor ??
+        entry.multiplier ??
+        1,
+    );
     return Number((baseWholesalePrice * (factor || 1)).toFixed(2));
   })();
 
@@ -63,21 +91,28 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const conversionFactor = (() => {
     if (selectedUom.toUpperCase() === baseUom.toUpperCase()) return 1;
     const entry = (product.uoms ?? []).find(
-      (u) => u.uom && u.uom.toUpperCase() === selectedUom.toUpperCase()
+      (u) => u.uom && u.uom.toUpperCase() === selectedUom.toUpperCase(),
     );
     if (entry) {
-      const f = Number(entry.conversion_factor ?? entry.conversionFactor ?? entry.multiplier ?? 0);
+      const f = Number(
+        entry.conversion_factor ??
+          entry.conversionFactor ??
+          entry.multiplier ??
+          0,
+      );
       if (f > 0) return f;
     }
     return pricingUnitQty;
   })();
 
   // Compute dynamic stock availability: current_quantity / conversion_factor
-  const totalBaseStock = typeof product.current_quantity === "number" ? product.current_quantity : 0;
+  const totalBaseStock =
+    typeof product.current_quantity === "number" ? product.current_quantity : 0;
   const rawAvailableStock = totalBaseStock / conversionFactor;
-  const availableStock = conversionFactor > 1
-    ? Number(rawAvailableStock.toFixed(2))
-    : totalBaseStock;
+  const availableStock =
+    conversionFactor > 1
+      ? Number(rawAvailableStock.toFixed(2))
+      : totalBaseStock;
 
   const isOutOfStock = totalBaseStock <= 0 || availableStock <= 0;
 
@@ -87,9 +122,9 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
     onAddToCart({
       ...product,
       unit_of_measure: selectedUom,
-      price: displayPrice,
-      retailPrice: displayPrice,
-      wholesalePrice: displayWholesalePrice,
+      // price: displayPrice,
+      // retailPrice: displayPrice,
+      // wholesalePrice: displayWholesalePrice,
       current_quantity: totalBaseStock,
     });
   };
@@ -115,12 +150,16 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
           </span>
           <div className="flex items-center gap-1 shrink-0">
             {isOutOfStock ? (
-              <Badge variant="destructive" className="text-[9px] px-1.5 py-0.5 rounded-[2px] font-mono uppercase font-bold">
+              <Badge
+                variant="destructive"
+                className="text-[9px] px-1.5 py-0.5 rounded-[2px] font-mono uppercase font-bold"
+              >
                 Out of Stock
               </Badge>
             ) : (
               <span className="text-[10px] font-mono text-muted-foreground tabular-nums">
-                Stock: <strong className="text-foreground">{availableStock}</strong>
+                Stock:{" "}
+                <strong className="text-foreground">{availableStock}</strong>
               </span>
             )}
             {/* Always visible UoM pill badge */}
@@ -150,7 +189,10 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
 
         {/* UoM Switcher if alternate UoM exists */}
         {hasAlternateUom && (
-          <div className="flex items-center gap-0.5 bg-muted/80 p-0.5 rounded-[3px] border border-border" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="flex items-center gap-0.5 bg-muted/80 p-0.5 rounded-[3px] border border-border"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               type="button"
               onClick={(e) => handleUomToggle(e, baseUom)}

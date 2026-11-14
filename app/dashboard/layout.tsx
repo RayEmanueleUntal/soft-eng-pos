@@ -79,6 +79,10 @@ const navigation: NavItem[] = [
         href: "/dashboard/inventory/deliveries",
       },
       {
+        name: "Shipments",
+        href: "/dashboard/inventory/shipments",
+      },
+      {
         name: "Purchase Orders",
         href: "/dashboard/inventory/purchase-orders",
         allowedRoles: ROLE_PERMISSIONS["/dashboard/inventory/purchase-orders"],
@@ -101,13 +105,18 @@ const navigation: NavItem[] = [
     icon: Truck,
   },
   {
+    name: "Forwarders",
+    href: "/dashboard/forwarders",
+    icon: Truck,
+  },
+  {
     name: "Staff",
     href: "/dashboard/staff",
     icon: UserRound,
   },
   {
     name: "Admin",
-    href: "/dashboard/admin/system-settings",
+    href: "/dashboard/admin/analytics",
     icon: UserStar,
     allowedRoles: ROLE_PERMISSIONS["/dashboard/admin"],
     children: [
@@ -124,7 +133,7 @@ const navigation: NavItem[] = [
         href: "/dashboard/admin/system-settings",
       },
       {
-        name: "Request Approvals",
+        name: "Approval Requests",
         href: "/dashboard/admin/approval-requests",
       },
     ],

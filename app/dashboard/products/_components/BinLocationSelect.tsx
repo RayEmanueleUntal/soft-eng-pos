@@ -144,11 +144,7 @@ export function BinLocationSelect({
 
       {error && !open ? (
         <p className="text-xs text-destructive">{error}</p>
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          Optional. Search by aisle or shelf location.
-        </p>
-      )}
+      ) : null}
     </div>
   );
 }

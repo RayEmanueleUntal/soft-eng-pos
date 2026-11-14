@@ -36,8 +36,8 @@ interface DetailResult {
 }
 
 const RECEIPT_STYLES: Record<ItemReceiptStatus, string> = {
-  PENDING: "border-amber-500/40 bg-amber-500/10 text-amber-700",
-  PARTIAL: "border-primary/30 bg-primary/5 text-primary",
+  PENDING: "border-primary/30 bg-primary/5 text-primary",
+  PARTIAL: "border-amber-500/40 bg-amber-500/10 text-amber-700",
   COMPLETE: "border-transparent bg-primary text-primary-foreground",
   CANCELLED: "border-destructive/30 bg-destructive/10 text-destructive",
 };

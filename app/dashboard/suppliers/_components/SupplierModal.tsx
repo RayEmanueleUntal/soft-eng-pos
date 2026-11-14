@@ -112,7 +112,7 @@ export function SupplierModal({
 
         <form onSubmit={handleSubmit} className="grid gap-4 py-2">
           <div className="grid gap-1.5">
-            <Label htmlFor="companyName">Company Name *</Label>
+            <Label htmlFor="companyName">Company Name <span className="text-destructive">*</span> </Label>
             <Input
               id="companyName"
               placeholder="e.g. Manila Industrial Fasteners"
@@ -140,7 +140,7 @@ export function SupplierModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email<span className="text-destructive">*</span> </Label>
               <Input
                 id="email"
                 type="email"
@@ -169,7 +169,7 @@ export function SupplierModal({
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="address">Address *</Label>
+            <Label htmlFor="address">Address <span className="text-destructive">*</span></Label>
             <Input
               id="address"
               placeholder="e.g. Building 4, Metro Industrial Park"

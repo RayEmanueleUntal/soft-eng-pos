@@ -81,20 +81,43 @@ Within each functional area, user-facing errors, validation messages, and succes
 
 ---
 
+## Forwarders Page (Logistics)
+
+### User Errors, Validation & Success
+
+| Message Type | Meaning | Recommended Action | Page Found In | How to Reproduce |
+|--------------|---------|-------------------|---------------|------------------|
+| Company Name and Contact Info are required. | One or both required fields left empty | Enter company name and tracking contact info | Create Forwarder Modal (`app/dashboard/forwarders/_components/CreateForwarderModal.tsx`) | Submit form with empty company name or contact info |
+| Forwarder updated successfully. | Existing forwarder details saved | None | Forwarders Page (`app/dashboard/forwarders/page.tsx`, `EditForwarderModal`) | Edit a forwarder in the modal and save |
+| Forwarder created successfully. | New forwarder added | None | Forwarders Page (`app/dashboard/forwarders/page.tsx`, `CreateForwarderModal`) | Add a new forwarder in the modal and save |
+| Forwarder deleted successfully. | Forwarder removed from the list | None | Forwarders Page (`app/dashboard/forwarders/page.tsx`, `DeleteForwarderModal`) | Delete a forwarder from the table |
+
+### Backend / API Failures
+
+| Message Type | Meaning | Recommended Action | Page Found In | How to Reproduce |
+|--------------|---------|-------------------|---------------|------------------|
+| Failed to load forwarders. | Forwarder list could not be fetched | Retry / refresh; check connection | Forwarders Page (`app/dashboard/forwarders/page.tsx`) | `GET /forwarders` endpoint fails |
+| Failed to create forwarder. | Create API call failed | Try again; check backend message | Create Forwarder Modal (`app/dashboard/forwarders/_components/CreateForwarderModal.tsx`, `handleSubmit` catch) | `POST /forwarders` endpoint fails |
+| Failed to update forwarder. | Update API call failed | Try again; check backend message | Edit Forwarder Modal (`app/dashboard/forwarders/_components/EditForwarderModal.tsx`, `handleSubmit` catch) | `PATCH /forwarders/{id}` endpoint fails |
+| Failed to delete forwarder. | Delete API call failed | Try again; check backend message | Delete Forwarder Modal (`app/dashboard/forwarders/_components/DeleteForwarderModal.tsx`, `handleDelete` catch) | `DELETE /forwarders/{id}` endpoint fails |
+
+---
+
 ## Approval Requests Page (Admin)
 
 ### User Errors, Validation & Success
 
 | Message Type | Meaning | Recommended Action | Page Found In | How to Reproduce |
 |--------------|---------|-------------------|---------------|------------------|
-| (none) | | | | |
+| An error occurred while processing your request. | Approve or reject API call failed; error message returned by backend | Review the error message and try again | Approval Requests Page (`app/dashboard/admin/approval-requests/page.tsx`, `handleConfirmApprove` / `handleConfirmReject`) | Collapse a request, then confirm approve or reject when backend rejects |
 
 ### Backend / API Failures
 
 | Message Type | Meaning | Recommended Action | Page Found In | How to Reproduce |
 |--------------|---------|-------------------|---------------|------------------|
-| Failed to approve request. | Approve API call failed | Try again; check permissions | Approval Requests Page (`app/dashboard/admin/approval-requests/page.tsx`, `handleConfirmApprove`) | Click Approve when backend rejects |
-| Failed to reject request. | Reject API call failed | Try again; check permissions | Approval Requests Page (`app/dashboard/admin/approval-requests/page.tsx`, `handleConfirmReject`) | Click Reject when backend rejects |
+| Failed to load approval requests. | Approval requests list could not be fetched | Refresh / retry; check connection | Approval Requests Page (`app/dashboard/admin/approval-requests/page.tsx`) | `GET /approval` endpoint fails |
+| Failed to approve request. | Approve API call failed | Try again; check backend message | Approval Requests Page (`app/dashboard/admin/approval-requests/page.tsx`, `handleConfirmApprove`) | Click Approve when backend rejects |
+| Failed to reject request. | Reject API call failed | Try again; check backend message | Approval Requests Page (`app/dashboard/admin/approval-requests/page.tsx`, `handleConfirmReject`) | Click Reject when backend rejects |
 
 ---
 
@@ -404,6 +427,29 @@ Within each functional area, user-facing errors, validation messages, and succes
 
 ---
 
+## Admin – Analytics Page (Executive Dashboard)
+
+### User Errors, Validation & Success
+
+| Message Type | Meaning | Recommended Action | Page Found In | How to Reproduce |
+|--------------|---------|-------------------|---------------|------------------|
+| Start date must be on or before end date. Adjust the date range to load analytics. | Date range validation: start date is after end date | Fix the date range (From must be ≤ To) | Analytics Page (`app/dashboard/admin/analytics/page.tsx`, `InvalidRangeNotice`) | Select a start date later than the end date |
+| No wholesale credit activity yet. | No top credit customers in the aging table | None – informational empty state | Accounts Receivable Tab (`app/dashboard/admin/analytics/_components/AccountsReceivableTab.tsx`) | View AR tab when no customers have credit balances |
+| No payment breakdown for this period. | No payment method data for the selected range | Widen or change the date range | Financial Performance Tab (`app/dashboard/admin/analytics/_components/FinancialPerformanceTab.tsx`) | Select a date range with no completed transactions |
+| No slow-moving stock detected for this aging window. | No items meet the slow-moving criteria | Lower the aging days threshold or widen range | Inventory Velocity Tab (`app/dashboard/admin/analytics/_components/InventoryVelocityTab.tsx`) | Set aging days high when all items are fast-moving |
+| No accounts receivable data available. | No AR credit overview or aging data | None – informational empty state | Accounts Receivable Tab (`app/dashboard/admin/analytics/_components/AccountsReceivableTab.tsx`) | View AR tab when no credit customers exist |
+| No inventory velocity data for this period. | No fast or slow moving items in the range | Widen the date range | Inventory Velocity Tab (`app/dashboard/admin/analytics/_components/InventoryVelocityTab.tsx`) | Select a date range with no sales data |
+
+### Backend / API Failures
+
+| Message Type | Meaning | Recommended Action | Page Found In | How to Reproduce |
+|--------------|---------|-------------------|---------------|------------------|
+| Failed to load analytics | Analytics API call failed | Click Retry to re-fetch | Kpi Summary Cards (`app/dashboard/admin/analytics/_components/KpiSummaryCards.tsx`, `AnalyticsError`) | Dashboard summary endpoint (`/analytics/summary`) returns an error |
+| Failed to load analytics | Sales performance API call failed | Click Retry to re-fetch | Financial Performance Tab (`app/dashboard/admin/analytics/_components/FinancialPerformanceTab.tsx`, `AnalyticsError`) | Sales performance endpoint (`/analytics/sales-performance`) returns an error |
+| Failed to load analytics | OpEx analytics API call failed | Click Retry to re-fetch | Expenses Tab (`app/dashboard/admin/analytics/_components/ExpensesTab.tsx`, `AnalyticsError`) | Expense analytics endpoint (`/analytics/expenses`) returns an error |
+| Failed to load analytics | Inventory velocity API call failed | Click Retry to re-fetch | Inventory Velocity Tab (`app/dashboard/admin/analytics/_components/InventoryVelocityTab.tsx`, `AnalyticsError`) | Inventory velocity endpoint (`/analytics/inventory-velocity`) returns an error |
+| Failed to load analytics | Accounts receivable API call failed | Click Retry to re-fetch | Accounts Receivable Tab (`app/dashboard/admin/analytics/_components/AccountsReceivableTab.tsx`, `AnalyticsError`) | AR analytics endpoint (`/analytics/accounts-receivable`) returns an error |
+
 ---
 
 ## Admin – Expenses Page
@@ -415,15 +461,14 @@ Within each functional area, user-facing errors, validation messages, and succes
 | Amount is required. | Amount field is empty | Enter an amount | Create Expense Modal (`app/dashboard/admin/expenses/_components/CreateExpenseModal.tsx`, `validateAmount`) | Submit with empty amount |
 | Amount must be a number. | Amount is not a valid number | Enter a numeric value | Create Expense Modal (`app/dashboard/admin/expenses/_components/CreateExpenseModal.tsx`, `validateAmount`) | Enter text like "abc" in amount |
 | Amount must be greater than 0. | Amount is zero or negative | Enter a positive amount | Create Expense Modal (`app/dashboard/admin/expenses/_components/CreateExpenseModal.tsx`, `validateAmount`) | Enter 0 or -100 |
-| Use at most 2 decimal places, for example 2500.50. | Amount has more than 2 decimal places | Round to 2 decimals | Create Expense Modal (`app/dashboard/admin/expenses/_components/CreateExpenseModal.tsx`, `validateAmount`) | Enter 2500.555 |
+| Use at most 2 decimal places, for example 2500.50. | Amount has more than 2 decimal places | Round to 2 decimal places | Create Expense Modal (`app/dashboard/admin/expenses/_components/CreateExpenseModal.tsx`, `validateAmount`) | Enter 2500.555 |
 | Category is required. | No expense category selected | Choose a category | Create Expense Modal (`app/dashboard/admin/expenses/_components/CreateExpenseModal.tsx`, `categoryError`) | Submit without selecting category |
-| No changes to save. | Edit form submitted with no modifications | Change at least one field | Edit Expense Modal (`app/dashboard/admin/expenses/_components/EditExpenseModal.tsx`, `handleSubmit`) | Open edit, change nothing, click Save |
+| No changes to save. | Edit form submitted with no modifications | Change at least one field | Edit Expense Modal (`app/dashboard/admin/expenses/_components/EditExpenseModal.tsx`, `handleSubmit`) | Open edit, change nothing, click Save Changes |
+| End date must be on or after the start date. | Date range invalid: end before start | Correct the dates | Expense Filter Bar (`app/dashboard/admin/expenses/_components/ExpenseFilterBar.tsx`, `isInvalidDateRange`) | Select end date before start date |
 | Expense #<id> created. | New expense successfully recorded | None | Expenses Page (`app/dashboard/admin/expenses/page.tsx`, `handleCreated`) | Create expense via New Expense button |
 | Expense #<id> updated. | Existing expense modified | None | Expenses Page (`app/dashboard/admin/expenses/page.tsx`, `handleUpdated`) | Edit expense and save changes |
 | Expense #<id> deleted. | Expense removed | None | Expenses Page (`app/dashboard/admin/expenses/page.tsx`, `handleDeleted`) | Delete expense from table |
 | This removes the expense permanently. This cannot be undone. | Delete confirmation warning | Confirm carefully | Delete Expense Dialog (`app/dashboard/admin/expenses/_components/DeleteExpenseDialog.tsx`) | Open delete confirmation |
-| End date must be on or after the start date. | Date range invalid: end before start | Correct the dates | Expense Filter Bar (`app/dashboard/admin/expenses/_components/ExpenseFilterBar.tsx`, `isInvalidDateRange`) | Select end date before start date |
-| No expenses found. Use "New Expense" to record one. | Empty expense list | Create an expense | Expense Table (`app/dashboard/admin/expenses/_components/ExpenseTable.tsx`) | View page with no expenses |
 
 ### Backend / API Failures
 
@@ -432,35 +477,9 @@ Within each functional area, user-facing errors, validation messages, and succes
 | Failed to load expenses. | Expense list could not be fetched | Refresh and try again | Expenses Page (`app/dashboard/admin/expenses/page.tsx`, `loadExpenses`) | `GET /expenses` endpoint fails |
 | Failed to record the expense. | Expense creation API call failed | Try again; check backend message | Create Expense Modal (`app/dashboard/admin/expenses/_components/CreateExpenseModal.tsx`, `handleSubmit` catch) | `POST /expenses` endpoint fails |
 | Failed to update the expense. | Expense edit API call failed | Try again | Edit Expense Modal (`app/dashboard/admin/expenses/_components/EditExpenseModal.tsx`, `handleSubmit` catch) | `PATCH /expenses/{id}` endpoint fails |
-| (404 message) Expense no longer exists | Expense was deleted by another user | Refresh and try again | Edit Expense Modal (`app/dashboard/admin/expenses/_components/EditExpenseModal.tsx`, `isExpenseNotFound`) | Edit expense that was deleted elsewhere |
 | Failed to delete the expense. | Expense deletion API call failed | Try again | Delete Expense Dialog (`app/dashboard/admin/expenses/_components/DeleteExpenseDialog.tsx`, `handleDelete` catch) | `DELETE /expenses/{id}` endpoint fails |
-| (404 message) Expense no longer exists | Expense already deleted | Refresh list | Delete Expense Dialog (`app/dashboard/admin/expenses/_components/DeleteExpenseDialog.tsx`, `isExpenseNotFound`) | Delete expense already removed |
-
----
-
-## Admin – Analytics Page (Executive Dashboard)
-
-### User Errors, Validation & Success
-
-| Message Type | Meaning | Recommended Action | Page Found In | How to Reproduce |
-|--------------|---------|-------------------|---------------|------------------|
-| Start date must be on or before end date. Adjust the date range to load analytics. | Date range invalid | Fix the date range | Analytics Page (`app/dashboard/admin/analytics/page.tsx`, `InvalidRangeNotice`) | Select start date after end date |
-| No data available for the selected range. | No analytics data for chosen dates | Widen or change date range | Analytics Feedback (`app/dashboard/admin/analytics/_components/AnalyticsFeedback.tsx`, `AnalyticsEmpty`) | Set date range with no data |
-| No wholesale credit activity yet. | No AR records | None | Accounts Receivable Tab (`app/dashboard/admin/analytics/_components/AccountsReceivableTab.tsx`) | View AR tab with no credit customers |
-| No slow-moving stock detected for this aging window. | No items match aging criteria | Reduce aging days or widen range | Inventory Velocity Tab (`app/dashboard/admin/analytics/_components/InventoryVelocityTab.tsx`) | Set aging days too high |
-| No payment breakdown for this period. | No payment data | Change date range | Financial Performance Tab (`app/dashboard/admin/analytics/_components/FinancialPerformanceTab.tsx`) | View period with no sales |
-| No data available for the selected range. | KPI data empty | Change date range | Kpi Summary Cards (`app/dashboard/admin/analytics/_components/KpiSummaryCards.tsx`) | View KPIs with empty data |
-
-### Backend / API Failures
-
-| Message Type | Meaning | Recommended Action | Page Found In | How to Reproduce |
-|--------------|---------|-------------------|---------------|------------------|
-| Failed to load analytics | Analytics API call failed | Click Retry | Analytics Feedback (`app/dashboard/admin/analytics/_components/AnalyticsFeedback.tsx`, `AnalyticsError`) | Any analytics endpoint returns error |
-| (KPI loading error) | Dashboard summary fetch failed | Click Retry | Kpi Summary Cards (`app/dashboard/admin/analytics/_components/KpiSummaryCards.tsx`, `AnalyticsError`) | `GET /analytics/summary` fails |
-| (Sales performance error) | Financial trend fetch failed | Click Retry | Financial Performance Tab (`app/dashboard/admin/analytics/_components/FinancialPerformanceTab.tsx`, `AnalyticsError`) | `GET /analytics/sales-performance` fails |
-| (Expense analytics error) | OpEx analytics fetch failed | Click Retry | Expenses Tab (`app/dashboard/admin/analytics/_components/ExpensesTab.tsx`, `AnalyticsError`) | `GET /analytics/expenses` fails |
-| (Inventory velocity error) | Velocity data fetch failed | Click Retry | Inventory Velocity Tab (`app/dashboard/admin/analytics/_components/InventoryVelocityTab.tsx`, `AnalyticsError`) | `GET /analytics/inventory-velocity` fails |
-| (AR error) | Accounts receivable fetch failed | Click Retry | Accounts Receivable Tab (`app/dashboard/admin/analytics/_components/AccountsReceivableTab.tsx`, `AnalyticsError`) | `GET /analytics/accounts-receivable` fails |
+| (404 message) Expense no longer exists | Expense was deleted by another user | Refresh and try again | Edit Expense Modal (`app/dashboard/admin/expenses/_components/EditExpenseModal.tsx`, `onMissing`) | Edit an expense that was deleted elsewhere |
+| (404 message) Expense no longer exists | Expense already deleted | Refresh list | Delete Expense Dialog (`app/dashboard/admin/expenses/_components/DeleteExpenseDialog.tsx`, `onMissing`) | Delete an expense already removed |
 
 ---
 
