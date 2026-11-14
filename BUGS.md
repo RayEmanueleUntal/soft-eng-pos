@@ -2,7 +2,7 @@
 
 Whole-app audit: frontend `lib/*` + components vs. backend controllers/DTOs/services/schema, plus live API checks.
 
-- **Frontend:** `C:\Users\Pat\Desktop\soft-eng-pos` (`main` — audit ran while `feature/analytics-dashboard` was checked out; that branch has since been merged, so findings apply to `main`)
+- **Frontend:** `C:\Users\Pat\Desktop\soft-eng-pos`
 - **Backend:** `C:\Users\Pat\Desktop\soft-eng-pos-api` (`http://localhost:3001`)
 - **Method:** 7 parallel module audits (frontend modules, backend services, Prisma schema/auth/remaining services, remaining frontend pages) + live endpoint verification (seeded admin)
 - **Date:** 2026 audit session
