@@ -3,6 +3,7 @@
 // Controlled by its parent via open/onOpenChange and reports the created movement on success.
 "use client";
 
+import * as React from "react";
 import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
@@ -30,8 +31,114 @@ import {
   StockInParams,
   StockOutParams,
   StockMovementResponse,
+  adjustInventory,
 } from "@/lib/inventory/stock-movement-api";
+
 import { allowsDecimals, roundQty } from "@/lib/inventory/uom";
+import { ProductPicker } from "./ProductPicker";
+import { Plus, CheckCircle2 } from "lucide-react"; // <- added CheckCircle2
+
+interface AdjustmentFormProps {
+  initialItem: InventoryItem | null;
+  onCancel: () => void;
+  onSaved: (movement: StockMovementResponse, item: InventoryItem) => void;
+}
+
+function AdjustmentForm({
+  initialItem,
+  onCancel,
+  onSaved,
+}: AdjustmentFormProps) {
+  const [selectedItem, setSelectedItem] = React.useState<InventoryItem | null>(
+    initialItem,
+  );
+  const [newCount, setNewCount] = React.useState("");
+  const [selectedUom, setSelectedUom] = React.useState("");
+  const [availableUoms, setAvailableUoms] = React.useState<UomOption[]>([]);
+  const [reason, setReason] = React.useState("");
+  const [error, setError] = React.useState("");
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [successMessage, setSuccessMessage] = React.useState<string | null>(null); // <- added
+
+  const parsedCount = Number(newCount);
+  const validationError = !selectedItem
+    ? "Select a product to adjust."
+    : !newCount || Number.isNaN(parsedCount) || parsedCount <= 0
+      ? "Enter a valid adjustment quantity."
+      : "";
+
+  // Auto-dismiss success message after 4 seconds.
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(null), 4000);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError("");
+
+    if (validationError || !selectedItem) {
+      setError(validationError || "Select a product to adjust.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      const movement = await adjustInventory({
+        productId: selectedItem.id,
+        current_uom: selectedUom || selectedItem.base_uom,
+        new_count: parsedCount,
+        reason: reason.trim(),
+      });
+
+      onSaved(movement, selectedItem);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to adjust stock.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Show a success message when the adjustment is saved.
+  React.useEffect(() => {
+    if (!selectedItem) return;
+    setSuccessMessage(`${selectedItem.name} adjusted successfully.`);
+  }, [selectedItem]);
+
+  return (
+    <form onSubmit={handleSubmit} className="grid gap-3.5 py-2">
+      {/* ... form fields unchanged ... */}
+
+      {successMessage && ( // <- added success banner
+        <div className="flex items-center justify-between gap-2 text-xs font-sans p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-[4px] animate-in fade-in duration-200">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span>{successMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccessMessage(null)}
+            className="text-emerald-700 hover:text-emerald-950 font-mono text-xs px-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-[4px] border border-destructive/50 bg-destructive/10 p-2.5 text-xs text-destructive">
+          {error}
+        </div>
+      )}
+
+      <DialogFooter className="mt-2">
+        {/* ... buttons unchanged ... */}
+      </DialogFooter>
+    </form>
+  );
+}
 
 interface UomOption {
   uom: string;

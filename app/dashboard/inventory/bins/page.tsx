@@ -4,13 +4,13 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Search,
-  MapPin,
   Loader2,
   ChevronLeft,
   ChevronRight,
   Info,
   Layers,
   AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ export default function BinLocationsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Modal State for Viewing Bin Details
   const [selectedBin, setSelectedBin] = useState<BinLocation | null>(null);
@@ -59,7 +60,6 @@ export default function BinLocationsPage() {
           search: search?.trim() || undefined,
         });
 
-        // OPTION 1: Sort by ID ascending (1, 2, 3, 4, 5, 6...)
         const sortedData = [...res.data].sort((a, b) => a.id - b.id);
 
         setBins(sortedData);
@@ -79,6 +79,12 @@ export default function BinLocationsPage() {
   useEffect(() => {
     fetchBins(page, searchQuery);
   }, [fetchBins, page]);
+
+  useEffect(() => {
+    if (!successMsg) return;
+    const timer = setTimeout(() => setSuccessMsg(null), 4000);
+    return () => clearTimeout(timer);
+  }, [successMsg]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,44 +134,22 @@ export default function BinLocationsPage() {
   };
 
   return (
-    <div className="space-y-3  mx-auto">
-      <div className="shrink-0 mt-4 mb-4 flex justify-between">
-        {/* Header Bar */}
+    <div className="space-y-3 mx-auto">
+      <div className="shrink-0 mt-4 mb-4 flex justify-between items-center">
         <PageHeader
           header="Bin Locations"
           subheader="Store aisles, physical shelf identifiers, and digital coordinates."
         />
         <AddBinModal
-          onSuccess={() => {
+          onSuccess={(newBin) => {
+            setSuccessMsg(
+              `Bin Location BIN-${newBin.aisle_number}-${newBin.shelf_location} successfully created.`,
+            );
             setPage(1);
             fetchBins(1);
           }}
         />
       </div>
-
-      {/* <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3.5 bg-white border border-[#CBD5E1] rounded-sm gap-2">
-        <div>
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-[#0060B2]" />
-            <h1 className="text-lg font-bold font-['Space_Grotesk'] text-[#0F172A] tracking-tight">
-              Bin Locations
-            </h1>
-            <span className="text-[11px] font-mono font-semibold border border-[#CBD5E1] text-[#565E74] bg-[#F8FAFC] px-1.5 py-0.5 rounded-sm">
-              {meta.total} TOTAL
-            </span>
-          </div>
-          <p className="text-xs text-[#414751] mt-0.5 font-['Inter']">
-            Store aisles, physical shelf identifiers, and digital coordinates.
-          </p>
-        </div>
-
-        <AddBinModal
-          onSuccess={() => {
-            setPage(1);
-            fetchBins(1);
-          }}
-        />
-      </div> */}
 
       {/* Filter / Search Toolbars */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5">
@@ -236,6 +220,24 @@ export default function BinLocationsPage() {
           )}
         </form>
       </div>
+
+      {/* Success Banner */}
+      {successMsg && (
+        <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium rounded-sm flex items-center justify-between animate-in fade-in duration-200">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span>{successMsg}</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSuccessMsg(null)}
+            className="h-5 text-[10px] text-emerald-800 hover:bg-black/5 px-2"
+          >
+            Dismiss
+          </Button>
+        </div>
+      )}
 
       {/* Exception Error Banner */}
       {errorMsg && (

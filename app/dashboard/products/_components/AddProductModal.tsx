@@ -10,17 +10,18 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ProductForm } from "./ProductForm";
+import type { Product } from "@/lib/products/types";
 
 interface AddProductModalProps {
-  onSaved?: () => void;
+  onSaved?: (product?: Product) => void;
 }
 
 export function AddProductModal({ onSaved }: AddProductModalProps) {
   const [open, setOpen] = useState(false);
 
-  const handleSaved = () => {
+  const handleSaved = (product?: Product) => {
     setOpen(false);
-    onSaved?.();
+    onSaved?.(product);
   };
 
   return (

@@ -16,13 +16,15 @@ import type { Product } from "@/lib/products/types";
 interface DeleteProductDialogProps {
   product: Product | null;
   onClose: () => void;
-  onDeleted: () => void;
+  onDeleted: (deletedProduct: Product) => void;
+  onError?: (message: string) => void;
 }
 
 export function DeleteProductDialog({
   product,
   onClose,
   onDeleted,
+  onError,
 }: DeleteProductDialogProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -45,12 +47,14 @@ export function DeleteProductDialog({
         },
       });
 
+      const deleted = product;
       onClose();
-      onDeleted();
+      onDeleted(deleted);
     } catch (err: any) {
-      setError(
-        err?.response?.data?.message || "Unable to delete this product.",
-      );
+      const msg =
+        err?.response?.data?.message || "Unable to delete this product.";
+      setError(msg);
+      onError?.(msg);
     } finally {
       setLoading(false);
     }
@@ -61,6 +65,7 @@ export function DeleteProductDialog({
       open={Boolean(product)}
       onOpenChange={(open) => {
         if (!open && !loading) {
+          setError("");
           onClose();
         }
       }}
@@ -87,7 +92,14 @@ export function DeleteProductDialog({
         )}
 
         <DialogFooter>
-          <Button variant="outline" disabled={loading} onClick={onClose}>
+          <Button
+            variant="outline"
+            disabled={loading}
+            onClick={() => {
+              setError("");
+              onClose();
+            }}
+          >
             Cancel
           </Button>
 

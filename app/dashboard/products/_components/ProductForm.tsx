@@ -20,7 +20,7 @@ import { BinLocationSelect } from "./BinLocationSelect";
 
 interface ProductFormProps {
   product?: Product;
-  onSaved: () => void;
+  onSaved?: (product?: Product) => void;
 }
 
 const createEmptyForm = (): ProductFormData => ({
@@ -335,7 +335,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
     return payload;
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
+const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     setError("");
@@ -391,7 +391,10 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
     }
 
     const binId = toNumberOrNull(formData.binId);
-    if (formData.binId.trim() !== "" && (binId === null || !Number.isInteger(binId) || binId < 1)) {
+    if (
+      formData.binId.trim() !== "" &&
+      (binId === null || !Number.isInteger(binId) || binId < 1)
+    ) {
       setError("Please select a valid bin location.");
       return;
     }
@@ -434,11 +437,8 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
         payload.binId = binId;
 
         /*
-         * The PATCH endpoint does not expose
-         * current_quantity.
-         *
-         * Stock should therefore not be modified
-         * through product editing.
+         * The PATCH endpoint does not expose current_quantity.
+         * Stock should therefore not be modified through product editing.
          */
         if (product && product.base_uom !== formData.base_uom) {
           payload.confirmUomChange = formData.confirmUomChange;
@@ -450,27 +450,31 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
       }
 
       const idempotencyKey = crypto.randomUUID();
+      const response =
+        isEdit && product
+          ? await apiClient.patch(`/products/${product.id}`, payload, {
+              headers: {
+                "Idempotency-Key": idempotencyKey,
+              },
+            })
+          : await apiClient.post("/products", payload, {
+              headers: {
+                "Idempotency-Key": idempotencyKey,
+              },
+            });
 
-      if (isEdit && product) {
-        await apiClient.patch(`/products/${product.id}`, payload, {
-          headers: {
-            "Idempotency-Key": idempotencyKey,
-          },
-        });
-      } else {
-        await apiClient.post("/products", payload, {
-          headers: {
-            "Idempotency-Key": idempotencyKey,
-          },
-        });
-      }
+      const savedProduct: Product = response.data?.data ??
+        response.data ?? {
+          ...(product ?? {}),
+          name: formData.name.trim(),
+        };
 
-      onSaved();
-    } catch (err: unknown) {
-      const response = (err as { response?: { status?: number; data?: { details?: { code?: string } } } })
-        ?.response;
-
-      if (response?.data?.details?.code === "PRODUCT_HAS_TRANSACTION_HISTORY") {
+      onSaved?.(savedProduct);
+    } catch (err: any) {
+      if (
+        err?.response?.data?.details?.code ===
+        "PRODUCT_HAS_TRANSACTION_HISTORY"
+      ) {
         setError(
           "Base UOM cannot be changed after stock history exists. Revert the Base UOM or adjust stock instead.",
         );
