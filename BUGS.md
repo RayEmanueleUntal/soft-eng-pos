@@ -4,7 +4,6 @@ Whole-app audit: frontend `lib/*` + components vs. backend controllers/DTOs/serv
 
 - **Frontend:** `C:\Users\Pat\Desktop\soft-eng-pos`
 - **Backend:** `C:\Users\Pat\Desktop\soft-eng-pos-api` (`http://localhost:3001`)
-- **Scope:** backend findings are **report-only** — the backend repo is owned by another team and must not be modified from this effort. Backend bugs are documented here for issue filing/handoff; only frontend findings are actionable in this repo.
 - **Method:** 7 parallel module audits (frontend modules, backend services, Prisma schema/auth/remaining services, remaining frontend pages) + live endpoint verification (seeded admin) + browser/UI sweep (Playwright)
 - **Date:** 2026 audit session
 
