@@ -23,6 +23,7 @@ Whole-app audit: frontend `lib/*` + components vs. backend controllers/DTOs/serv
 | E2E flow mutations | PO #8 (fulfilled via delivery #4, +10 stock), PO #9 (delivery #5 with **factor 999 → +999 stock**, BUG-015 proof); shipment #2 now DELIVERED; credit sale `INV-2026-0007` ₱9 on customer 6; ₱5 cash settlement; product #5 stock now **1502** |
 | Refund/exchange probes | Tx #11 (qty2 sale): refunds of qty 5+2+2 all APPROVED → +9 units restocked, ~₱727 paid out (BUG-149/150 proof). Tx #12: exchange + subsequent refund both APPROVED — double-dip (BUG-151). Tx #13: ₱80.78→₱116.65 exchange approved, ₱35.87 difference never collected (BUG-152). Approval ids 6–14; products 7590/7591 stock shifted |
 | Credit-limit race | 3 parallel CREDIT checkouts (₱80.78 each, `override:true`) on customer 6 → all 201; balance ₱79,912 → **₱80,154.34, exceeding credit_limit ₱80,000** (BUG-037 live proof; BUG-125 override also exercised) |
+| Phantom credit probe | Customer 4: CREDIT checkout ₱0.90 **without `details`** → balance +0.90 but no CreditPayment invoice — AR aging shows total 0.9 with all buckets 0, `hasOverdue:false` (BUG-171 live proof). Also: product 7600 base_uom PATCH→BOX→restored (BUG-153/178 proofs); split CASH+GCASH checkout ₱50+₱30.78 verified clean |
 | Product catalog scaled | CSV seed run (`scripts/run-csv-seed.ts`): +2,571 products → then `scripts/scale-products.ts` added **+5,500 synthetic SKUs → 8,076 total** for latency testing |
 | Checkouts | 2 × CASH checkout of 500 PCS product #5 (₱600 each) — product #5 stock is now **1500** (correct serialized value would be 1000 — see BUG-014 proof) |
 | Wholesale balance | Customer #6 (Vanguard): two ₱100 payments recorded (ledger −₱200) but balance only fell ₱100 (BUG-032 proof); then a ₱1.20 fully-cash sale added phantom +₱5 AR via CREDIT payment (BUG-016 proof). Balance now 79,905 vs credit_limit 80,000 |
@@ -50,10 +51,10 @@ Whole-app audit: frontend `lib/*` + components vs. backend controllers/DTOs/serv
 
 | Severity | Count |
 |---|---|
-| High | 32 |
-| Medium | ~68 |
-| Low | ~71 |
-| Informational | 6 |
+| High | 33 |
+| Medium | ~73 |
+| Low | ~73 |
+| Informational | 7 |
 
 Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 
@@ -229,10 +230,11 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - **Scenario:** Customer exchanges a defective part for a new one, then files a refund on the original receipt — approved. They keep the new part AND get their money back.
 - **Fix:** Treat exchange as consuming returnable quantity; block refunds once an exchange exists for the item (and vice versa).
 
-## BUG-153 — `base_uom` mutable without converting stock or UoM factors → quantities reinterpreted **[code-verified]**
+## BUG-153 — `base_uom` mutable without converting stock or UoM factors → quantities reinterpreted **[LIVE-CONFIRMED]**
 - **Severity:** High
 - **Locations:** `products.service.ts:398-415` (blocks `base_uom` change only when `stockMovement.count > 0`), `:565-596` (updates `base_uom` without touching `current_quantity`/`ProductUom.conversion_factor`); `update-product.dto.ts:8-15` (`confirmUomChange` documented but never enforced); `schema.prisma:62-63,342,383-385`
 - Opening stock written at create produces no `StockMovement` → `stockMovementCount=0` → `PATCH {base_uom:"BOX"}` succeeds; stored `current_quantity=100` is now read as **100 BOX**, and existing UoM rows still say `1 BOX = 100 BOX`.
+- **Live proof:** `PATCH /products/7600 {base_uom:"BOX"}` (qty 113, zero movements) → 200; product then read `base_uom:BOX, current_quantity:113` — 113 PCS silently became 113 BOX. Restored to PCS afterward.
 - **Scenario:** A product created with 100 PCS opening stock gets its base_uom switched to BOX. The system now believes it holds 100 BOX (10,000+ PCS worth) — sales, WAC, and reorders are all wrong, and the UoM table contradicts itself.
 - **Fix:** Block `base_uom` changes whenever `current_quantity > 0` or UoM rows exist; honor `confirmUomChange` or remove it.
 
@@ -248,6 +250,13 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - **Locations:** `DeliveryDetailViewModal.tsx:85-87,213-224` (`window.print()` only); `globals.css:153-190` (`@media print` hides `body *` except `.print-only`/`#printable-receipt`); no print markup exists on the deliveries route — the only `PrintableInvoice` usages are under `app/dashboard/pos/receipt/`
 - **Scenario:** Staff opens a delivery and clicks "Print Receipt" — the print dialog produces a blank page. Receiving clerks can't produce the goods-received document the business needs for disputes and audits; the button is 100% nonfunctional.
 - **Fix:** Add print-only delivery receipt markup or a scoped `@media print` rule for the modal.
+
+## BUG-171 — CREDIT payment without `details` inflates balance but creates NO `CreditPayment` invoice → phantom debt **[LIVE-CONFIRMED]**
+- **Severity:** High (latent — UI always sends `details.date`, but API permits omission)
+- **Locations:** `payment.dto.ts:75-90` (`details` optional for all methods); `pos.service.ts:351-361` (`creditPayment` row created only when `details` present) vs `:369-375` (`adjustWholesaleBalance` runs regardless)
+- **Live proof:** `POST /pos/checkout` customer 4, CREDIT ₱0.90 **without details** → 201; `outstanding_balance` 0→0.90 but AR aging shows the customer with `total=0.9` and **all buckets 0** — debt exists in the macro balance but is invisible to aging buckets, overdue checks (`hasOverdue:false`), and FIFO settlement.
+- **Scenario:** Any API client (or future UI regression) checks out on credit without a due date — the customer's balance grows, but no invoice exists: AR aging shows ₱0 in every bucket, the customer never goes overdue, and payments can't be allocated against the debt. Bad debt accumulates silently.
+- **Fix:** Require `details` for CREDIT (`@IsNotEmpty` conditional) or always create the CreditPayment row with a default date.
 
 ---
 
@@ -304,8 +313,8 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 
 ## BUG-036 — Backend: PO status allows arbitrary transitions **[LIVE-CONFIRMED]**
 - `purchase-orders.service.ts:357-419` — `PENDING→FULFILLED` with zero deliveries, regressions, etc. No state machine.
-- **Live proof:** created PO #7 (PENDING, 0 deliveries) → `PATCH /purchase-orders/7/status {po_status:"FULFILLED"}` → **200, status now FULFILLED**.
-- **Scenario:** A manager marks a PENDING purchase order FULFILLED with zero deliveries — proven live (PO #7). Procurement records claim goods arrived that never did; stock expectations, WAC, and receiving workflows all diverge from reality.
+- **Live proof:** created PO #7 (PENDING, 0 deliveries) → `PATCH /purchase-orders/7/status {po_status:"FULFILLED"}` → **200, status now FULFILLED**. FULFILLED is terminal and deliveries only accept PENDING/PARTIALLY_FULFILLED → a wrongly-fulfilled PO can **never** receive its goods (no regression path).
+- **Scenario:** A manager marks a PENDING purchase order FULFILLED with zero deliveries — proven live (PO #7). Procurement records claim goods arrived that never did; the PO is then permanently bricked — when the real shipment arrives, receiving 400s forever with no way to reopen it.
 
 ## BUG-037 — Backend: credit-limit check TOCTOU on `outstanding_balance` **[LIVE-CONFIRMED]**
 - `pos.service.ts:128-145` + `customers.service.ts:401-432` — concurrent credit checkouts both pass.
@@ -551,6 +560,29 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - `admin/expenses/page.tsx:70-107` — `loadExpenses` refires on every filter/page change with no sequence counter/AbortController/stale check (contrast shipments `requestId` guard, `useInventory` abort).
 - **Scenario:** Admin changes the category filter then quickly the date range — the older request resolves last, leaving the table and pagination showing the stale filter while the UI shows the new one; wrong expense rows until manual refresh.
 
+## BUG-172 — Return window enforced only at request time; approval executes with no re-validation **[code-verified]**
+- `returns.service.ts:27-63` window check runs only in `requestRefund`/`requestExchange`; `refund-approval.handler.ts`/`exchange-approval.handler.ts` have no date check — `approveRequest` executes the stored payload whenever clicked.
+- **Scenario:** A refund requested on day 6 sits PENDING over a holiday and is approved 3 weeks later — restock + cash payout still execute on a transaction far outside the 7-day policy. `is_within_7_days` is recorded but never enforced.
+
+## BUG-173 — 8 of 9 seeded system settings are dead keys — admin edits have zero runtime effect **[code-verified]**
+- Only `RETURN_WINDOW_DAYS` is consumed (`returns.service.ts:37`). `TAX_RATE_PERCENT` (tax hardcoded 0, BUG-074), `RESTOCKING_FEE_PERCENT` (refund breakdown ignores it), `ALLOW_NEGATIVE_INVENTORY` (never read — BUG-125's flag is the only gate), `ENABLE_WHOLESALE_PRICING`, `REQUIRE_RECEIPT_FOR_RETURN`, `STORE_NAME`, `CURRENCY_SYMBOL`, `RECEIPT_FOOTER_MESSAGE` have no consumer.
+- **Scenario:** Admin sets `RESTOCKING_FEE_PERCENT=10` expecting refunds to deduct 10%, or disables `ALLOW_NEGATIVE_INVENTORY` expecting stockouts to block — nothing changes. The settings UI promises runtime control that doesn't exist.
+
+## BUG-174 — Refunds/exchanges invisible to all analytics: payment-method breakdown and OpEx never reflect payouts **[code-verified]**
+- `analytics.service.ts` never queries `Return`/`Exchange`; refund handlers create no negative `Payment` and no `Expense`. Cash refund payouts never reduce CASH/GCASH tender buckets and never appear in OpEx.
+- **Scenario:** ₱50k of cash refunds issued in a month — revenue and the CASH payment-method share are unchanged, OpEx shows nothing; net profit is overstated by the full payout with no report surfacing it.
+
+## BUG-177 — Post-checkout receipt rebuilds line items from the *request* payload, ignoring backend `transaction_items` **[code-verified]**
+- `pos-api.ts:383-402` — checkout request sends no price fields; response includes authoritative `transaction_items`, but `receipt.items` is built entirely from the stale cart snapshot (`payload.items`); only totals are read from the response.
+- **Scenario:** Another register changes a product's price mid-shift; a cashier completes a sale — `grand_total` charges the server price but every printed line item shows the stale client-side price/name, and lines can fail to sum to the charged total. The printed receipt disagrees with the persisted `TransactionItem` rows and with the same receipt re-fetched later.
+- **Fix:** Map `receipt.items` from `tx.transaction_items` (fallback to payload only when absent).
+
+## BUG-178 — `PATCH /products/:id` re-runs duplicate-attribute check even when attributes unchanged → unrelated edits blocked **[LIVE-CONFIRMED]**
+- `products.service.ts:500-520` — the fastener-spec duplicate check fires whenever the product *has* specs, regardless of whether the PATCH touches them; frontend `ProductForm` only bypasses via a manual `allowDuplicate` checkbox.
+- **Live proof:** `PATCH /products/7600 {base_uom:"BOX"}` → **409 DUPLICATE_PRODUCT_ATTRIBUTES** (identical specs exist on product 5683) — the UoM change was rejected for an unrelated reason; succeeded only with `allowDuplicate:true`.
+- **Scenario:** In a catalog with legitimate same-spec products (the CSV seed created thousands), an admin edits a product's price or reorder point — save fails with a duplicate-attributes 409 unless they happen to tick 'allow duplicate', a checkbox meant for creation. Confusing, and the generic error path (BUG-025) hides the real cause.
+- **Fix:** Skip the duplicate check when `size_dimensions`/`thread_type`/`material_grade`/`categoryId` are unchanged by the PATCH.
+
 ---
 
 # LOW SEVERITY
@@ -616,6 +648,8 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 | BUG-168 |`EditExpenseModal.tsx:64-66`|Edit Expense cannot clear an existing date — falsy check skips the change| An expense saved with a date is opened in Edit, the date field cleared (marked optional), saved — `values.date === ""` is falsy so the PATCH never includes `date`; the stored date silently remains while the UI implies it was cleared. |
 | BUG-169 |`GCashPaymentForm.tsx:41,132-139`|`+639…` format unreachable — input strips `+` and `maxLength=11` truncates `639XXXXXXXXX`| Customer reads their GCash number as "+639 17 123 4567"; cashier types it — `+` stripped, truncated to 11 digits, fails `mobileRegex` forever. The `+639` branch is dead code; users only learn the real format from a failed submit. |
 | BUG-170 |`StaffTable.tsx:162,518-550`|Client-side pagination never clamps `page` when `filteredStaff` shrinks on refetch| On page 2+ with an active filter, enough rows leave the set after a refetch that the page empties — pagination hides entirely (≤LIMIT) and the table shows 'No staff members match' with no Previous button. Dead end until the user guesses to change a filter. |
+| BUG-175 |`inventory.service.ts:206,340`; `analytics.service.ts:572-579,638-641`; `schema.prisma:691-695`|`MovementType.SALE`/`RETURN` never written — sales, exchange issues, and return restocks all log as generic IN/OUT| A product issued only via exchanges shows a fresh 'last sale' date with zero sales volume — velocity reports it as recently sold while it's actually dead stock. Auditors can't distinguish a return restock from a supplier stock-in except by parsing reason strings. |
+| BUG-176 |`deliveries.service.ts:217-220,122-136,157-179,233-241`|WAC intake cost uses the PO's conversion factor, not the delivered UoM's; `productMap` snapshot read before `$transaction`| PO ordered in BOX (factor 12) but received in pieces — stock adds base units correctly while `cost_price` WAC divides by the PO's factor, silently skewing valuation; concurrent sales make the WAC denominator stale too. |
 
 ## BUG-113 — Roles without POS access get infinite redirect loop — app unusable **[BROWSER-CONFIRMED]**
 - **Severity:** High
@@ -714,6 +748,12 @@ Real API authz uses the Bearer token (unforgeable); cookie role only drives nav 
 - `Payment`, `TransactionItem`, `CashPayment`/`GCashPayment`/`CheckPayment`/`BankTransferPayment`/`CreditPayment`, `DeliveryItem`, `ProductUom` all `onDelete: Cascade` with parents (`schema.prisma:73-183,395,533`). Safe today only because no delete endpoint exists for Transaction/Delivery/Product-with-history — but `DELETE_TRANSACTION` exists in the RequestType enum, so a future delete feature would wipe the entire payment + item audit trail in one cascade (violates the AGENT.md audit-immutability rule). Conversely `Return`/`Exchange`/`Shipment` relations default to Restrict (safe), and `Transaction.customerId`/`staffId` are Restrict — inconsistent. Also: `WholeSaleCustomer.customer → Cascade` means deleting a Customer cascades the wholesale profile → cascades all `CustomerPayment` ledger rows; `updateCustomer`'s wholesale-profile delete guard (`customerPayment.count` check) is not transactional with the delete — a payment recorded between check and delete is cascade-wiped.
 - **Scenario:** A future 'delete transaction' admin feature ships without touching the schema — one click erases the transaction's payments, items, and credit records. The audit ledger the business relies on for disputes and tax compliance is gone, unrecoverable.
 - **Fix (preemptive):** flip payment-side cascades to `Restrict`/`NoAction` before any delete feature is added; wrap the wholesale-profile count-check + delete in a transaction.
+
+## OBS-007 — Minor code hygiene (pass-3 parsing audit)
+- `PrintableInvoice.tsx:33-39` — `formatQuantity` dead conditional (both branches return `String(quantity)`).
+- `use-pos-catalog.ts:22-24,42-44` — duplicate `setError` calls per failure (first is dead).
+- `pos-api.ts:510-516` — `TransactionSummary.paymentMethod` union omits `CHECK`/`BANK_TRANSFER`; `getBadgeVariant` (`receipt/page.tsx:91-104`) has no case for them — type lies, badge falls through to default.
+- **Scenario:** A CHECK/BANK_TRANSFER payment renders with a generic badge and no dedicated styling — cosmetic today, but the type gap means a future switch on paymentMethod silently misses those methods.
 
 ---
 
