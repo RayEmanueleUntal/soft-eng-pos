@@ -22,6 +22,7 @@ import { ProductSearch } from "./ProductSearch";
 import { ProductPagination } from "./ProductPagination";
 import { ProductForm } from "./ProductForm";
 import { DeleteProductDialog } from "./DeleteProductDialog";
+import { CheckCircle2, AlertCircle } from "lucide-react";
 
 import {
   Dialog,
@@ -51,6 +52,9 @@ export function ProductTable() {
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [bannerError, setBannerError] = useState<string | null>(null);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -90,9 +94,28 @@ export function ProductTable() {
     setPage(1);
   }, [searchTerm, thread, material, size, categoryId]);
 
-  const handleSaved = () => {
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, thread, material, size, categoryId]);
+
+  // 1. Place the auto-dismiss useEffect right here:
+  useEffect(() => {
+    if (!successMsg) return;
+    const timer = setTimeout(() => setSuccessMsg(null), 4000);
+    return () => clearTimeout(timer);
+  }, [successMsg]);
+
+  const handleSaved = (updatedProduct?: Product) => {
+    const productName = selectedProduct?.name;
+
     setIsEditOpen(false);
     setSelectedProduct(null);
+    setBannerError(null);
+    setSuccessMsg(
+      productName
+        ? `Product "${productName}" updated successfully.`
+        : "Product updated successfully.",
+    );
     fetchProducts();
   };
 
@@ -137,6 +160,37 @@ export function ProductTable() {
 
   return (
     <div className="space-y-4">
+      {successMsg && (
+        <div className="flex items-center justify-between gap-2 text-xs font-sans p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-[4px] animate-in fade-in duration-200">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span>{successMsg}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccessMsg(null)}
+            className="text-emerald-700 hover:text-emerald-950 font-mono text-xs px-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {bannerError && (
+        <div className="flex items-center justify-between gap-2 text-xs font-sans p-3 bg-red-50 border border-red-200 text-red-700 rounded-[4px] animate-in fade-in duration-200">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+            <span>{bannerError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setBannerError(null)}
+            className="text-red-700 hover:text-red-950 font-mono text-xs px-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <ProductSearch
           searchTerm={searchTerm}
@@ -151,7 +205,17 @@ export function ProductTable() {
           onCategoryChange={setCategoryId}
         />
 
-        <AddProductModal onSaved={fetchProducts} />
+        <AddProductModal
+          onSaved={(createdProduct) => {
+            setBannerError(null);
+            setSuccessMsg(
+              createdProduct?.name
+                ? `Product "${createdProduct.name}" added successfully.`
+                : "Product added successfully.",
+            );
+            fetchProducts();
+          }}
+        />
       </div>
 
       {error && (
@@ -283,6 +347,7 @@ export function ProductTable() {
                         variant="ghost"
                         size="icon"
                         onClick={() => setProductToDelete(product)}
+                        className="h-7 w-7 rounded-[2px] hover:bg-red-50 hover:text-red-700 inline-flex items-center justify-center"
                         title="Delete product"
                       >
                         <Trash2 />
@@ -324,7 +389,14 @@ export function ProductTable() {
       <DeleteProductDialog
         product={productToDelete}
         onClose={() => setProductToDelete(null)}
-        onDeleted={fetchProducts}
+        onDeleted={(deletedProduct) => {
+          setBannerError(null);
+          setSuccessMsg(
+            `Product "${deletedProduct.name}" deleted successfully.`,
+          );
+          fetchProducts();
+        }}
+        onError={(msg) => setBannerError(msg)}
       />
     </div>
   );

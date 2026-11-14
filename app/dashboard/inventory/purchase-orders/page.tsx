@@ -4,7 +4,7 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, Plus, RefreshCw } from "lucide-react";
+import { AlertCircle, CheckCircle2, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -35,8 +35,6 @@ export default function PurchaseOrdersPage() {
   const [orders, setOrders] = React.useState<PurchaseOrderDto[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [notice, setNotice] = React.useState<string | null>(null);
-
   const [page, setPage] = React.useState(1);
   const [totalPages, setTotalPages] = React.useState(1);
   const [total, setTotal] = React.useState(0);
@@ -73,20 +71,39 @@ export default function PurchaseOrdersPage() {
     loadOrders();
   }, [loadOrders]);
 
-  // Closes the create dialog, announces the new PO and reloads the list.
+  const [notice, setNotice] = React.useState<{
+    message: string;
+    variant: "success" | "cancelled";
+  } | null>(null);
+
+  // Auto-dismiss after 4 seconds
+  React.useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(timer);
+  }, [notice]);  
+
+  // Closes the create dialog, announces the new PO (green) and reloads the list.
   const handleCreated = (order: PurchaseOrderDto) => {
     setCreateOpen(false);
-    setNotice(`Purchase order #${order.id} created.`);
+    setNotice({
+      message: `Purchase order #${order.id} created.`,
+      variant: "success",
+    });
     if (page === 1) loadOrders();
     else setPage(1);
   };
 
-  // Closes the cancel dialog, announces the result and reloads the list.
+  // Closes the cancel dialog, announces the result (red) and reloads the list.
   const handleCancelled = (order: PurchaseOrderDto) => {
     setCancelTarget(null);
-    setNotice(`Purchase order #${order.id} cancelled.`);
+    setNotice({
+      message: `Purchase order #${order.id} cancelled.`,
+      variant: "cancelled",
+    });
     loadOrders();
   };
+  
 
   return (
     <div className="flex-1 space-y-6 font-sans">
@@ -163,20 +180,34 @@ export default function PurchaseOrdersPage() {
         </div>
 
         {notice && (
-          <div className="flex items-center justify-between gap-3 rounded-md border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
+          <div
+            role="status"
+            className={`flex items-center justify-between gap-3 rounded-md border p-3 text-xs animate-in fade-in duration-200 ${
+              notice.variant === "cancelled"
+                ? "border-red-500/30 bg-red-500/10 text-red-700"
+                : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
+            }`}
+          >
             <span className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              {notice}
+              {notice.variant === "cancelled" ? (
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+              )}
+              {notice.message}
             </span>
-            <Button variant="ghost" size="xs" onClick={() => setNotice(null)}>
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => setNotice(null)}
+              className={
+                notice.variant === "cancelled"
+                  ? "text-red-700 hover:bg-red-500/20 hover:text-red-900"
+                  : "text-emerald-700 hover:bg-emerald-500/20 hover:text-emerald-900"
+              }
+            >
               Dismiss
             </Button>
-          </div>
-        )}
-
-        {error && (
-          <div className="break-words rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
-            {error}
           </div>
         )}
 

@@ -54,6 +54,7 @@ export function CustomerTable() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -106,6 +107,16 @@ export function CustomerTable() {
 
     return () => clearTimeout(timeout);
   }, [loadCustomers]);
+
+  useEffect(() => {
+    if (!successMsg) return;
+
+    const timer = setTimeout(() => {
+      setSuccessMsg(null);
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [successMsg]);
 
   useEffect(() => {
     if (!paymentNotice) return;
@@ -182,6 +193,27 @@ export function CustomerTable() {
           <Plus className="mr-2 h-4 w-4" /> Add Customer
         </Button>
       </div>
+
+      {successMsg && (
+        <div
+          role="status"
+          className="flex items-center justify-between gap-3 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700"
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span>{successMsg}</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setSuccessMsg(null)}
+            className="rounded p-1 text-emerald-700 hover:bg-emerald-500/20"
+            aria-label="Dismiss notification"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {paymentNotice && (
         <div
@@ -337,8 +369,11 @@ export function CustomerTable() {
           onClose={handleEditClose}
           mode="edit"
           customer={selectedCustomer}
-          onSuccess={() => {
+          onSuccess={(savedCustomer) => {
             handleEditClose();
+            setSuccessMsg(
+              `Customer "${savedCustomer.name}" updated successfully.`,
+            );
             void loadCustomers();
           }}
         />
@@ -348,8 +383,11 @@ export function CustomerTable() {
         isOpen={isAddOpen}
         mode="add"
         onClose={() => setIsAddOpen(false)}
-        onSuccess={() => {
+        onSuccess={(savedCustomer) => {
           setIsAddOpen(false);
+          setSuccessMsg(
+            `Customer "${savedCustomer.name}" added successfully.`,
+          );
           void loadCustomers();
         }}
       />

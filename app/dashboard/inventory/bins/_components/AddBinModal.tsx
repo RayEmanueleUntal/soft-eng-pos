@@ -47,7 +47,6 @@ export function AddBinModal({ onSuccess }: AddBinModalProps) {
     setErrorMsg(null);
 
     try {
-      // Pre-check for duplicate bin location case-insensitively using searchBinLocationExact
       try {
         const existingBin = await searchBinLocationExact({
           aisle_number: normalizedAisle,
@@ -62,9 +61,7 @@ export function AddBinModal({ onSuccess }: AddBinModalProps) {
           return;
         }
       } catch (searchErr: any) {
-        // If 404, it means the bin location does not exist yet, which is the expected case to proceed
         if (searchErr?.response?.status !== 404) {
-          // If the lookup failed with another error (e.g., 400 or other), continue and let createBinLocation handle it
           console.warn("Exact lookup check failed:", searchErr);
         }
       }
@@ -78,6 +75,7 @@ export function AddBinModal({ onSuccess }: AddBinModalProps) {
 
       setAisleNumber("");
       setShelfLocation("");
+      setErrorMsg(null);
       setOpen(false);
       onSuccess(createdBin);
     } catch (err: any) {
@@ -101,14 +99,14 @@ export function AddBinModal({ onSuccess }: AddBinModalProps) {
   return (
     <>
       <Button
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setErrorMsg(null);
+          setOpen(true);
+        }}
         className="h-8 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm"
       >
         <Plus className="h-3.5 w-3.5" />
         <span>Add Bin Location</span>
-        {/* <span className="ml-1 text-[10px] font-mono opacity-90 bg-white/20 px-1 rounded-sm border border-white/20">
-          [F2]
-        </span> */}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -121,9 +119,18 @@ export function AddBinModal({ onSuccess }: AddBinModalProps) {
 
           <form onSubmit={handleSubmit} className="space-y-4 pt-3">
             {errorMsg && (
-              <div className="p-2.5 bg-[#FFDAD6] border border-[#BA1A1A] text-[#93000A] text-xs font-medium rounded-sm flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>{errorMsg}</span>
+              <div className="flex items-center justify-between gap-2 text-xs font-sans p-3 bg-red-50 border border-red-200 text-red-700 rounded-[4px] animate-in fade-in duration-200">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+                  <span>{errorMsg}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setErrorMsg(null)}
+                  className="text-red-700 hover:text-red-950 font-mono text-xs px-1"
+                >
+                  ✕
+                </button>
               </div>
             )}
 

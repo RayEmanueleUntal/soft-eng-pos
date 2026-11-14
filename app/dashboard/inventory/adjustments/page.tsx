@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, X, RotateCcw } from "lucide-react";
+import { Search, X, RotateCcw, Plus, CheckCircle2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { getErrorMessage } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/pageheader";
@@ -133,6 +133,16 @@ export default function InventoryAdjustmentsPage() {
   >([]);
   const [staffMap, setStaffMap] = useState<Record<number, string>>({});
   const staffMapRef = useRef(staffMap);
+
+  // Success banner for stock adjustments
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Auto-dismiss success message after 4 seconds
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(null), 4000);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
 
   useEffect(() => {
     staffMapRef.current = staffMap;
@@ -312,12 +322,19 @@ export default function InventoryAdjustmentsPage() {
   }, [loadMovements]);
 
   // When a new adjustment is submitted via modal, refresh the movements
+// When a new adjustment is submitted via modal, show the banner & refresh movements
   const handleAdjustmentSuccess = (
     _movement: StockMovementResponse,
-    _item: InventoryItem,
+    item: InventoryItem,
   ) => {
+    setSuccessMessage(`${item.name} adjusted successfully.`);
     setPage(1);
     loadMovements();
+  };
+
+  // Sets the page-level success banner when a stock adjustment is saved.
+  const handleAdjustmentSaveSuccess = (item: InventoryItem) => {
+    setSuccessMessage(`${item.name} adjusted successfully.`);
   };
 
   const hasActiveFilters =
@@ -354,7 +371,7 @@ export default function InventoryAdjustmentsPage() {
             Audit inventory logs, filter movements, and record physical count adjustments.
           </p>
         </div>
-        <StockAdjustmentModal onSuccess={handleAdjustmentSuccess} />
+        <StockAdjustmentModal onSuccess={handleAdjustmentSaveSuccess} />
       </div> */}
 
       <div className="shrink-0 mt-4 mb-4 flex justify-between">
@@ -365,6 +382,23 @@ export default function InventoryAdjustmentsPage() {
         />
         <StockAdjustmentModal onSuccess={handleAdjustmentSuccess} />
       </div>
+
+      {/* Success Banner */}
+      {successMessage && (
+        <div className="shrink-0 mb-3 flex items-center justify-between gap-2 text-xs font-sans p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-[4px] animate-in fade-in duration-200">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span>{successMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccessMessage(null)}
+            className="text-emerald-700 hover:text-emerald-950 font-mono text-xs px-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Multi-attribute Filter Bar */}
       <div className="bg-card p-3 rounded-[4px] border border-border shadow-xs space-y-2.5">
