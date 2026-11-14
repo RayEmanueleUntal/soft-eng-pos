@@ -4,8 +4,7 @@ Whole-app audit: frontend `lib/*` + components vs. backend controllers/DTOs/serv
 
 - **Frontend:** `C:\Users\Pat\Desktop\soft-eng-pos`
 - **Backend:** `C:\Users\Pat\Desktop\soft-eng-pos-api` (`http://localhost:3001`)
-- **Method:** 7 parallel module audits (frontend modules, backend services, Prisma schema/auth/remaining services, remaining frontend pages) + live endpoint verification (seeded admin)
-- **Re-verified on `main`:** after analytics merge, all findings re-checked against the current tree (65 files changed since the original audit snapshot). Verdicts: ~110 STILL-VALID, 0 fully FIXED, partial mitigations noted inline (BUG-003, BUG-013, BUG-044, BUG-049, BUG-050, BUG-088). New findings from the re-audit: BUG-115–BUG-121.
+- **Method:** 7 parallel module audits (frontend modules, backend services, Prisma schema/auth/remaining services, remaining frontend pages) + live endpoint verification (seeded admin) + browser/UI sweep (Playwright)
 - **Date:** 2026 audit session
 
 > **Data-volume caveat:** the dev database is small (~7 transactions, ~5 products, 4 staff, 6+ customers). `limit=N` truncation findings are **latent** — guaranteed by code, invisible until data exceeds the cap. Project targets 8,000+ SKUs (AGENT.md).
@@ -64,7 +63,7 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 ## BUG-003 — POS customer picker truncated to first 100 customers
 - **Location:** `lib/pos/services/pos-api.ts:168-180`
 - Wholesale customers past page 1 can't be attached to CREDIT checkouts. Live `GET /customers?limit=1` → `totalPages:6`.
-- **Re-verified on main:** the customers *admin* table was fixed (server-side pagination + debounce in `CustomerTable.tsx`), but the POS picker path is unchanged → STILL-VALID.
+- The customers *admin* table uses server-side pagination (`CustomerTable.tsx`), but the POS picker path is unchanged.
 
 ## BUG-004 — Transaction history truncated and fails silently
 - **Location:** `lib/pos/services/pos-api.ts:490-545`
@@ -107,7 +106,7 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 ## BUG-013 — Overdue-status field names mismatch → warning never displays **[LIVE-CONFIRMED]**
 - **Locations:** `pos-api.ts:274-292`; backend `customer-overdue-status-response.dto.ts`
 - Frontend reads `isOverdue`/`overdue`; backend returns `{hasOverdue, overdueCount, totalOverdueAmount}`. Live response confirmed. `CreditPaymentForm` never warns; cashier hits surprise block at checkout.
-- **Re-verified on main:** `CustomerPaymentModal.tsx` (customer mgmt settlement) now uses the correct `hasOverdue` shape — only the POS `CreditPaymentForm` path remains broken.
+- `CustomerPaymentModal.tsx` (customer mgmt settlement) uses the correct `hasOverdue` shape — only the POS `CreditPaymentForm` path remains broken.
 
 ## BUG-014 — Backend: stock decrement is read-modify-write → lost updates **[LIVE-CONFIRMED]**
 - **Location:** `src/inventory/inventory.service.ts:278-333, 179-198, 99-147`
@@ -223,15 +222,14 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - `lib/auth/roles.ts` + `layout.tsx` vs backend `@Roles`:
   - UI shows, API 403s: `/dashboard/suppliers` (CASHIER), `/dashboard/inventory/rop` (CASHIER/SALES_CLERK), ungated forwarder/product/supplier/bin mutation buttons, Deliveries nav for CASHIER/SALES_CLERK.
   - API allows, UI blocks: POS+receipts for SALES_CLERK/SECRETARY/STOCK_MANAGEMENT; expenses for SECRETARY (backend allows on all expense endpoints); `/inventory/movements` view for SECRETARY.
-  - **Re-verified on main:** `layout.tsx` nav children for Suppliers/Forwarders/Staff/Products/Deliveries/Shipments/ROP/Bins still have **no** `allowedRoles`; `roles.ts` still lacks entries for `/dashboard/suppliers`, `/dashboard/forwarders`, `/dashboard/inventory/bins`, `/dashboard/inventory/shipments` → all roles pass those routes while APIs 403. New `lib/auth/permissions.ts` verified to match `shipments.controller.ts` `@Roles` exactly — extend this pattern to the other modules.
+  - `layout.tsx` nav children for Suppliers/Forwarders/Staff/Products/Deliveries/Shipments/ROP/Bins still have **no** `allowedRoles`; `roles.ts` still lacks entries for `/dashboard/suppliers`, `/dashboard/forwarders`, `/dashboard/inventory/bins`, `/dashboard/inventory/shipments` → all roles pass those routes while APIs 403. `lib/auth/permissions.ts` matches `shipments.controller.ts` `@Roles` exactly — extend this pattern to the other modules.
 - **Fix:** Single source of truth mapping routes ↔ `@Roles`.
 
 ## BUG-045 — `fetchReceiptApi` never requests returns/exchanges; `already_returned_qty` never populated
 - `pos-api.ts:573-578`; backend defaults `includeReturns/Exchanges`=false; `transactions.service.ts:100-102` never passes it. Receipt reconstructs from `/approval` only → misses other channels; return modals can't cap prior returns.
 
 ## BUG-046 — Adjustments date filters use UTC-midnight parsing
-- `adjustments/page.tsx:190-195` — `new Date("YYYY-MM-DD")` = UTC midnight → PH end-date excludes everything after 08:00 local; inconsistent with expenses page's correct local-time handling.
-- **Re-verified on main:** still present; the same midnight `endDate` boundary bug also exists in `POSelectList.tsx` (delivery PO selector).
+- `adjustments/page.tsx:190-195` — `new Date("YYYY-MM-DD")` = UTC midnight → PH end-date excludes everything after 08:00 local; inconsistent with expenses page's correct local-time handling. The same midnight `endDate` boundary bug also exists in `POSelectList.tsx` (delivery PO selector).
 
 ## BUG-047 — `formatDateToInput` uses `toISOString()` → off-by-one-day in PH mornings
 - `CreditPaymentForm.tsx:37-39` — 00:00–08:00 PHT yields yesterday for due-date default/`min`.
@@ -241,11 +239,11 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 
 ## BUG-049 — Line discount not capped; frontend/backend total math diverges
 - `use-pos-cart.ts:13-25,219-242`, `CartItemRow.tsx:102-112`; backend `pos.service.ts:274-295` — backend subtracts Σ discounts from order total, no cap → discount > line gross eats other lines / negative grand_total; displayed ≠ charged.
-- **Re-verified on main:** cart was rewritten — `calcLineSubtotal` now clamps `subtotal`/`line_discount` ≥ 0, but `line_discount` is still **not capped at line gross** → divergence persists for over-discounted lines.
+- The cart was rewritten — `calcLineSubtotal` now clamps `subtotal`/`line_discount` ≥ 0, but `line_discount` is still **not capped at line gross** → divergence persists for over-discounted lines.
 
 ## BUG-050 — UoM wholesale price priority differs from backend
 - `use-pos-cart.ts:57-75`, `ProductCard.tsx:63-88`; backend `pos.service.ts:244-254` — UoM explicit `retail_price` (no wholesale) + product `wholesale_price` → frontend shows `wholesale×factor`, backend charges `uom.retail_price`.
-- **Re-verified on main:** `resolveUomPrice` rewritten to prefer backend `calculated_*` fields, but the priority order still doesn't match backend (`uom.retail_price` must outrank base-wholesale×factor for wholesale transactions) → STILL-VALID.
+- `resolveUomPrice` prefers backend `calculated_*` fields, but the priority order still doesn't match backend (`uom.retail_price` must outrank base-wholesale×factor for wholesale transactions).
 
 ## BUG-051 — `getErrorMessage` discards backend message on 403
 - `lib/utils.ts:33-35` — hardcoded "Access denied" ignores `details.message` for all modules.
@@ -329,8 +327,8 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 | BUG-084 | `BinAssignmentModal.tsx:80-107` | Bin picker page-1-only (20 bins); search mitigates |
 | BUG-085 | `bins/page.tsx:79-87` | Page change can apply unsubmitted search text |
 | BUG-086 | `use-pos-cart.ts:245-276` | `updateItemUom` never wired — can't change UoM in cart |
-| BUG-087 | `pos-api.ts:60-65` | First non-base UoM picked as `pricing_uom`; `is_default_sales` ignored; extra UoMs unreachable. **Re-verified on main:** `BackendProductUom` (`pos-types.ts:47-57`) also missing `cost_price`, `calculated_cost_price`, `is_default_purchase`, `is_default_sales` the backend returns — cost-side data invisible to POS pricing |
-| BUG-088 | `CreditPaymentForm.tsx` ~153 | Credit always full balance — no partial splits; `poNumber` collected but dropped. **Re-verified on main:** `submitCheckout` emits only `{date}` for CREDIT `details`; `po_number`/`credit_due_date` in `CheckoutPaymentEntry` silently discarded (backend `CreditDetailsDto` accepts only `date` anyway) |
+| BUG-087 | `pos-api.ts:60-65` | First non-base UoM picked as `pricing_uom`; `is_default_sales` ignored; extra UoMs unreachable. `BackendProductUom` (`pos-types.ts:47-57`) also missing `cost_price`, `calculated_cost_price`, `is_default_purchase`, `is_default_sales` the backend returns — cost-side data invisible to POS pricing |
+| BUG-088 | `CreditPaymentForm.tsx` ~153 | Credit always full balance — no partial splits; `poNumber` collected but dropped. `submitCheckout` emits only `{date}` for CREDIT `details`; `po_number`/`credit_due_date` in `CheckoutPaymentEntry` silently discarded (backend `CreditDetailsDto` accepts only `date` anyway) |
 | BUG-089 | `pos-api.ts:229-238` | Dummy fallback `product_id:1` if checkout with empty cart (unreachable but fragile) |
 | BUG-090 | `pos-types.ts:10-19` | `UnitOfMeasure` missing `SACK`; `PaymentMethod` missing `CHECK`/`BANK_TRANSFER` (spec includes Bank Transfer) |
 | BUG-091 | `approval-api.ts:22-25` | Unpaginated `/approval` fetch per receipt view |
@@ -369,9 +367,9 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 
 ---
 
-# NEW FINDINGS FROM MAIN RE-AUDIT
+# ADDITIONAL FINDINGS
 
-Findings discovered while re-verifying the register against `main` (post-analytics-merge, 65 changed files). BUG-115–121 continue the numbering.
+BUG-115–121 continue the register numbering.
 
 ## BUG-115 — Products page has no role gating on create/edit/delete **[code-verified]**
 - **Severity:** Medium
@@ -449,8 +447,8 @@ Real API authz uses the Bearer token (unforgeable); cookie role only drives nav 
 | `AddStaffModal` / `SettingFormDialog` payloads | Match backend DTOs; parents key-remount correctly |
 | `includeShipments` query param | Exists in `GetTransactionsQueryDto` — not stripped by whitelist |
 | Customer settlement modal over-tender | `CustomerPaymentModal` caps `amount_paid` at balance client-side and sends the capped amount — backend never sees the over-tender |
-| Shipments page fetch logic | Debounced search + request-sequence race guard + empty-page step-back + role-gated actions (new code on main) |
-| PO page + products page fetch logic | Server-side pagination + debounce + role-gated mutations via `permissions.ts` (new code on main) |
+| Shipments page fetch logic | Debounced search + request-sequence race guard + empty-page step-back + role-gated actions |
+| PO page + products page fetch logic | Server-side pagination + debounce + role-gated mutations via `permissions.ts` |
 | `ProductForm` edit flow | Fetches full `GET /products/:id` UoM set, validates UoM rows, handles `PRODUCT_HAS_TRANSACTION_HISTORY` |
 | Schema unique constraints | `username`, `sku`, `poItem`, `productUom`, `binLocation`, `category`, `supplier`, `forwarder` uniques all exist at DB level |
 | RolesGuard | Reads `assigned_role` from DB-fetched user — role changes effective immediately |
