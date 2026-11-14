@@ -19,21 +19,31 @@ Whole-app audit: frontend `lib/*` + components vs. backend controllers/DTOs/serv
 
 ## Browser UI test results (Playwright, headless Chromium)
 
-- **Login:** real UI login (`admin123`) → redirect to `/dashboard/pos` — works; all API calls 200.
-- **Route sweep:** all 18 dashboard routes return HTTP 200 with **zero console errors, zero page errors, zero failed API calls** (incl. `/pos/receipt/:id`, all inventory sub-pages, all admin pages).
-- **POS sale E2E:** added Wood Screw to cart (default UoM BOX @ ₱550), opened PaymentModal (Cash/GCash tabs, quick-tender ₱600/₱1,000, "Complete Sale" correctly disabled until tender applied), completed sale → `INV-2026-0006` created, cart cleared ("Register is empty"), receipt modal rendered.
-- **BUG-011 confirmed in browser** (see entry above).
-- **Receipt detail page** (`/pos/receipt/9`): renders invoice, items, "Cash tendered ₱600.00 / Change ₱50.00" correctly; Refund/Exchange buttons present.
-- **Scripts:** `scripts/ui-smoke.mjs`, `scripts/ui-probe.mjs`, `scripts/ui-probe2.mjs`, `scripts/ui-flow.mjs`, `scripts/ui-sale.mjs`, `scripts/ui-sale2.mjs`, `scripts/ui-receipt.mjs` (Playwright devDependency added).
+### Round 1 — smoke + POS sale
+- **Login:** real UI login (`admin123`) → `/dashboard/pos` — works; all API calls 200.
+- **Route sweep (admin):** all 18 dashboard routes HTTP 200, **zero console errors, zero page errors, zero failed API calls**.
+- **POS sale E2E:** add to cart → PaymentModal (Cash/GCash, quick-tender, Complete-Sale gating) → ₱600 tender on ₱550 sale → `INV-2026-0006` created, cart cleared, receipt rendered. BUG-011 confirmed visually.
+- **Receipt detail** (`/pos/receipt/9`): shows "Cash tendered ₱600 / Change ₱50" correctly (persisted receipt endpoint flattens properly); Refund/Exchange buttons present.
+
+### Round 2 — multi-role sweep, modals, mobile, perf
+- **RBAC matrix (live, 4 roles × 18 routes):**
+  - ADMIN & MANAGER: all routes accessible.
+  - CASHIER: blocked from adjustments/deliveries/POs/staff/admin pages (redirect to `/dashboard/pos`) — correct. **`/dashboard/suppliers` loads but `GET /suppliers` → 403** (BUG-044 confirmed live). `/dashboard/inventory/rop` loads with **no API error** — BUG-001's `/products` fetch accidentally masks the `/inventory/rop` 403.
+  - **STOCK_MANAGEMENT (`stock_alex`): `ERR_TOO_MANY_REDIRECTS` on every navigation — see BUG-113.**
+- **Modal sweep:** 12/12 create dialogs open cleanly (products 14 fields, customers, suppliers, staff, forwarders, bins, deliveries, POs, shipments "Log Shipment", expenses, system-settings) + inventory row-actions menu (Stock In/Out/Adjust/Assign Bin/Edit ROP) → Stock In dialog opens. Zero pageerrors.
+- **Mobile viewport (390×844):** all 17 routes render; only `/inventory/adjustments` overflows by 1px (scrollW=391) — cosmetic.
+- **Search perf:** `GET /products?search=` ~16–40ms across terms at current 5-product scale — trivially fast now; BUG-021 (no trigram indexes) remains a scale risk at 8k SKUs.
+- **Print:** `@media print` in globals.css + `PrintableInvoice` + `window.print()` wired on receipt page/modal and delivery view — statically verified.
+- **Scripts:** `scripts/ui-smoke.mjs`, `ui-probe*.mjs`, `ui-flow.mjs`, `ui-sale*.mjs`, `ui-receipt.mjs`, `ui-roles.mjs`, `ui-modals*.mjs`, `ui-mobile.mjs`, `ui-inventory.mjs`, `ui-inv-actions.mjs` (Playwright devDependency added, uncommitted).
 
 ## Severity summary
 
 | Severity | Count |
 |---|---|
-| High | 23 |
+| High | 24 |
 | Medium | ~45 |
-| Low | ~45 |
-| Informational | 4 |
+| Low | ~46 |
+| Informational | 5 |
 
 Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 
@@ -339,6 +349,17 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 | BUG-111 | `approval.controller.ts:78-79` | `status`/`type` query params unvalidated → invalid enum → Prisma validation error → 500 (not 400) via BUG-058 |
 | BUG-112 | `credit-status-task.service.ts` | Daily cron, no distributed lock, errors swallowed to logs; never re-evaluates OVERDUE→PAID (handled by payment flow — OK) |
 
+## BUG-113 — Roles without POS access get infinite redirect loop — app unusable **[BROWSER-CONFIRMED]**
+- **Severity:** High
+- **Locations:** `app/dashboard/page.tsx:42` (unconditional `redirect("/dashboard/pos")`), `proxy.ts:58-59` + `lib/auth/roles.ts:25` (`/dashboard/pos` = ADMIN/MANAGER/CASHIER only)
+- **What:** `/dashboard` always redirects to `/dashboard/pos`. For STOCK_MANAGEMENT, SECRETARY, and SALES_CLERK the proxy then bounces `/dashboard/pos` → `/dashboard` → `/dashboard/pos` → … `ERR_TOO_MANY_REDIRECTS`. **Live proof:** `stock_alex` login landed on `/dashboard`, then every route navigation redirect-looped.
+- **Impact:** Three of six roles cannot use the application at all via normal navigation (direct URLs to permitted pages like `/dashboard/inventory` still work, but login lands in the loop).
+- **Fix:** Make `/dashboard` role-aware (redirect to first permitted route per role) or remove the hard redirect.
+
+## BUG-114 — ROP page's `/products` fetch accidentally masks the `/inventory/rop` 403 for CASHIER/SALES_CLERK
+- **Severity:** Low (observation)
+- BUG-001's client-side `/products?limit=100` call is role-allowed, so cashier sees a "working" ROP page (with wrong/incomplete data anyway) instead of the 403 the dedicated endpoint would return. Fixing BUG-001 will surface BUG-044's ROP role mismatch — fix both together.
+
 ---
 
 # INFORMATIONAL / OBSERVATIONS
@@ -391,6 +412,6 @@ Real API authz uses the Bearer token (unforgeable); cookie role only drives nav 
 5. **fix(inventory/backend): stock atomicity, delivery caps, PO state machine** — BUG-014, 015, 036, 042, 061, 062
 6. **fix(backend): idempotency atomicity, approval races, error-shape consistency** — BUG-022, 023, 056–060, 070, 111
 7. **fix(analytics): margin ×10, COGS snapshot, endDate bounds** — BUG-039, 043, 068
-8. **fix(roles): reconcile frontend gating with backend @Roles** — BUG-044, 051, 081
+8. **fix(roles): reconcile frontend gating with backend @Roles** — BUG-044, 051, 081, **113 (redirect loop — ships first)**, 114
 9. **perf(db): product search indexes (pg_trgm/tsvector) + missing FK indexes** — BUG-021, 108
 10. **chore: error handling, dead code & minor cleanups** — BUG-006, 007, 025, 052, 065, 066, 071–110 subset
