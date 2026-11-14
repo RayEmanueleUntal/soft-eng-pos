@@ -19,7 +19,8 @@ Whole-app audit: frontend `lib/*` + components vs. backend controllers/DTOs/serv
 | Expense created | id 13 — UTILITIES ₱1.50 dated 2026-01-01, notes "BUGTEST" |
 | Purchase order created | id 7 — supplier 2, product 5 ×5 PCS; **transitioned PENDING→FULFILLED with zero deliveries** (BUG-036 proof) |
 | Shipment created | id 2 — transaction 9, forwarder 3, tracking `BUGTEST-TRK`; walked PENDING→DISPATCHED→PENDING (BUG-042 proof) |
-| Approval requests created | ids 1–2 — `REFUND_TRANSACTION` with empty/garbage payloads (BUG-023 proof); approve attempt → 500, stays PENDING |
+| Approval requests created | ids 1–2 — `REFUND_TRANSACTION` with empty/garbage payloads (BUG-023 proof); approve attempt → 500, stays PENDING. ids 3–5 — real refunds on tx #9 all APPROVED (incl. concurrent-approve race → double restock, BUG-023/017 proof) |
+| E2E flow mutations | PO #8 (fulfilled via delivery #4, +10 stock), PO #9 (delivery #5 with **factor 999 → +999 stock**, BUG-015 proof); shipment #2 now DELIVERED; credit sale `INV-2026-0007` ₱9 on customer 6; ₱5 cash settlement; product #5 stock now **1502** |
 | Product catalog scaled | CSV seed run (`scripts/run-csv-seed.ts`): +2,571 products → then `scripts/scale-products.ts` added **+5,500 synthetic SKUs → 8,076 total** for latency testing |
 | Checkouts | 2 × CASH checkout of 500 PCS product #5 (₱600 each) — product #5 stock is now **1500** (correct serialized value would be 1000 — see BUG-014 proof) |
 | Wholesale balance | Customer #6 (Vanguard): two ₱100 payments recorded (ledger −₱200) but balance only fell ₱100 (BUG-032 proof); then a ₱1.20 fully-cash sale added phantom +₱5 AR via CREDIT payment (BUG-016 proof). Balance now 79,905 vs credit_limit 80,000 |
@@ -47,10 +48,10 @@ Whole-app audit: frontend `lib/*` + components vs. backend controllers/DTOs/serv
 
 | Severity | Count |
 |---|---|
-| High | 24 |
-| Medium | ~47 |
-| Low | ~54 |
-| Informational | 5 |
+| High | 26 |
+| Medium | ~57 |
+| Low | ~66 |
+| Informational | 6 |
 
 Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 
@@ -135,19 +136,22 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - **Fix:** Atomic `decrement`/`increment` or `SELECT … FOR UPDATE`.
 - **Scenario:** Two registers sell the last 500 units of a product simultaneously. Both checkouts read stock=2000, both write 1500 — proven live. ₱1,200 in sales is recorded but 500 units were never deducted, so the system oversells and physical stock goes negative.
 
-## BUG-015 — Backend: delivery receiving trusts client quantities; no over-receipt cap; state read outside tx
+## BUG-015 — Backend: delivery receiving trusts client quantities; no over-receipt cap; state read outside tx **[LIVE-CONFIRMED — arbitrary stock inflation]**
 - **Location:** `src/deliveries/deliveries.service.ts:48-73, 114-143, 182-297`
 - `actual_base_quantity`/`uom_conversion_factor` accepted verbatim (can restock arbitrary qty); cumulative received never capped at `expected_base_quantity`; PO status + prior deliveries read before `prisma.$transaction` → concurrent deliveries both pass; WAC from stale product map.
+- **Live proof:** `POST /deliveries` with `uom_conversion_factor:999, actual_base_quantity:999` for a 5-unit PO line → **stock inflated +999** (509→1508). A receiver can mint unlimited inventory by editing two fields. Partial mitigation observed: deliveries on a FULFILLED PO are rejected (400), and a full delivery auto-transitions the PO — but within a PENDING/PARTIAL PO the client-supplied factor/qty are trusted completely.
 - **Scenario:** A receiver keys in a delivery quantity larger than shipped — the backend accepts it verbatim and restocks arbitrary amounts. Two receivers process partial deliveries of the same PO concurrently; both pass the state check and the PO/deliveries double-count received quantities.
 
 ## BUG-016 — Backend: POS credit — credit amount never reconciled; multiple CREDIT payments bypass checks **[LIVE-CONFIRMED]**
 - **Location:** `src/pos/pos.service.ts:112-114, 128-145, 297-306, 351-375`
 - **Live proof:** ₱1.20 sale paid `CASH 1.20 + CREDIT 5.00` → 201, `outstanding_balance` +₱5 despite sale fully covered by cash. AR inflated arbitrarily; `cash_tendered`/`change_given` trusted client-side; overpayment accepted with no change computation; only first CREDIT payment counted for limit/balance but all persisted.
+- **Second live proof:** credit checkout for a ₱9 sale with `amount_paid:12` → balance +**₱12** (client `amount_paid` trusted over computed `grand_total`).
 - **Scenario:** A cashier splits a ₱1.20 sale as CASH ₱1.20 + CREDIT ₱5.00. The backend records ₱5 phantom AR against the customer despite the sale being fully covered — proven live. The customer's balance inflates arbitrarily, eventually blocking legitimate credit sales and corrupting AR aging reports.
 
-## BUG-017 — Backend: refund/exchange handlers never validate quantity → over-refund/over-restock/negative balances
+## BUG-017 — Backend: refund/exchange handlers never validate quantity → over-refund/over-restock/negative balances **[LIVE-CONFIRMED]**
 - **Location:** `src/returns/handlers/refund/refund-approval.handler.ts:49-85`, `exchange-approval.handler.ts:53-104`, `returns.service.ts:65-130`
 - `findFirst` on `(transactionId, productId)` collapses duplicate lines; quantity never checked vs sold or cumulative prior returns; `remaining_credit_balance` decremented with no floor → negative; `TransactionStatus.REFUNDED`/`PARTIALLY_REFUNDED` never written → refunded sales still count as revenue.
+- **Live proof:** tx #9 sold 1 BOX of product 5. Three separate `POST /returns/refund` + approve cycles for the same item all succeeded — stock restocked +1 three times (`RETURN RESTOCK` movement rows confirmed). No cumulative-return cap exists.
 - **Scenario:** An approver clicks approve twice on a refund (or two approvers race). Quantity is never validated against sold/cumulative returns — the customer gets double-refunded and inventory double-restocked. Repeated over-refunds drive remaining_credit_balance negative and refunded sales still count as revenue forever.
 
 ## BUG-018 — Backend: logout is a no-op — refresh tokens never revoked **[code-verified end-to-end]**
@@ -184,9 +188,24 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - **Location:** `src/approval/approval.service.ts:55-90,92-124`, `approval.controller.ts`
 - Check-then-act on `status===PENDING` under READ COMMITTED → concurrent approves both execute handler (double refund/restock). No `requestedById !== reviewerId` check → managers can approve own requests. `GET /approval` has no `@Roles` → any authenticated CASHIER enumerates all requests incl. payload JSON. `createRequest` payload `IsObject`-only; handlers trust client-supplied breakdown values.
 - **Live proof:** `POST /approval {type:"REFUND_TRANSACTION", payload:{}}` → **201 PENDING**; same with `payload:{transaction_id:"abc"}` → **201**. `PATCH /approval/1/approve` (as the same admin who created it — no self-approval block) → **500**, request stays PENDING forever → zombie un-approvable requests. `GET /approval?status=BOGUS` → **500** `{statusCode,message}` (no `details` wrapper — also BUG-058/111).
+- **Race proof:** 3 concurrent `PATCH /approval/5/approve` → **two returned 200 APPROVED** and the stock-movement log shows **two `RETURN RESTOCK` entries** — the check-then-act let both requests execute the refund handler. Double restock confirmed live.
+- **Scenario:** A manager creates a REFUND_TRANSACTION approval with an empty payload — accepted (proven live: 201). Approving it 500s and the request stays PENDING forever, clogging the queue. The same manager can approve their own request (no self-approval check), and any cashier can enumerate every approval payload including customer data.
+
+## BUG-125 — `POST /pos/checkout` `override` flag lets any cashier self-authorize negative stock AND overdue-credit bypass
+- **Severity:** High
+- **Locations:** `src/pos/pos.service.ts:178` (overdue block gated by `!checkoutDto.override`), `:321` (`allowOverride` → `reduceProductStock`); `checkout.dto.ts:65-73`; controller allows CASHIER/SALES_CLERK/SECRETARY
+- One client boolean bypasses both the insufficient-stock check and the overdue-invoice credit block — no role gate, no approval, same flag for both.
+- **Scenario:** A cashier sells stock that doesn't exist, or pushes an overdue customer through credit checkout, by adding `"override": true` — every stock/credit safeguard is self-service.
+- **Fix:** Split into role-gated overrides; require MANAGER+ or route credit override through approvals.
+
+## BUG-126 — Same product in two UoMs on one PO → guaranteed 500
+- **Severity:** High (latent)
+- **Locations:** `purchase-orders.service.ts:103-131` (dedupe key `${productId}_${uom}`) vs `schema.prisma:482` (`@@unique([poId, productId])`)
+- Ordering product #5 as both PCS and BOX emits two `poItems` rows with same productId → P2002 → 500. UI encourages multi-UoM ordering.
+- **Scenario:** A buyer orders screws by the piece AND by the box in one PO — submission 500s with no explanation; the order can't be placed.
+- **Fix:** Consolidate to one row per productId or widen unique to include `ordered_uom`.
 
 ---
-- **Scenario:** A manager creates a REFUND_TRANSACTION approval with an empty payload — accepted (proven live: 201). Approving it 500s and the request stays PENDING forever, clogging the queue. The same manager can approve their own request (no self-approval check), and any cashier can enumerate every approval payload including customer data.
 
 # MEDIUM SEVERITY
 
@@ -267,7 +286,7 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 
 ## BUG-042 — Backend: shipment state machine regressions + racy dup check + hard delete **[LIVE-CONFIRMED partial]**
 - `shipments.service.ts:93-107,206-226,412-428` — `DISPATCHED→PENDING` allowed; same-status no-ops; dup check outside tx; `deleteShipment` hard-deletes audit trail.
-- **Live proof:** shipment #2 walked `PENDING → DISPATCHED → PENDING` via `PATCH /shipments/2/status` — both 200, regression accepted. Duplicate active shipment for same transaction correctly 409s.
+- **Live proof:** shipment #2 walked `PENDING → DISPATCHED → PENDING` via `PATCH /shipments/2/status` — regression accepted. Refined by further probes: `PENDING→DELIVERED` correctly 400s ("Allowed flow: PENDING -> DISPATCHED -> DELIVERED") and `DELIVERED→PENDING` correctly 400s ("already delivered") — so the hole is specifically **DISPATCHED→PENDING** (and presumably same-status no-ops). Duplicate active shipment for same transaction correctly 409s.
 - **Scenario:** A shipment marked DISPATCHED is regressed to PENDING (proven live) — tracking history and delivery SLAs become meaningless. Deleting a shipment hard-deletes the audit record, so 'where did this order go' becomes unanswerable.
 
 ## BUG-043 — Backend: `endDate` `lte` excludes entire end day **[LIVE-CONFIRMED]**
@@ -337,8 +356,9 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - `schema.prisma:616-622` — `OVERRIDE_DISCOUNT`/`STOCK_OUT_OVERRIDE`/`DELETE_TRANSACTION` have no handlers → `createRequest` 400s; `REFUNDED`/`PARTIALLY_REFUNDED` never set → refunded sales count as revenue (see BUG-017).
 - **Scenario:** Staff try to create an OVERRIDE_DISCOUNT approval — it 400s because no handler exists, so the workflow they expected is impossible. And because REFUNDED/PARTIALLY_REFUNDED statuses are never written, monthly revenue reports keep counting refunded sales as income.
 
-## BUG-058 — Backend: exception filter only catches `HttpException` → inconsistent error shape
+## BUG-058 — Backend: exception filter only catches `HttpException` → inconsistent error shape **[LIVE-CONFIRMED ×3]**
 - `http-exception.filter.ts:9` — Prisma errors (P2002/P2025), TypeErrors bypass → Nest default `{statusCode,message}` without `details` wrapper → 500 instead of 409; breaks client error parsing.
+- **Live proofs:** `GET /approval?status=BOGUS` → 500 bare shape; `PATCH /approval/1/approve` on garbage payload → 500; `POST /customers` with `credit_limit:1e12` (Decimal(10,2) overflow) → **500** — should be a 400 validation error.
 - **Scenario:** A forwarder name collision triggers a Prisma P2002 — the exception filter doesn't catch it, so the API returns a bare 500 {statusCode,message} instead of a 409 with details. Monitoring fills with false 500s and clients can't show the real reason.
 
 ## BUG-059 — Backend: case-sensitive uniques vs case-insensitive lookups; `contact_number` has no unique constraint
@@ -387,9 +407,59 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 
 ## BUG-070 — Backend: inactive-user timing side-channel + 403-for-bad-credentials
 - `auth.service.ts:42,51` — bad credentials return 403 (should be 401); inactive check skips `argon.verify` → timing distinguishes inactive accounts. No per-account lockout (only global 100/min throttle).
+- **Scenario:** An attacker probes usernames — 403-vs-timing reveals which accounts exist and are disabled; with no per-account lockout, credential stuffing is feasible.
+
+## BUG-127 — `POST /returns/refund` & `/returns/exchange` have NO `@Roles` — every authenticated role can file returns
+- **Severity:** Medium
+- `returns.controller.ts:9-46` — guards present but no `@Roles` on either endpoint; STOCK_MANAGEMENT can create refund/exchange approval requests.
+- **Scenario:** A stock clerk files refund approvals for transactions outside their authority — requests enter the approval queue from an unauthorized role.
+
+## BUG-128 — `requestExchange` accepts un-validatable payloads → permanently un-approvable zombie approvals
+- **Severity:** Medium
+- `returns.service.ts:170-206` — unlike `requestRefund`, zero request-time validation: nonexistent transaction/product → 201 PENDING; approve → handler throws → stuck PENDING forever (BUG-023).
+- **Scenario:** A malformed exchange request clogs the approval queue permanently — approvers see a PENDING item that can never succeed.
+
+## BUG-129 — Refund of credit-settled invoices leaves `CreditPayment.status` stale → customer blocked from credit forever
+- **Severity:** Medium-High
+- `refund-approval.handler.ts:92-111` decrements balances, never updates `status`; overdue checks count `status=OVERDUE` regardless of balance; cron only flips →OVERDUE, never clears.
+- **Scenario:** A wholesale customer returns goods on an overdue invoice — refund zeroes the balance but status stays OVERDUE → `hasOverdue:true` forever → every future credit checkout 403s until manual DB fix.
+
+## BUG-130 — `StockMovement.isOverride`/`approvedById` are dead audit fields — overrides never flagged
+- **Severity:** Medium
+- `schema.prisma:417,427`; `inventory.service.ts:335-350` writes override movements with only a "(OVERRIDDEN)" reason suffix — `isOverride` stays false, `approvedById` has zero writers; filters at `:493-496` can never match.
+- **Scenario:** An override sale ships nonexistent stock — the movement log can't be filtered to show who authorized it; shrinkage investigations can't isolate override events.
+
+## BUG-131 — `AdjustInventoryDto.new_count` is `@IsPositive` → physical count of zero cannot be recorded
+- **Severity:** Medium
+- `adjust-inventory.dto.ts:31-34` — a stocktake finding an empty bin (count=0) → 400; workaround is a manual stock-out producing the wrong movement type.
+- **Scenario:** During cycle count a bin is empty — staff can't record count=0 and must fake a stock-out, corrupting the movement-type audit trail.
+
+## BUG-132 — Delivery receiving: duplicate `productId` lines double-restock with stale-WAC
+- **Severity:** Medium
+- `create-delivery.dto.ts:75-79` (no `@ArrayUnique`); `deliveries.service.ts:105-153,209-256` — duplicate lines each restock; second line's WAC uses the pre-transaction productMap snapshot → wrong cost_price.
+- **Scenario:** A receiver lists the same product twice by accident — stock double-counts and weighted-average cost is computed from stale quantities, skewing valuation.
+
+## BUG-133 — `collectWholesalePayment` accepts payments exceeding open invoice sum; excess vanishes at invoice level
+- **Severity:** Medium
+- `customers.service.ts:461-570` — only ceiling is macro `outstanding_balance`; after FIFO any remainder settles no invoice — money recorded but unapplied, invisible to AR aging.
+- **Scenario:** After balance drift (BUG-038/017), a customer pays ₱50k — invoices show less settled; the surplus is untraceable at invoice level.
+
+## BUG-134 — `createCustomer` accepts client-supplied `outstanding_balance` → phantom AR with no invoice
+- **Severity:** Medium
+- `create-customer.dto.ts:66-75`; `customers.service.ts:98-109` — MANAGER+ can create a WHOLESALE customer already owing ₱50k with zero CreditPayment records.
+- **Scenario:** AR aging shows nothing while the customer displays ₱50k owed — bad debt exists with no invoice trail; the credit check uses the inflated balance.
+
+## BUG-135 — `updateCustomer` silently drops wholesale fields on RETAIL customers; blocks ALL edits on wholesale for non-managers
+- **Severity:** Medium
+- `customers.service.ts:276-293,318-337` — (1) wholesale fields + type=RETAIL → silently ignored, 200 OK; (2) ANY patch on a WHOLESALE customer requires ADMIN/MANAGER/SECRETARY — broader than BUG-034.
+- **Scenario:** A cashier fixes a wholesale customer's phone typo → 403 (any edit is manager-gated). A manager edits a retail customer's company_name → 200 but nothing changes — silent data loss.
+
+## BUG-137 — `POST /pos/checkout` accepts CHECK/BANK_TRANSFER but never writes detail rows
+- **Severity:** Medium
+- `pos.service.ts:329-364` only handles CASH/GCASH/CREDIT; `payment.dto.ts:77-89` discards `details` for CHECK/BANK_TRANSFER — Payment row with no check_number/bank reference.
+- **Scenario:** A customer pays by check — the sale records method CHECK but no check number, bank, or clearing status — reconciliation and fraud detection have nothing to audit.
 
 ---
-- **Scenario:** An attacker probes usernames: bad credentials return 403 while inactive accounts return faster (argon.verify skipped) — timing reveals which accounts exist and are disabled. With only a global rate limit and no lockout, credential stuffing is feasible.
 
 # LOW SEVERITY
 
@@ -437,6 +507,18 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 | BUG-110 |`main.ts:20-29`|CORS origins hardcoded to 4 LAN IPs — DHCP changes break frontend; consider env-driven list| The office router renews DHCP and the server's LAN IP changes. The hardcoded CORS list no longer matches — the frontend is blocked entirely until someone edits main.ts and restarts the API. |
 | BUG-111 |`approval.controller.ts:78-79`|`status`/`type` query params unvalidated → invalid enum → Prisma validation error → 500 (not 400) via BUG-058| A user or script passes an invalid status/type filter to /approval — instead of a clean 400, Prisma throws and the API returns 500. Monitoring sees false server errors and clients can't distinguish bad input from outages. |
 | BUG-112 |`credit-status-task.service.ts`|Daily cron, no distributed lock, errors swallowed to logs; never re-evaluates OVERDUE→PAID (handled by payment flow — OK)| Two backend instances (or a restart mid-run) execute the daily credit-status cron without a distributed lock — OVERDUE markings can double-apply or interleave. Errors are swallowed to logs, so stale credit statuses persist silently. |
+| BUG-136 |`get-suppliers.dto.ts:35-40`, `get-customer.dto.ts:62-71`|Unbounded `limit` (no `@Max`) on suppliers/customers — same class as BUG-056| Someone requests /suppliers?limit=1000000 — the API dumps the entire table in one response, and a script or bug loops this to hammer the DB. |
+| BUG-138 |`inventory.service.ts:293-299`|`needsRecount` flag set inside rolled-back transaction never persists| A product repeatedly fails stock checks — the recount flag is set then rolled back with the failed checkout, so it's never marked. Staff never know which products need physical recounts. |
+| BUG-139 |`inventory.service.ts:409-439`|`assignBin` catches P2002 only — missing product throws P2025 → 500 not 404| PATCH /inventory/:id/bin with a deleted product ID → 500 instead of a clean 404. Frontend shows 'server error' instead of 'product not found'. |
+| BUG-140 |`stock-out.dto.ts:20-23`, `inventory.service.ts:339`|`date` accepted in stock-out DTO but silently ignored — movement always stamped now| Stock-in and adjust honor backdating; stock-out doesn't. A manager backdating a stock-out for last week's audit gets today's timestamp — the movement history doesn't match reality. |
+| BUG-141 |`forwarder.service.ts:94`|`findAllForwarders` returns `totalPages: 0` on empty result — inconsistent envelope| Forwarder list is empty and a consumer computes totalPages=0 — pagination UI shows 'Page 1 of 0' or div-by-zero instead of the standard totalPages>=1 envelope every other endpoint returns. |
+| BUG-142 |`get-shipments-query.dto.ts:34-40`, `shipments.service.ts:232-338`|`status` query param accepted but silently ignored by both list endpoints| Caller requests /shipments/active?status=DELIVERED — validation passes, but the service hardcodes its own status split, so the caller gets the wrong dataset with a 200 and no warning. |
+| BUG-143 |`system-settings.controller.ts:47,57`|Settings GET endpoints have no `@Roles` — any authenticated user reads all operational config| A cashier reads RETURN_WINDOW_DAYS, credit thresholds, and any future secrets-in-settings — today it's probably fine, but there's no key allowlist so a sensitive key added later is exposed by default. |
+| BUG-144 |`schema.prisma:228`, `shipments.service.ts:186-193`|`Shipment.dispatch_date` set at creation, never updated on DISPATCHED transition| Ops sorts active deliveries by dispatch_date expecting actual dispatch times — they get creation order instead, so the oldest-created (not oldest-dispatched) shipments surface first. |
+| BUG-145 |`products.service.ts:301-316,537-562`, `create-product-uom.dto.ts:18-19`|`ProductUom` can duplicate `base_uom`; multiple `is_default_*` flags allowed| A product gets a ProductUom row equal to its base_uom — dead weight that can shadow/confuse UoM pickers. Multiple rows can claim default sales/purchase simultaneously, and nothing enforces a single default. |
+| BUG-146 |`products.service.ts:139`|Auto-SKU suffix is only last-4-digits of `Date.now()` → same-ms collisions hard-fail| Two products created in the same millisecond with identical attributes get identical SKUs — the second create throws DuplicateProductException. Rare but real during bulk imports. |
+| BUG-147 |`schema.prisma:655-661`, `shipments.service.ts:83`|`TransactionStatus.CANCELLED`/`REFUNDED`/`PARTIALLY_REFUNDED` are dead — nothing ever sets them| Returns can be filed against any transaction regardless of status because no transaction ever leaves COMPLETED — a 'cancelled' or fully-refunded sale still accepts new return requests. |
+| BUG-148 |`customers.service.ts:679-691`|`updateOverduePaymentsStatus` marks zero-balance credit records OVERDUE — no balance predicate| A credit row driven to ~0 balance without a status update (BUG-129 drift) gets flipped to OVERDUE by the cron anyway — the customer is blocked from credit checkout over an invoice they already paid off. |
 
 ## BUG-113 — Roles without POS access get infinite redirect loop — app unusable **[BROWSER-CONFIRMED]**
 - **Severity:** High
@@ -505,9 +587,9 @@ BUG-115–121 continue the register numbering.
 ## BUG-122 — Bins page keeps stale `searchQuery` **and** stale `page` after exact lookup
 - **Severity:** Low
 - `bins/page.tsx` — after an exact-location lookup replaces results with one row, `searchQuery` retains old text AND `page` state stays >1 while `meta` is overwritten to page 1. A subsequent page change refetches with the stale filter/page → mixed state (filtered list under exact-lookup UI). `AddBinModal` also rendered ungated (backend POST requires ADMIN/MANAGER/SECRETARY → CASHIER/STOCK_MANAGEMENT 403 — part of BUG-044).
+- **Scenario:** A user runs an exact bin lookup from page 3 — one row shows, footer says 'Page 1 of 1', but internal page state stays 3. Clicking Prev silently reloads a filtered list under the exact-lookup UI — mixed state leads to editing the wrong bin.
 
 ---
-- **Scenario:** A user runs an exact bin lookup from page 3 — one row shows, footer says 'Page 1 of 1', but internal page state stays 3. Clicking Prev silently reloads a filtered list under the exact-lookup UI — mixed state leads to editing the wrong bin.
 
 # INFORMATIONAL / OBSERVATIONS
 
@@ -529,9 +611,14 @@ Only `POST /returns/refund` + `POST /returns/exchange`; receipt history reconstr
 
 ## OBS-005 — `/api/auth/session` + proxy trust unverified JWT claims for UI gating
 Real API authz uses the Bearer token (unforgeable); cookie role only drives nav visibility. Latent footgun (BUG-101).
+- **Scenario:** The session cookie's role claim is decoded, not verified — fine today because real authz uses the Bearer token, but if backend validation is ever weakened or a route trusts the cookie, the UI gating becomes the only (cosmetic) barrier.
+
+## OBS-006 — Cascade-delete audit: payment-side relations cascade, delete endpoints absent (latent)
+- `Payment`, `TransactionItem`, `CashPayment`/`GCashPayment`/`CheckPayment`/`BankTransferPayment`/`CreditPayment`, `DeliveryItem`, `ProductUom` all `onDelete: Cascade` with parents (`schema.prisma:73-183,395,533`). Safe today only because no delete endpoint exists for Transaction/Delivery/Product-with-history — but `DELETE_TRANSACTION` exists in the RequestType enum, so a future delete feature would wipe the entire payment + item audit trail in one cascade (violates the AGENT.md audit-immutability rule). Conversely `Return`/`Exchange`/`Shipment` relations default to Restrict (safe), and `Transaction.customerId`/`staffId` are Restrict — inconsistent. Also: `WholeSaleCustomer.customer → Cascade` means deleting a Customer cascades the wholesale profile → cascades all `CustomerPayment` ledger rows; `updateCustomer`'s wholesale-profile delete guard (`customerPayment.count` check) is not transactional with the delete — a payment recorded between check and delete is cascade-wiped.
+- **Scenario:** A future 'delete transaction' admin feature ships without touching the schema — one click erases the transaction's payments, items, and credit records. The audit ledger the business relies on for disputes and tax compliance is gone, unrecoverable.
+- **Fix (preemptive):** flip payment-side cascades to `Restrict`/`NoAction` before any delete feature is added; wrap the wholesale-profile count-check + delete in a transaction.
 
 ---
-- **Scenario:** The session cookie's role claim is decoded, not verified — fine today because real authz uses the Bearer token, but if backend validation is ever weakened or a route trusts the cookie, the UI gating becomes the only (cosmetic) barrier.
 
 # VERIFIED CLEAN
 
@@ -559,6 +646,11 @@ Real API authz uses the Bearer token (unforgeable); cookie role only drives nav 
 | Shipments page fetch logic | Debounced search + request-sequence race guard + empty-page step-back + role-gated actions |
 | PO page + products page fetch logic | Server-side pagination + debounce + role-gated mutations via `permissions.ts` |
 | `ProductForm` edit flow | Fetches full `GET /products/:id` UoM set, validates UoM rows, handles `PRODUCT_HAS_TRANSACTION_HISTORY` |
+| PO intake flow | Full receive auto-transitions PO to FULFILLED; deliveries on FULFILLED PO rejected 400 |
+| Shipment lifecycle | `PENDING→DELIVERED` skip rejected 400; `DELIVERED→*` terminal rejected 400; dup active shipment 409 |
+| Settlement overpayment | `amount_paid` > balance → 400 (backend rejects; modal caps client-side anyway) |
+| Overdue-invoice checkout block | CREDIT checkout on customer with overdue invoice → 403 with clear message; `override:true` bypasses as designed |
+| Fuzz sweep (34 probes) | Negative/zero/huge quantities, bogus enums/UoMs/products, extra fields, empty payloads → all clean 400/404/409 (one Decimal-overflow 500 = BUG-058) |
 | Schema unique constraints | `username`, `sku`, `poItem`, `productUom`, `binLocation`, `category`, `supplier`, `forwarder` uniques all exist at DB level |
 | RolesGuard | Reads `assigned_role` from DB-fetched user — role changes effective immediately |
 | Auth basics | argon2 hashing, SHA-256 refresh hashes in Redis, uniform signin errors, global throttler |
