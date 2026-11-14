@@ -21,6 +21,8 @@ Whole-app audit: frontend `lib/*` + components vs. backend controllers/DTOs/serv
 | Shipment created | id 2 — transaction 9, forwarder 3, tracking `BUGTEST-TRK`; walked PENDING→DISPATCHED→PENDING (BUG-042 proof) |
 | Approval requests created | ids 1–2 — `REFUND_TRANSACTION` with empty/garbage payloads (BUG-023 proof); approve attempt → 500, stays PENDING. ids 3–5 — real refunds on tx #9 all APPROVED (incl. concurrent-approve race → double restock, BUG-023/017 proof) |
 | E2E flow mutations | PO #8 (fulfilled via delivery #4, +10 stock), PO #9 (delivery #5 with **factor 999 → +999 stock**, BUG-015 proof); shipment #2 now DELIVERED; credit sale `INV-2026-0007` ₱9 on customer 6; ₱5 cash settlement; product #5 stock now **1502** |
+| Refund/exchange probes | Tx #11 (qty2 sale): refunds of qty 5+2+2 all APPROVED → +9 units restocked, ~₱727 paid out (BUG-149/150 proof). Tx #12: exchange + subsequent refund both APPROVED — double-dip (BUG-151). Tx #13: ₱80.78→₱116.65 exchange approved, ₱35.87 difference never collected (BUG-152). Approval ids 6–14; products 7590/7591 stock shifted |
+| Credit-limit race | 3 parallel CREDIT checkouts (₱80.78 each, `override:true`) on customer 6 → all 201; balance ₱79,912 → **₱80,154.34, exceeding credit_limit ₱80,000** (BUG-037 live proof; BUG-125 override also exercised) |
 | Product catalog scaled | CSV seed run (`scripts/run-csv-seed.ts`): +2,571 products → then `scripts/scale-products.ts` added **+5,500 synthetic SKUs → 8,076 total** for latency testing |
 | Checkouts | 2 × CASH checkout of 500 PCS product #5 (₱600 each) — product #5 stock is now **1500** (correct serialized value would be 1000 — see BUG-014 proof) |
 | Wholesale balance | Customer #6 (Vanguard): two ₱100 payments recorded (ledger −₱200) but balance only fell ₱100 (BUG-032 proof); then a ₱1.20 fully-cash sale added phantom +₱5 AR via CREDIT payment (BUG-016 proof). Balance now 79,905 vs credit_limit 80,000 |
@@ -41,16 +43,16 @@ Whole-app audit: frontend `lib/*` + components vs. backend controllers/DTOs/serv
 - **Modal sweep:** 12/12 create dialogs open cleanly (products 14 fields, customers, suppliers, staff, forwarders, bins, deliveries, POs, shipments "Log Shipment", expenses, system-settings) + inventory row-actions menu (Stock In/Out/Adjust/Assign Bin/Edit ROP) → Stock In dialog opens. Zero pageerrors.
 - **Mobile viewport (390×844):** all 17 routes render; only `/inventory/adjustments` overflows by 1px (scrollW=391) — cosmetic.
 - **Search perf:** `GET /products?search=` ~16–40ms across terms at current 5-product scale — trivially fast now; BUG-021 (no trigram indexes) remains a scale risk at 8k SKUs.
-- **Print:** `@media print` in globals.css + `PrintableInvoice` + `window.print()` wired on receipt page/modal and delivery view — statically verified.
+- **Print:** `@media print` in globals.css + `PrintableInvoice` + `window.print()` wired on receipt page/modal — works there. **Delivery "Print Receipt" is broken** (BUG-165: blank page — no print markup on that route).
 - **Scripts:** `scripts/ui-smoke.mjs`, `ui-probe*.mjs`, `ui-flow.mjs`, `ui-sale*.mjs`, `ui-receipt.mjs`, `ui-roles.mjs`, `ui-modals*.mjs`, `ui-mobile.mjs`, `ui-inventory.mjs`, `ui-inv-actions.mjs` (Playwright devDependency added, uncommitted).
 
 ## Severity summary
 
 | Severity | Count |
 |---|---|
-| High | 26 |
-| Medium | ~57 |
-| Low | ~66 |
+| High | 32 |
+| Medium | ~68 |
+| Low | ~71 |
 | Informational | 6 |
 
 Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
@@ -195,6 +197,7 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - **Severity:** High
 - **Locations:** `src/pos/pos.service.ts:178` (overdue block gated by `!checkoutDto.override`), `:321` (`allowOverride` → `reduceProductStock`); `checkout.dto.ts:65-73`; controller allows CASHIER/SALES_CLERK/SECRETARY
 - One client boolean bypasses both the insufficient-stock check and the overdue-invoice credit block — no role gate, no approval, same flag for both.
+- **Live proof:** CREDIT checkout on customer 6 with overdue invoices → 403 without flag; identical request with `override:true` → proceeded to payment validation (only failed on amount mismatch). Overdue block bypassed by any cashier.
 - **Scenario:** A cashier sells stock that doesn't exist, or pushes an overdue customer through credit checkout, by adding `"override": true` — every stock/credit safeguard is self-service.
 - **Fix:** Split into role-gated overrides; require MANAGER+ or route credit override through approvals.
 
@@ -204,6 +207,47 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - Ordering product #5 as both PCS and BOX emits two `poItems` rows with same productId → P2002 → 500. UI encourages multi-UoM ordering.
 - **Scenario:** A buyer orders screws by the piece AND by the box in one PO — submission 500s with no explanation; the order can't be placed.
 - **Fix:** Consolidate to one row per productId or widen unique to include `ordered_uom`.
+
+## BUG-149 — Refund quantity never validated against sold quantity → over-refund pays out more than the sale **[LIVE-CONFIRMED]**
+- **Severity:** High
+- **Locations:** `returns.service.ts` (`requestRefund`/`calculateRefundBreakdown` — no check that `quantity <= transactionItem.quantity_sold` converted to base UoM); `create-refund.dto.ts:31-33` (`@IsPositive` only)
+- **Live proof:** Sold qty 2 of product 7590 (line total ₱161.56). `POST /returns/refund {quantity:5}` → 201; approval #6 APPROVED → `Return` row for 5 units, `refund_amount` ₱403.90 (**2.5× the line total**), `cashPayoutAmount` ₱403.90, and +5 units restocked.
+- **Scenario:** A customer buys 2 bolts and "returns" 5 — the system pays out ₱403.90 cash for a ₱161.56 sale and restocks phantom inventory. Repeatable across any transaction.
+- **Fix:** Validate cumulative refunded qty per transaction item ≤ sold qty (base UoM) at request time.
+
+## BUG-150 — No cumulative refund tracking → unlimited repeat refunds on the same item **[LIVE-CONFIRMED]**
+- **Severity:** High
+- **Locations:** same as BUG-149 — nothing records or checks prior `Return`/`Exchange` rows against `transactionItem`
+- **Live proof:** Tx #11 sold qty 2. Three refunds approved on the same item: qty 5 + qty 2 + qty 2 = **9 units restocked** (movement log ids 40/41/42: +2, +5, +2 → stock 128→137) and cash payouts issued for each. A 2-unit sale generated 9 units of inventory and ~₱727 in refunds.
+- **Scenario:** A cashier processes the same receipt three times — the customer walks out with triple the money and the warehouse gains phantom stock that will be sold to the next customer.
+- **Fix:** Sum existing Return quantities per (transactionId, productId) and reject requests exceeding remaining returnable qty.
+
+## BUG-151 — Refund approved after exchange on same item → customer gets replacement AND refund (double-dip) **[LIVE-CONFIRMED]**
+- **Severity:** High
+- **Locations:** `returns.service.ts` — `requestRefund` doesn't check for existing `Exchange` rows on the transaction item; `exchange-approval.handler.ts` creates a `Return` row too, further confusing cumulative tracking
+- **Live proof:** Tx #12 item exchanged (approval #9 APPROVED → new product 7591 deducted) then refunded (approval #10 APPROVED → `Return` + cash payout on the same item). Both succeeded — customer received the exchange item and the refund.
+- **Scenario:** Customer exchanges a defective part for a new one, then files a refund on the original receipt — approved. They keep the new part AND get their money back.
+- **Fix:** Treat exchange as consuming returnable quantity; block refunds once an exchange exists for the item (and vice versa).
+
+## BUG-153 — `base_uom` mutable without converting stock or UoM factors → quantities reinterpreted **[code-verified]**
+- **Severity:** High
+- **Locations:** `products.service.ts:398-415` (blocks `base_uom` change only when `stockMovement.count > 0`), `:565-596` (updates `base_uom` without touching `current_quantity`/`ProductUom.conversion_factor`); `update-product.dto.ts:8-15` (`confirmUomChange` documented but never enforced); `schema.prisma:62-63,342,383-385`
+- Opening stock written at create produces no `StockMovement` → `stockMovementCount=0` → `PATCH {base_uom:"BOX"}` succeeds; stored `current_quantity=100` is now read as **100 BOX**, and existing UoM rows still say `1 BOX = 100 BOX`.
+- **Scenario:** A product created with 100 PCS opening stock gets its base_uom switched to BOX. The system now believes it holds 100 BOX (10,000+ PCS worth) — sales, WAC, and reorders are all wrong, and the UoM table contradicts itself.
+- **Fix:** Block `base_uom` changes whenever `current_quantity > 0` or UoM rows exist; honor `confirmUomChange` or remove it.
+
+## BUG-154 — Approval approve-vs-reject race: side effects execute but request can end REJECTED **[code-verified]**
+- **Severity:** High
+- **Locations:** `approval.service.ts:55-84` (approve: read PENDING → execute handler → update APPROVED, all in tx) vs `:92-124` (reject: reads PENDING *outside* a transaction, then unconditionally updates REJECTED)
+- Manager A approves a refund while Manager B rejects the same request — B's unconditional REJECTED update can land after A's handler already restocked/refunded, leaving financial/inventory side effects on a "REJECTED" request.
+- **Scenario:** Two managers act on the same refund at once — one approves, one rejects. The refund executes (stock restocked, balance decremented) but the record shows REJECTED, or vice versa — the audit trail contradicts what actually happened to inventory and money.
+- **Fix:** Do the PENDING check + status update atomically in both paths (single conditional `updateMany({status:PENDING})` guard).
+
+## BUG-165 — Delivery "Print Receipt" prints a completely blank page **[code-verified]**
+- **Severity:** High
+- **Locations:** `DeliveryDetailViewModal.tsx:85-87,213-224` (`window.print()` only); `globals.css:153-190` (`@media print` hides `body *` except `.print-only`/`#printable-receipt`); no print markup exists on the deliveries route — the only `PrintableInvoice` usages are under `app/dashboard/pos/receipt/`
+- **Scenario:** Staff opens a delivery and clicks "Print Receipt" — the print dialog produces a blank page. Receiving clerks can't produce the goods-received document the business needs for disputes and audits; the button is 100% nonfunctional.
+- **Fix:** Add print-only delivery receipt markup or a scoped `@media print` rule for the modal.
 
 ---
 
@@ -263,9 +307,10 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - **Live proof:** created PO #7 (PENDING, 0 deliveries) → `PATCH /purchase-orders/7/status {po_status:"FULFILLED"}` → **200, status now FULFILLED**.
 - **Scenario:** A manager marks a PENDING purchase order FULFILLED with zero deliveries — proven live (PO #7). Procurement records claim goods arrived that never did; stock expectations, WAC, and receiving workflows all diverge from reality.
 
-## BUG-037 — Backend: credit-limit check TOCTOU on `outstanding_balance`
+## BUG-037 — Backend: credit-limit check TOCTOU on `outstanding_balance` **[LIVE-CONFIRMED]**
 - `pos.service.ts:128-145` + `customers.service.ts:401-432` — concurrent credit checkouts both pass.
-- **Scenario:** Two cashiers process credit sales for the same customer near their credit limit simultaneously. Both read the same outstanding_balance, both pass the check — the customer exceeds their credit limit and the store carries unapproved bad-debt exposure.
+- **Live proof:** Vanguard balance ₱79,912 / limit ₱80,000 (headroom ₱88). Three parallel CREDIT checkouts of ₱80.78 each → **all three 201**; balance now **₱80,154.34 — exceeds credit_limit by ₱154.34**. (Required `override:true` to bypass the unrelated overdue block — itself BUG-125.)
+- **Scenario:** Two cashiers process credit sales for the same customer near their credit limit simultaneously — proven live: 3 parallel sales pushed the balance ₱154 over the limit. The customer exceeds their credit limit and the store carries unapproved bad-debt exposure.
 
 ## BUG-038 — Backend: `collectWholesalePayment` lost-update race **[LIVE-CONFIRMED]**
 - `customers.service.ts:461-570`
@@ -459,6 +504,53 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - `pos.service.ts:329-364` only handles CASH/GCASH/CREDIT; `payment.dto.ts:77-89` discards `details` for CHECK/BANK_TRANSFER — Payment row with no check_number/bank reference.
 - **Scenario:** A customer pays by check — the sale records method CHECK but no check number, bank, or clearing status — reconciliation and fraud detection have nothing to audit.
 
+## BUG-152 — Exchange `price_difference` recorded but never collected → revenue leakage on upgrades **[LIVE-CONFIRMED]**
+- **Severity:** Medium
+- **Locations:** `exchange-approval.handler.ts:91-92,112` — computes `priceDifference` and stores it on the `Exchange` row, but no payment/tender adjustment is created; downgrades likewise never refund the difference
+- **Live proof:** Exchange approval #11 swapped ₱80.78 item for ₱116.65 item — `price_difference` ≈ ₱35.87 recorded, APPROVED, no additional charge anywhere. The store gave away ₱35.87 of margin silently.
+- **Scenario:** A customer exchanges a ₱80 item for a ₱116 item — the system records the ₱36 difference but never bills it. Every upgrade exchange leaks margin; downgrade exchanges leak cash the other way.
+- **Fix:** Create a supplemental payment/charge (or refund) for the difference, or require payment collection at exchange approval.
+
+## BUG-155 — Product creation writes opening stock with no `StockMovement` audit row **[code-verified]**
+- `create-product.dto.ts:242-247` accepts `current_quantity`; `products.service.ts:318-339` writes it directly in `product.create`; delete safety (`:630-665`) counts only `stockMovements`, not `current_quantity`.
+- **Scenario:** A product is created with 500 units opening stock — inventory shows 500 but the movement log has no IN record (audit gap), and because `stockMovements=0` the product can be hard-deleted while still holding stock, erasing the quantity with zero audit trail.
+
+## BUG-156 — `/transactions` list DTO reads non-existent relation fields → blank/wrong serialized data **[code-verified]**
+- `transaction-list-item-response.dto.ts:94-100,136-142` — reads `staff?.name` (StaffUser has `first_name`/`last_name`), `customer.phone ?? customer.number` (Customer has `contact_number`), `forwarder?.name` (Forwarder has `company_name`).
+- **Scenario:** `GET /transactions?includeShipments=true` returns every shipment row as "Unknown Forwarder" and blank customer numbers — anyone building reports on the list endpoint gets garbage fields even though the receipt endpoint serializes correctly.
+
+## BUG-157 — Boolean query params treat `"false"` as `true` **[code-verified]**
+- `get-staff-users-query.dto.ts:54-60`, `staff-user.service.ts:110-112`, `get-transactions-query.dto.ts:95-120` — `@Type(() => Boolean)` uses JS `Boolean(value)`; the string `"false"` → `true`.
+- **Scenario:** Admin requests `GET /staff-users?is_active=false` to list deactivated accounts — gets the *active* ones instead. `includeReturns=false` still pays the extra joins. Filters silently invert.
+
+## BUG-158 — `PATCH /customers/:id` validation gaps: blank strings and unvalidated wholesale values **[code-verified]**
+- `update-customer.dto.ts:19-31,41-67` — `name`/`contact_number` only `@IsOptional() @IsString()` (empty strings pass); wholesale validators gated by `o.type === WHOLESALE` so they're skipped when `type` is omitted on an already-wholesale customer — but the service still applies them.
+- **Scenario:** PATCH a wholesale customer with `{credit_limit: -500}` and no `type` field — validators skip, service applies → negative credit limit stored. Or `{name: ""}` blanks a required field.
+
+## BUG-159 — Password/credential changes do not revoke existing refresh sessions **[code-verified]**
+- `staff-user.service.ts:180-185,199-207` updates password hash with no token invalidation; `auth.service.ts:81-98` refresh only checks user existence + `is_active`.
+- **Scenario:** Admin resets a cashier's password after suspected compromise — the attacker's existing refresh token keeps working for days because nothing invalidates sessions on credential change.
+
+## BUG-160 — Mixed retail/wholesale line pricing allowed but line-level type never persisted **[code-verified]**
+- `item.dto.ts:43-53` per-item `transaction_type`; `pos.service.ts:72-95,244-289` prices each line by its own type but `transactionItemsData` doesn't store it; `TransactionItem` has no type column.
+- **Scenario:** A wholesale checkout mixes a wholesale-priced line and a retail-priced line — both charge correctly, but reports and receipts can't tell which tier each line used; channel analytics are wrong.
+
+## BUG-161 — Wholesale FIFO settlement mishandles negative `CreditPayment` balances **[code-verified]**
+- `customers.service.ts:500-549` — FIFO loads credit rows without `remaining_credit_balance > 0`; for a negative `recordBalance`, `remainingToAllocate.gte(recordBalance)` is always true and the remainder *increases*.
+- **Scenario:** After BUG-017/149-151 drift leaves a credit row at −₱100, a real ₱50 settlement first "settles" the negative row (remainder grows to ₱150) then marks ₱150 of later invoices paid — ledger shows ₱50 received but ₱150 of invoice balances wiped.
+
+## BUG-162 — Per-line and header totals use different rounding boundaries **[code-verified]**
+- `pos.service.ts:267-289,294-306` — line subtotals persist rounded to `Decimal(10,2)` but `grand_total` computes from unrounded accumulators; fractional `quantity_sold` accepted (`item.dto.ts:24-31`).
+- **Scenario:** Two lines of 0.5 qty at ₱10.01 each → items sum ₱10.02 but grand_total ₱10.01 — the receipt shows line items totaling more than the total charged; auditors see a ₱0.01 discrepancy on every fractional-qty sale.
+
+## BUG-163 — CASH/GCASH payment `details` optional → payments with zero audit metadata **[code-verified]**
+- `payment.dto.ts:75-90` (`details` optional for all methods); `pos.service.ts:335-350` detail rows only created when `details` present; tender/change/GCash reference fields required only *inside* the optional object.
+- **Scenario:** A GCash checkout with no `details` succeeds — a ₱5,000 GCash payment is recorded with no reference number or mobile number. Reconciliation can't match it to the GCash statement; fraud is undetectable.
+
+## BUG-166 — Expenses list fetch has no out-of-order response guard **[code-verified]**
+- `admin/expenses/page.tsx:70-107` — `loadExpenses` refires on every filter/page change with no sequence counter/AbortController/stale check (contrast shipments `requestId` guard, `useInventory` abort).
+- **Scenario:** Admin changes the category filter then quickly the date range — the older request resolves last, leaving the table and pagination showing the stale filter while the UI shows the new one; wrong expense rows until manual refresh.
+
 ---
 
 # LOW SEVERITY
@@ -519,6 +611,11 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 | BUG-146 |`products.service.ts:139`|Auto-SKU suffix is only last-4-digits of `Date.now()` → same-ms collisions hard-fail| Two products created in the same millisecond with identical attributes get identical SKUs — the second create throws DuplicateProductException. Rare but real during bulk imports. |
 | BUG-147 |`schema.prisma:655-661`, `shipments.service.ts:83`|`TransactionStatus.CANCELLED`/`REFUNDED`/`PARTIALLY_REFUNDED` are dead — nothing ever sets them| Returns can be filed against any transaction regardless of status because no transaction ever leaves COMPLETED — a 'cancelled' or fully-refunded sale still accepts new return requests. |
 | BUG-148 |`customers.service.ts:679-691`|`updateOverduePaymentsStatus` marks zero-balance credit records OVERDUE — no balance predicate| A credit row driven to ~0 balance without a status update (BUG-129 drift) gets flipped to OVERDUE by the cron anyway — the customer is blocked from credit checkout over an invoice they already paid off. |
+| BUG-164 |`checkout.dto.ts:18-26`, `pos.service.ts:62-67,380-394`|Checkout `customerId` lacks `@IsInt()`; nonexistent IDs pass validation then fail on FK as 500| A script or buggy client sends customerId:999999 — validation passes (positive number), customer lookup misses, and the transaction insert dies on the FK constraint as a 500 instead of a clean 400/404. |
+| BUG-167 |`receipt/[id]/page.tsx:324,356-358`, `ReceiptModal.tsx:105-107`, `PrintableInvoice.tsx:131`|Up to three elements share `id="printable-receipt"` on the receipt page| Three DOM nodes carry the same print ID — invalid HTML, and `@media print` positions all of them at identical coordinates. Today content coincides so output looks right, but any divergence (modal showing a different receipt, returns variant) prints overlapping garbage. |
+| BUG-168 |`EditExpenseModal.tsx:64-66`|Edit Expense cannot clear an existing date — falsy check skips the change| An expense saved with a date is opened in Edit, the date field cleared (marked optional), saved — `values.date === ""` is falsy so the PATCH never includes `date`; the stored date silently remains while the UI implies it was cleared. |
+| BUG-169 |`GCashPaymentForm.tsx:41,132-139`|`+639…` format unreachable — input strips `+` and `maxLength=11` truncates `639XXXXXXXXX`| Customer reads their GCash number as "+639 17 123 4567"; cashier types it — `+` stripped, truncated to 11 digits, fails `mobileRegex` forever. The `+639` branch is dead code; users only learn the real format from a failed submit. |
+| BUG-170 |`StaffTable.tsx:162,518-550`|Client-side pagination never clamps `page` when `filteredStaff` shrinks on refetch| On page 2+ with an active filter, enough rows leave the set after a refetch that the page empties — pagination hides entirely (≤LIMIT) and the table shows 'No staff members match' with no Previous button. Dead end until the user guesses to change a filter. |
 
 ## BUG-113 — Roles without POS access get infinite redirect loop — app unusable **[BROWSER-CONFIRMED]**
 - **Severity:** High
