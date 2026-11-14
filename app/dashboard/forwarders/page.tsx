@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { CheckCircle2, X } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { getErrorMessage } from "@/lib/utils";
 import { Forwarder, ForwardersResponse } from "./_components/types";
@@ -14,6 +15,7 @@ export default function ForwardersPage() {
   const [forwarders, setForwarders] = useState<Forwarder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Filters & Pagination
   const [searchQuery, setSearchQuery] = useState("");
@@ -48,7 +50,9 @@ export default function ForwardersPage() {
         params.is_active = false;
       }
 
-      const response = await apiClient.get<ForwardersResponse>("/forwarders", { params });
+      const response = await apiClient.get<ForwardersResponse>("/forwarders", {
+        params,
+      });
       setForwarders(response.data.data || []);
       setTotalPages(response.data.meta?.totalPages || 1);
     } catch (err) {
@@ -61,6 +65,12 @@ export default function ForwardersPage() {
   useEffect(() => {
     fetchForwarders();
   }, [fetchForwarders]);
+
+  useEffect(() => {
+    if (!successMsg) return;
+    const timer = setTimeout(() => setSuccessMsg(null), 4000);
+    return () => clearTimeout(timer);
+  }, [successMsg]);
 
   // Reset page on filter/search change
   const handleSearchChange = (query: string) => {
@@ -77,14 +87,38 @@ export default function ForwardersPage() {
     <div className="flex-1 space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Forwarders Management</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          Forwarders Management
+        </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Manage courier and logistics vendor accounts, contact channels, and status tracking.
+          Manage courier and logistics vendor accounts, contact channels, and
+          status tracking.
         </p>
       </div>
 
       {/* Main Content Card */}
       <div className="bg-card p-6 rounded-lg shadow-sm border border-border space-y-4">
+        {successMsg && (
+          <div
+            role="status"
+            className="flex items-center justify-between gap-3 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700"
+          >
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSuccessMsg(null)}
+              className="rounded p-1 text-emerald-700 hover:bg-emerald-500/20"
+              aria-label="Dismiss notification"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         {error && (
           <div className="p-3 rounded text-xs font-mono bg-destructive/10 text-destructive border border-destructive/20">
             {error}
@@ -114,21 +148,40 @@ export default function ForwardersPage() {
       <CreateForwarderModal
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
-        onSuccess={fetchForwarders}
+        onSuccess={(createdCompanyName) => {
+          setSuccessMsg(
+            `Forwarder "${createdCompanyName}" added successfully.`,
+          );
+          fetchForwarders();
+        }}
       />
 
       <EditForwarderModal
         forwarder={editTarget}
         open={!!editTarget}
         onOpenChange={(open) => !open && setEditTarget(null)}
-        onSuccess={fetchForwarders}
+        onSuccess={() => {
+          if (editTarget) {
+            setSuccessMsg(
+              `Forwarder "${editTarget.company_name}" updated successfully.`,
+            );
+          }
+          fetchForwarders();
+        }}
       />
 
       <DeleteForwarderModal
         forwarder={deleteTarget}
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        onSuccess={fetchForwarders}
+        onSuccess={() => {
+          if (deleteTarget) {
+            setSuccessMsg(
+              `Forwarder "${deleteTarget.company_name}" deleted successfully.`,
+            );
+          }
+          fetchForwarders();
+        }}
       />
     </div>
   );

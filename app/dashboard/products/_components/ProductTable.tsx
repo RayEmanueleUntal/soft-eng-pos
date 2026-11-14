@@ -106,7 +106,7 @@ export function ProductTable() {
   }, [successMsg]);
 
   const handleSaved = (updatedProduct?: Product) => {
-    const productName = updatedProduct?.name ?? selectedProduct?.name;
+    const productName = selectedProduct?.name;
 
     setIsEditOpen(false);
     setSelectedProduct(null);

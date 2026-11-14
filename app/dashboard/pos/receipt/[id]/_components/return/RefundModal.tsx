@@ -151,7 +151,7 @@ export function RefundModal({ open, onOpenChange, receipt, onSuccess }: RefundMo
           {/* Item Selection */}
           <div className="space-y-2">
             <Label htmlFor="item-select" className="text-xs font-medium">
-              Select Item to Return
+              Select Item to Return <span className="text-destructive">*</span>
             </Label>
             <Select
               value={selectedItemIndex !== null ? String(selectedItemIndex) : ""}
@@ -183,7 +183,7 @@ export function RefundModal({ open, onOpenChange, receipt, onSuccess }: RefundMo
           {/* Quantity */}
           <div className="space-y-2">
             <Label htmlFor="quantity" className="text-xs font-medium">
-              Quantity to Return
+              Quantity to Return <span className="text-destructive">*</span>
             </Label>
             <Input
               id="quantity"
@@ -204,7 +204,7 @@ export function RefundModal({ open, onOpenChange, receipt, onSuccess }: RefundMo
           {/* Condition */}
           <div className="space-y-2">
             <Label htmlFor="condition" className="text-xs font-medium">
-              Condition
+              Condition <span className="text-destructive">*</span>
             </Label>
             <Select
               value={condition || ""}
@@ -234,7 +234,7 @@ export function RefundModal({ open, onOpenChange, receipt, onSuccess }: RefundMo
           {/* Reason */}
           <div className="space-y-2">
             <Label htmlFor="reason" className="text-xs font-medium">
-              Reason for Return
+              Reason for Return <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id="reason"
