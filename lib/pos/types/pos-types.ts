@@ -372,3 +372,23 @@ export interface ReturnResponse {
   message: string;
   approvalRequestId: number;
 }
+
+export interface ProductCategoryItem {
+  id: number;
+  name: string;
+}
+
+export interface PosCatalogProps {
+  searchInputRef: React.RefObject<HTMLInputElement | null>;
+  onAddToCart: (product: CatalogProduct) => void;
+  refreshTrigger?: unknown;
+  products?: CatalogProduct[];
+  loading?: boolean;
+  error?: string | null;
+  refetch?: () => Promise<void> | void;
+}
+
+export interface UsePosCatalogOptions {
+  search?: string;
+  categoryId?: number;
+}

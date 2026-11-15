@@ -1,58 +1,42 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { AlertCircle, Barcode, Loader2, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "./ProductCard";
-import { usePosCatalog, type CatalogProduct } from "@/lib/pos";
+import {
+  usePosCatalog,
+  type CatalogProduct,
+  type PosCatalogProps,
+} from "@/lib/pos";
 
 export type { CatalogProduct } from "@/lib/pos";
 
-interface PosCatalogProps {
-  searchInputRef: React.RefObject<HTMLInputElement | null>;
-  onAddToCart: (product: CatalogProduct) => void;
-  products: CatalogProduct[];
-  loading: boolean;
-  error: string | null;
-  refetch: () => Promise<void> | void;
-}
-
-export function PosCatalog({
-  searchInputRef,
-  onAddToCart,
-  products,
-  loading,
-  error,
-  refetch,
-}: PosCatalogProps) {
+export function PosCatalog({ searchInputRef,refreshTrigger, onAddToCart  }: PosCatalogProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  // const { products, loading, error, refetch } = usePosCatalog();
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(undefined);
 
-  // Extract unique categories dynamically from loaded products
-  const categories = useMemo(() => {
-    const set = new Set(
-      products.map((p) => p.category?.trim()).filter(Boolean),
-    );
-    return ["All", ...Array.from(set)];
-  }, [products]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  // Real-time filtering by search query AND selected category
-  const filteredProducts = useMemo(() => {
-    return products.filter((prod) => {
-      const matchesSearch =
-        prod.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        prod.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        prod.category.toLowerCase().includes(searchQuery.toLowerCase());
+  const { products, categories, loading, error, refetch } = usePosCatalog({
+    search: debouncedSearch,
+    categoryId: selectedCategoryId,
+  });
+  // 2. Refetch stock counts whenever a transaction finishes
+  useEffect(() => {
+    if (refreshTrigger) {
+      refetch();
+    }
+  }, [refreshTrigger, refetch]);
 
-      const matchesCategory =
-        selectedCategory === "All" ||
-        prod.category.toLowerCase() === selectedCategory.toLowerCase();
-
-      return matchesSearch && matchesCategory;
-    });
-  }, [products, searchQuery, selectedCategory]);
+  
 
   return (
     <div className="lg:col-span-6 flex flex-col gap-3 overflow-hidden">
@@ -67,7 +51,10 @@ export function PosCatalog({
           placeholder="Scan Barcode or Search SKU..."
           className="pl-9 h-9 rounded-[4px] border-input focus-visible:ring-0 focus-visible:border-primary focus-visible:ring-offset-0 focus-visible:ring-transparent focus-visible:shadow-[0_0_0_2px_rgba(0,96,178,0.2)]"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setSelectedCategoryId(undefined);
+          }}
         />
         <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
           <span className="inline-flex items-center justify-center px-1.5 h-5 text-[10px] font-mono font-bold rounded-[2px] border border-input bg-muted/80 text-foreground">
@@ -77,20 +64,33 @@ export function PosCatalog({
       </div>
 
       {/* Category Filter Pills */}
-      {categories.length > 1 && (
+      {categories.length > 0 && (
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 shrink-0 scrollbar-none text-xs">
+          {/* "All" Button to reset category */}
+          <button
+            type="button"
+            onClick={() => setSelectedCategoryId(undefined)}
+            className={`px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+              selectedCategoryId === undefined
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            All
+          </button>
+          {/* Individual Category Chips (clicking an active chip toggles it off) */}
           {categories.map((cat) => (
             <button
-              key={cat}
+              key={cat.id}
               type="button"
-              onClick={() => setSelectedCategory(cat)}
+              onClick={() => setSelectedCategoryId((prev) => (prev === cat.id ? undefined : cat.id))}
               className={`px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-                selectedCategory === cat
+                selectedCategoryId === cat.id
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
-              {cat}
+              {cat.name}
             </button>
           ))}
         </div>
@@ -119,15 +119,15 @@ export function PosCatalog({
               <RefreshCw className="h-3.5 w-3.5" /> Retry
             </Button>
           </div>
-        ) : filteredProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground text-xs">
-            {searchQuery || selectedCategory !== "All"
+            {searchQuery || selectedCategoryId !== undefined
               ? "No products match your search or filter."
               : "No products available in database."}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
-            {filteredProducts.map((prod) => (
+            {products.map((prod) => (
               <ProductCard
                 key={prod.id}
                 product={prod}
