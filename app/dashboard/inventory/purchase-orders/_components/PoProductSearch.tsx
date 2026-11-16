@@ -13,18 +13,10 @@ import { getErrorMessage } from "@/lib/utils";
 
 interface ProductFilters {
   search: string;
-  size: string;
-  thread: string;
-  material: string;
 }
 
-const EMPTY_FILTERS: ProductFilters = { search: "", size: "", thread: "", material: "" };
+const EMPTY_FILTERS: ProductFilters = { search: "" };
 
-const FILTER_FIELDS: { key: Exclude<keyof ProductFilters, "search">; label: string }[] = [
-  { key: "size", label: "Size" },
-  { key: "thread", label: "Thread" },
-  { key: "material", label: "Material" },
-];
 
 interface SearchResult {
   query: string;
@@ -53,9 +45,6 @@ export function PoProductSearch({
       () =>
         setDebounced({
           search: filters.search.trim(),
-          size: filters.size.trim(),
-          thread: filters.thread.trim(),
-          material: filters.material.trim(),
         }),
       300,
     );
@@ -106,24 +95,11 @@ export function PoProductSearch({
           className="h-9 rounded-[4px] pl-8 text-xs"
         />
       </div>
-      <div className="grid grid-cols-3 gap-2">
-        {FILTER_FIELDS.map(({ key, label }) => (
-          <Input
-            key={key}
-            placeholder={label}
-            aria-label={`Filter by ${label.toLowerCase()}`}
-            value={filters[key]}
-            disabled={disabled}
-            onChange={(e) => setFilters((prev) => ({ ...prev, [key]: e.target.value }))}
-            className="h-8 rounded-[4px] font-mono text-xs"
-          />
-        ))}
-      </div>
 
       <div className="max-h-44 divide-y divide-border overflow-y-auto rounded-md border border-border bg-card">
         {!hasQuery ? (
           <p className="p-4 text-center text-xs text-muted-foreground">
-            Type a SKU or name, or filter by size, thread or material.
+            Type a product, size, thread or material.
           </p>
         ) : isLoading ? (
           <p className="p-4 text-center text-xs text-muted-foreground">Searching...</p>
@@ -148,7 +124,7 @@ export function PoProductSearch({
                     {item.name}
                   </p>
                   <p className="truncate font-mono text-[11px] text-muted-foreground">
-                    {item.sku ?? "—"} · {item.current_quantity} {item.base_uom}
+                    {item.current_quantity} {item.base_uom}
                     {item.size_dimensions ? ` · ${item.size_dimensions}` : ""}
                     {item.thread_type ? ` · ${item.thread_type}` : ""}
                     {item.material_grade ? ` · ${item.material_grade}` : ""}
