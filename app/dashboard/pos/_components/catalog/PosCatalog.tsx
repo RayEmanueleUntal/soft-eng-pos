@@ -55,7 +55,7 @@ export function PosCatalog({
         {/* Barcode / Search Input */}
         <div className="relative min-w-0 flex-1">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <SearchIcon className="h-4 w-4 text-muted-foreground/80" /> 
+            <SearchIcon className="h-4 w-4 text-muted-foreground/80" />
           </div>
           <Input
             ref={searchInputRef}
@@ -78,7 +78,11 @@ export function PosCatalog({
         {/* Category Filter */}
         {categories.length > 0 && (
           <Select
-            value={selectedCategoryId === undefined ? "all" : String(selectedCategoryId)}
+            value={
+              selectedCategoryId === undefined
+                ? "all"
+                : String(selectedCategoryId)
+            }
             onValueChange={(value) =>
               setSelectedCategoryId(value === "all" ? undefined : Number(value))
             }
@@ -94,8 +98,9 @@ export function PosCatalog({
                 {(value: string | null) =>
                   !value || value === "all"
                     ? "All Categories"
-                    : categories.find((category) => String(category.id) === value)
-                        ?.name ?? "Select category"
+                    : (categories.find(
+                        (category) => String(category.id) === value,
+                      )?.name ?? "Select category")
                 }
               </SelectValue>
             </SelectTrigger>
@@ -112,7 +117,7 @@ export function PosCatalog({
       </div>
 
       {/* Product Catalog Grid */}
-      <div className="overflow-y-auto flex-1 pr-1">
+      <div className="min-h-0 flex-1 overflow-y-auto pr-1 pb-3">  
         {loading ? (
           <div className="flex items-center justify-center py-12 text-muted-foreground text-xs gap-2">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
@@ -141,7 +146,7 @@ export function PosCatalog({
               : "No products available in database."}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {[...products]
               .sort((a, b) =>
                 a.name.localeCompare(b.name, undefined, {
