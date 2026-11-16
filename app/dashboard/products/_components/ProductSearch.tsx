@@ -2,6 +2,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Search } from "lucide-react";
 import { useProductCategories } from "@/lib/products/product-categories";
 
 interface ProductSearchProps {
@@ -41,42 +42,19 @@ export function ProductSearch({
   } = useProductCategories();
 
   return (
-    <div className="rounded-lg border bg-background p-3">
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
-        <div className="space-y-2 lg:col-span-2">
-          <Label>Search</Label>
+    <div className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+          <div className="space-y-2 lg:col-span-2">
+            <Label>Search</Label>
+            <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search products or SKU..."
+            placeholder="Search products by name, description, or SKU..."
+            className="pl-8"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Thread</Label>
-          <Input
-            placeholder="e.g. M8x1.25"
-            value={thread}
-            onChange={(e) => onThreadChange(e.target.value)}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Material</Label>
-          <Input
-            placeholder="e.g. Stainless"
-            value={material}
-            onChange={(e) => onMaterialChange(e.target.value)}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Size</Label>
-          <Input
-            placeholder="e.g. M8 x 30mm"
-            value={size}
-            onChange={(e) => onSizeChange(e.target.value)}
-          />
+          </div>
         </div>
 
         <div className="space-y-2">

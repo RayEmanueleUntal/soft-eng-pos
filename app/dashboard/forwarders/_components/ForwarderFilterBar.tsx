@@ -20,6 +20,12 @@ interface ForwarderFilterBarProps {
   onOpenCreateModal: () => void;
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  all: "All Status",
+  active: "Active",
+  inactive: "Inactive",
+};
+
 export function ForwarderFilterBar({
   searchQuery,
   onSearchChange,
@@ -47,12 +53,14 @@ export function ForwarderFilterBar({
           onValueChange={(val) => onStatusFilterChange(val ?? "all")}
         >
           <SelectTrigger className="w-[160px] h-9 text-sm">
-            <SelectValue placeholder="Filter by Status" />
+            <SelectValue placeholder="Filter by Status">
+              {STATUS_LABELS[statusFilter] ?? "All Status"}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="active">Active Only</SelectItem>
-            <SelectItem value="inactive">Inactive Only</SelectItem>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
           </SelectContent>
         </Select>
       </div>

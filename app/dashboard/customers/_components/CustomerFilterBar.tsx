@@ -39,6 +39,12 @@ export function CustomerFilterBar({
       filters.company_name,
   );
 
+  const TYPE_LABELS: Record<string, string> = {
+    all: "All Customers",
+    RETAIL: "Retail",
+    WHOLESALE: "Wholesale",
+  };
+
   return (
     <div className="flex flex-wrap items-center gap-3 bg-card p-3 rounded-[4px] border border-border shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
       <div className="relative">
@@ -49,37 +55,14 @@ export function CustomerFilterBar({
           placeholder="Search name, contact, or company..."
           value={filters.search}
           onChange={(event) => updateFilter("search", event.target.value)}
-          className="w-[220px] pl-8 h-8 text-[13px] rounded-[2px]"
+          className="w-[300px] pl-8 h-8 text-[13px] rounded-[2px]"
         />
       </div>
-
-      <Input
-        placeholder="Filter by name..."
-        value={filters.name}
-        onChange={(event) => updateFilter("name", event.target.value)}
-        className="w-[160px] h-8 text-[13px] rounded-[2px]"
-      />
-
-      <Input
-        placeholder="Filter by contact #..."
-        value={filters.contact_number}
-        onChange={(event) =>
-          updateFilter("contact_number", event.target.value)
-        }
-        className="w-[160px] h-8 text-[13px] rounded-[2px]"
-      />
-
-      <Input
-        placeholder="Filter by company..."
-        value={filters.company_name}
-        onChange={(event) => updateFilter("company_name", event.target.value)}
-        className="w-[190px] h-8 text-[13px] rounded-[2px]"
-      />
 
       <Select
         value={filters.type || "all"}
         onValueChange={(value) => {
-          if (value === "all") {
+          if (!value || value === "all") {
             updateFilter("type", "");
           } else if (value === "RETAIL" || value === "WHOLESALE") {
             updateFilter("type", value);
@@ -87,10 +70,12 @@ export function CustomerFilterBar({
         }}
       >
         <SelectTrigger className="w-[140px] h-8 text-[13px] rounded-[2px]">
-          <SelectValue placeholder="All Types" />
+          <SelectValue placeholder="All Customers">
+            {TYPE_LABELS[filters.type || "all"] ?? "All Customers"}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Types</SelectItem>
+          <SelectItem value="all">All Customers</SelectItem>
           <SelectItem value="RETAIL">Retail</SelectItem>
           <SelectItem value="WHOLESALE">Wholesale</SelectItem>
         </SelectContent>
