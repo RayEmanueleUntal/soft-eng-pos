@@ -32,12 +32,12 @@ const ROW_LIMIT_OPTIONS = [10, 25, 50];
 
 function AgingCell({ value, severity }: { value: number; severity: "warn" | "high" }) {
   if (value <= 0) {
-    return <span className="font-mono tabular-nums text-muted-foreground">—</span>;
+    return <span className=" tabular-nums text-muted-foreground">—</span>;
   }
   return (
     <span
       className={cn(
-        "font-mono tabular-nums font-medium",
+        " tabular-nums font-medium",
         severity === "warn"
           ? "text-amber-600"
           : "text-red-600",
@@ -74,7 +74,7 @@ export function AccountsReceivableTab({ refreshKey }: { refreshKey: number }) {
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Credit Extended
             </p>
-            <p className="font-mono text-lg font-semibold tabular-nums">
+            <p className=" text-lg font-semibold tabular-nums">
               {formatPeso(overview.total_credit_extended)}
             </p>
           </CardContent>
@@ -84,7 +84,7 @@ export function AccountsReceivableTab({ refreshKey }: { refreshKey: number }) {
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Outstanding Debt
             </p>
-            <p className="font-mono text-lg font-semibold tabular-nums text-amber-600">
+            <p className=" text-lg font-semibold tabular-nums text-amber-600">
               {formatPeso(overview.total_outstanding_debt)}
             </p>
           </CardContent>
@@ -94,7 +94,7 @@ export function AccountsReceivableTab({ refreshKey }: { refreshKey: number }) {
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Utilization
             </p>
-            <p className="font-mono text-lg font-semibold tabular-nums">
+            <p className=" text-lg font-semibold tabular-nums">
               {overview.credit_utilization_percentage.toFixed(1)}%
             </p>
           </CardContent>
@@ -104,7 +104,7 @@ export function AccountsReceivableTab({ refreshKey }: { refreshKey: number }) {
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Wholesale Accounts
             </p>
-            <p className="font-mono text-lg font-semibold tabular-nums">
+            <p className=" text-lg font-semibold tabular-nums">
               {overview.total_wholesale_accounts}
             </p>
           </CardContent>
@@ -157,13 +157,13 @@ export function AccountsReceivableTab({ refreshKey }: { refreshKey: number }) {
                       <TableCell className="max-w-[140px] whitespace-normal break-words text-xs">
                         {row.customer_name}
                       </TableCell>
-                      <TableCell className="font-mono text-xs whitespace-nowrap">
+                      <TableCell className=" text-xs whitespace-nowrap">
                         {row.contact_number}
                       </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums font-semibold">
+                      <TableCell className="text-right  tabular-nums font-semibold">
                         {formatPeso(row.total_outstanding_balance)}
                       </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">
+                      <TableCell className="text-right tabular-nums">
                         {row.current_amount > 0 ? (
                           formatPeso(row.current_amount)
                         ) : (
@@ -241,19 +241,19 @@ export function AccountsReceivableTab({ refreshKey }: { refreshKey: number }) {
                       <TableCell className="max-w-[220px] font-medium whitespace-normal break-words">
                         {customer.company_name}
                       </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">
+                      <TableCell className="text-right  tabular-nums">
                         {formatPeso(customer.total_sales_volume)}
                       </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">
+                      <TableCell className="text-right  tabular-nums">
                         {formatPeso(customer.total_settled_payments)}
                       </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums font-semibold">
+                      <TableCell className="text-right  tabular-nums font-semibold">
                         {formatPeso(customer.current_outstanding_balance)}
                       </TableCell>
                       <TableCell className="text-right">
                         <span
                           className={cn(
-                            "font-mono tabular-nums",
+                            " tabular-nums",
                             customer.promptness_score >= 80
                               ? "text-emerald-600"
                               : customer.promptness_score >= 50

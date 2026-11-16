@@ -195,10 +195,10 @@ export function InventoryVelocityTab({
                       <TableCell className="text-right font-mono tabular-nums">
                         {formatQty(item.total_base_quantity_sold)}
                       </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">
+                      <TableCell className="text-right tabular-nums">
                         {formatPeso(item.total_revenue)}
                       </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">
+                      <TableCell className="text-right  tabular-nums">
                         {formatPeso(item.total_gross_profit)}
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums">
@@ -262,10 +262,10 @@ export function InventoryVelocityTab({
                       <TableCell className="text-right font-mono tabular-nums">
                         {formatQty(item.current_quantity)} {item.base_uom}
                       </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">
+                      <TableCell className="text-right  tabular-nums">
                         {formatPeso(item.cost_price)}
                       </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums font-semibold">
+                      <TableCell className="text-right  tabular-nums font-semibold">
                         {formatPeso(item.tied_up_capital)}
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums">
@@ -284,7 +284,7 @@ export function InventoryVelocityTab({
           {hasSlow && (
             <div className="border-t px-4 py-2 text-xs text-muted-foreground">
               Total tied-up capital:{" "}
-              <span className="font-mono font-semibold tabular-nums text-foreground">
+              <span className=" font-semibold tabular-nums text-foreground">
                 {formatPeso(
                   data.slow_moving_items.reduce(
                     (sum, item) => sum + item.tied_up_capital,

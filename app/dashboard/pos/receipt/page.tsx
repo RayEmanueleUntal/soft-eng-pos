@@ -22,7 +22,7 @@ import {
   RefreshCw,
   AlertCircle,
 } from "lucide-react";
-import { getErrorMessage } from "@/lib/utils";
+import { formatPeso, getErrorMessage } from "@/lib/utils";
 import { fetchTransactionsApi, type TransactionSummary } from "@/lib/pos";
 import { PageHeader } from "@/components/ui/pageheader";
 
@@ -265,11 +265,8 @@ export default function TransactionHistoryPage() {
                         {tx.paymentMethod}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right font-semibold font-mono text-xs tabular-nums text-foreground">
-                      ₱
-                      {tx.totalAmount.toLocaleString("en-PH", {
-                        minimumFractionDigits: 2,
-                      })}
+                    <TableCell className="text-right font-semibold text-xs tabular-nums text-foreground">
+                      {formatPeso(tx.totalAmount)}
                     </TableCell>
                     <TableCell className="text-center">
                       <Button

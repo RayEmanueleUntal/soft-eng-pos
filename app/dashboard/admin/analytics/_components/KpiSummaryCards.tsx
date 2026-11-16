@@ -28,12 +28,12 @@ function KpiCard({ label, value, badge, badgeVariant = "secondary", hint }: KpiC
             {label}
           </p>
           {badge && (
-            <Badge variant={badgeVariant} className="font-mono text-[10px]">
+            <Badge variant={badgeVariant} className=" text-[10px]">
               {badge}
             </Badge>
           )}
         </div>
-        <p className="font-mono text-xl font-semibold tabular-nums tracking-tight">
+        <p className=" text-xl font-semibold tabular-nums tracking-tight">
           {value}
         </p>
         {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}

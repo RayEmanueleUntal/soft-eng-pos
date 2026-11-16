@@ -118,7 +118,7 @@ export function ExpenseTable({
                   <TableCell className="whitespace-nowrap">
                     {expense.payment_method.replace(/_/g, " ")}
                   </TableCell>
-                  <TableCell className="text-right font-mono font-semibold tabular-nums text-foreground whitespace-nowrap">
+                  <TableCell className="text-right  font-semibold tabular-nums text-foreground whitespace-nowrap">
                     {formatPeso(Number(expense.amount))}
                   </TableCell>
                   <TableCell>

@@ -45,7 +45,7 @@ function LedgerStat({ label, value }: { label: string; value: string }) {
       <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
-      <p className="font-mono text-sm font-semibold tabular-nums">{value}</p>
+      <p className=" text-sm font-semibold tabular-nums">{value}</p>
     </div>
   );
 }
@@ -209,7 +209,7 @@ export function FinancialPerformanceTab({
                       <span className="truncate text-muted-foreground">
                         {entry.payment_method}
                       </span>
-                      <span className="font-mono tabular-nums">
+                      <span className="tabular-nums">
                         {formatPeso(entry.total_amount)}{" "}
                         <span className="text-muted-foreground">
                           ({entry.percentage_share.toFixed(1)}%)
