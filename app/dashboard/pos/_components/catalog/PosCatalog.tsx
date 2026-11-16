@@ -13,10 +13,16 @@ import {
 
 export type { CatalogProduct } from "@/lib/pos";
 
-export function PosCatalog({ searchInputRef,refreshTrigger, onAddToCart  }: PosCatalogProps) {
+export function PosCatalog({
+  searchInputRef,
+  refreshTrigger,
+  onAddToCart,
+}: PosCatalogProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(undefined);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<
+    number | undefined
+  >(undefined);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -35,8 +41,6 @@ export function PosCatalog({ searchInputRef,refreshTrigger, onAddToCart  }: PosC
       refetch();
     }
   }, [refreshTrigger, refetch]);
-
-  
 
   return (
     <div className="lg:col-span-6 flex flex-col gap-3 overflow-hidden">
@@ -83,7 +87,11 @@ export function PosCatalog({ searchInputRef,refreshTrigger, onAddToCart  }: PosC
             <button
               key={cat.id}
               type="button"
-              onClick={() => setSelectedCategoryId((prev) => (prev === cat.id ? undefined : cat.id))}
+              onClick={() =>
+                setSelectedCategoryId((prev) =>
+                  prev === cat.id ? undefined : cat.id,
+                )
+              }
               className={`px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
                 selectedCategoryId === cat.id
                   ? "bg-primary text-primary-foreground"
@@ -127,13 +135,19 @@ export function PosCatalog({ searchInputRef,refreshTrigger, onAddToCart  }: PosC
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
-            {products.map((prod) => (
-              <ProductCard
-                key={prod.id}
-                product={prod}
-                onAddToCart={onAddToCart}
-              />
-            ))}
+            {[...products]
+              .sort((a, b) =>
+                a.name.localeCompare(b.name, undefined, {
+                  sensitivity: "base",
+                }),
+              )
+              .map((prod) => (
+                <ProductCard
+                  key={prod.id}
+                  product={prod}
+                  onAddToCart={onAddToCart}
+                />
+              ))}
           </div>
         )}
       </div>

@@ -173,7 +173,14 @@ export async function fetchProductsApi(params?: {
     : productsRes.data?.data || [];
 
   // 3. Pass the dynamic categoryMap to toCatalogProduct
-  return rawList.map((item) => toCatalogProduct(item, categoryMap));
+  return rawList
+  .map((item) => toCatalogProduct(item, categoryMap))
+  .sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, {
+      sensitivity: "base",
+      numeric: true,
+    }) || a.id - b.id,
+  );
 }
 
 /**
