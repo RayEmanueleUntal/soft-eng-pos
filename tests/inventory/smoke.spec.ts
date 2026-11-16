@@ -10,7 +10,6 @@ const inventoryPages = [
   { path: '/dashboard/inventory/bins', heading: 'Bin Locations' },
   { path: '/dashboard/inventory/deliveries', heading: 'Deliveries' },
   { path: '/dashboard/inventory/purchase-orders', heading: 'Purchase Orders' },
-  { path: '/dashboard/inventory/rop', heading: 'Reorder Point Management' },
   { path: '/dashboard/inventory/shipments', heading: 'Shipments' },
 ];
 

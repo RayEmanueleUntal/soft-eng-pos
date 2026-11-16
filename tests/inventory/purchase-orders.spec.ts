@@ -1,7 +1,33 @@
-// PURCHASE ORDER TESTS (backend rules, tested through the API)
+// PURCHASE ORDER TESTS
 
 import { test, expect } from '@playwright/test';
-import { Api } from './helpers';
+import { Api, loginAs } from './helpers';
+
+// BUG-001 in BUGS.md (it used to be on the ROP page, which was removed from the menu).
+// The "Below reorder point" quick-add list in the New Purchase Order form still uses
+// fetchROPItems(), which only checks the first 100 products instead of asking the backend's
+// /inventory/rop. Low-stock products further down the list never appear there.
+test('@bug BUG-001 "Below reorder point" list shows every product the backend flags', async ({ page, request }) => {
+  const api = await Api.login(request);
+  const flagged = await api.flagLowStockProductOutsideFirst(100); // fetchROPItems() loads 100
+  test.skip(flagged === null, 'Could not place a low-stock product outside the first 100 on this database (NEW-1 paging bug).');
+
+  try {
+    // The backend itself says this product needs reordering...
+    const rop = await api.get('/inventory/rop');
+    expect(JSON.stringify(rop.body.items), 'backend /inventory/rop list').toContain(flagged!.product.sku);
+
+    // ...so the quick-add list in the New Purchase Order form should offer it too.
+    await loginAs(page, 'admin');
+    await page.goto('/dashboard/inventory/purchase-orders');
+    await page.getByRole('button', { name: 'New Purchase Order' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText('Below reorder point')).toBeVisible();
+    await expect(dialog.getByText(flagged!.product.sku)).toBeVisible();
+  } finally {
+    await flagged?.restore();
+  }
+});
 
 // Healthy check (GREEN): a normal purchase order can be created and cancelled.
 test('a normal purchase order can be created and cancelled', async ({ request }) => {

@@ -102,6 +102,30 @@ export class Api {
     }
   }
 
+  // Makes one of the OLDEST products drop below its reorder point, making sure it is NOT among
+  // the first `firstN` products of the product list (the part a page loads and can see).
+  // Because of the NEW-1 paging bug, an edited product can jump to the front of the list, so it
+  // tries up to five products. Returns null if none stays outside (the test should then skip).
+  // Always call restore() at the end to put the reorder point back.
+  async flagLowStockProductOutsideFirst(firstN: number) {
+    const first = await this.get('/products?limit=100&page=1');
+    const last = await this.get(`/products?limit=100&page=${first.body.meta.totalPages}`);
+    const candidates = last.body.data.slice(-5).reverse(); // the five oldest products
+
+    for (const candidate of candidates) {
+      const originalRop = Number(candidate.reorder_point_ROP);
+      await this.patch(`/products/${candidate.id}`, { reorder_point_ROP: Number(candidate.current_quantity) + 10 });
+      const restore = () => this.patch(`/products/${candidate.id}`, { reorder_point_ROP: originalRop });
+
+      const visible = await this.get(`/products?limit=${firstN}`); // what the page would load
+      if (!visible.body.data.some((p: any) => p.id === candidate.id)) {
+        return { product: candidate, restore };
+      }
+      await restore(); // it jumped into the visible part, try the next one
+    }
+    return null;
+  }
+
   async firstSupplierId(): Promise<number> {
     const { body } = await this.get('/suppliers?limit=1');
     return (body.data ?? body)[0].id;
