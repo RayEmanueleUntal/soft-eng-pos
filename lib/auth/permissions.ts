@@ -76,3 +76,15 @@ export function canUpdateShipment(role: string | null | undefined): boolean {
 export function canDeleteShipment(role: string | null | undefined): boolean {
   return !!role && SHIPMENT_DELETE_ROLES.includes(role as Role);
 }
+
+// Roles the backend allows to create bin locations (POST /bin-location).
+export const BIN_CREATE_ROLES: Role[] = [
+  ROLES.ADMIN,
+  ROLES.MANAGER,
+  ROLES.SECRETARY,
+];
+
+// Returns true when the role may create a new bin location.
+export function canCreateBin(role: string | null | undefined): boolean {
+  return !!role && BIN_CREATE_ROLES.includes(role as Role);
+}
