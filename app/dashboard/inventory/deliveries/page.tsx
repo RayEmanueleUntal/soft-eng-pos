@@ -83,75 +83,77 @@ export default function DeliveriesPage() {
           header="Deliveries"
           subheader="Record incoming stock from suppliers and match deliveries against Purchase Orders."
         />
-
-        {canManageStock(role) && (
-          <ReceiveDeliveryModal
-            onSuccess={(info) => {
-              setSuccessBanner(info);
-              if (page === 1) loadDeliveries();
-              else setPage(1);
-            }}
-          />
-        )}
       </div>
 
       {/* Main Content Card Container */}
       <div className="bg-card p-6 rounded-lg shadow-sm border border-border space-y-6">
-        {/* Actions Bar (Success banner beside Refresh button) */}
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
-          <div className="flex-1">
-            {successBanner && (
-              <div
-                role="status"
-                className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-xs animate-in fade-in duration-200 ${
+        {/* Actions Bar: Refresh on the left, Receive Delivery on the right */}
+        <div className="space-y-3">
+          {successBanner && (
+            <div
+              role="status"
+              className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-xs animate-in fade-in duration-200 ${
+                successBanner.isPartial
+                  ? "border-amber-500/30 bg-amber-500/10 text-amber-800"
+                  : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                {successBanner.isPartial ? (
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                )}
+                <span>
+                  {successBanner.message}
+                  {successBanner.isPartial && (
+                    <span className="ml-1 font-semibold">
+                      (PO marked as partially fulfilled.)
+                    </span>
+                  )}
+                </span>
+              </span>
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={() => setSuccessBanner(null)}
+                className={`h-6 px-2 ${
                   successBanner.isPartial
-                    ? "border-amber-500/30 bg-amber-500/10 text-amber-800"
-                    : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
+                    ? "text-amber-800 hover:bg-amber-500/20 hover:text-amber-950"
+                    : "text-emerald-700 hover:bg-emerald-500/20 hover:text-emerald-900"
                 }`}
               >
-                <span className="flex items-center gap-2">
-                  {successBanner.isPartial ? (
-                    <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
-                  ) : (
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                  )}
-                  <span>
-                    {successBanner.message}
-                    {successBanner.isPartial && (
-                      <span className="ml-1 font-semibold">
-                        (PO marked as partially fulfilled.)
-                      </span>
-                    )}
-                  </span>
-                </span>
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  onClick={() => setSuccessBanner(null)}
-                  className={`h-6 px-2 ${
-                    successBanner.isPartial
-                      ? "text-amber-800 hover:bg-amber-500/20 hover:text-amber-950"
-                      : "text-emerald-700 hover:bg-emerald-500/20 hover:text-emerald-900"
-                  }`}
-                >
-                  Dismiss
-                </Button>
+                Dismiss
+              </Button>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadDeliveries}
+              disabled={loading}
+              className="rounded-md gap-1.5 text-xs h-9 hover:bg-muted"
+            >
+              <RefreshCw
+                className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
+              />
+              Refresh
+            </Button>
+
+            {canManageStock(role) && (
+              <div className="ml-auto">
+                <ReceiveDeliveryModal
+                  onSuccess={(info) => {
+                    setSuccessBanner(info);
+                    if (page === 1) loadDeliveries();
+                    else setPage(1);
+                  }}
+                />
               </div>
             )}
           </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadDeliveries}
-            disabled={loading}
-            className="rounded-md gap-1.5 text-xs h-9 hover:bg-muted shrink-0 self-end sm:self-auto"
-          >
-            <RefreshCw
-              className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </Button>
         </div>
 
         {/* Error Notification */}

@@ -63,51 +63,54 @@ const navigation: NavItem[] = [
     ],
   },
   {
-    name: "Inventory",
-    href: "/dashboard/inventory",
-    icon: Boxes,
+    name: "Products",
+    href: "/dashboard/products",
+    icon: Package,
     children: [
-      { name: "ROP", href: "/dashboard/inventory/rop" },
-      { name: "Bin Locations", href: "/dashboard/inventory/bins" },
+      {
+        name: "Inventory",
+        href: "/dashboard/inventory",
+      },  
       {
         name: "Adjustments",
         href: "/dashboard/inventory/adjustments",
         requiresStockRole: true,
       },
-      {
-        name: "Deliveries",
-        href: "/dashboard/inventory/deliveries",
-      },
-      {
-        name: "Shipments",
-        href: "/dashboard/inventory/shipments",
-      },
-      {
-        name: "Purchase Orders",
-        href: "/dashboard/inventory/purchase-orders",
-        allowedRoles: ROLE_PERMISSIONS["/dashboard/inventory/purchase-orders"],
-      },
-    ],
-  },
-  {
-    name: "Products",
-    href: "/dashboard/products",
-    icon: Package,
-  },
-  {
-    name: "Customers",
-    href: "/dashboard/customers",
-    icon: Users,
+            { name: "Bin Locations", href: "/dashboard/inventory/bins" },
+
+    ]
   },
   {
     name: "Suppliers",
     href: "/dashboard/suppliers",
     icon: Truck,
+    children: [
+      {
+        name: "Purchase Orders",
+        href: "/dashboard/inventory/purchase-orders",
+        allowedRoles: ROLE_PERMISSIONS["/dashboard/inventory/purchase-orders"],
+      },
+      {
+        name: "Receive Deliveries",
+        href: "/dashboard/inventory/deliveries",
+      },
+    ]  
   },
   {
     name: "Forwarders",
     href: "/dashboard/forwarders",
     icon: Truck,
+    children: [
+      {
+        name: "Outgoing Shipments",
+        href: "/dashboard/inventory/shipments",
+      }
+    ]
+  },
+  {
+    name: "Customers",
+    href: "/dashboard/customers",
+    icon: Users,
   },
   {
     name: "Staff",
@@ -129,12 +132,12 @@ const navigation: NavItem[] = [
         href: "/dashboard/admin/expenses",
       },
       {
-        name: "System Settings",
-        href: "/dashboard/admin/system-settings",
-      },
-      {
         name: "Approval Requests",
         href: "/dashboard/admin/approval-requests",
+      },
+      {
+        name: "System Settings",
+        href: "/dashboard/admin/system-settings",
       },
     ],
   },

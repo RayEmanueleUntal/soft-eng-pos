@@ -14,9 +14,10 @@ const CLOSED_STATUSES = ["FULFILLED", "CANCELLED"];
 
 interface POSelectListProps {
   onSelectPO: (po: PurchaseOrder) => void;
+  actionSlot?: React.ReactNode;
 }
 
-export function POSelectList({ onSelectPO }: POSelectListProps) {
+export function POSelectList({ onSelectPO, actionSlot }: POSelectListProps) {
   const [orders, setOrders] = React.useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -118,6 +119,7 @@ export function POSelectList({ onSelectPO }: POSelectListProps) {
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
+          {actionSlot}
         </div>
       </div>
 
