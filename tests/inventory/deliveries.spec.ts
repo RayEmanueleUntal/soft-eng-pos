@@ -1,25 +1,10 @@
-// DELIVERIES PAGE TESTS
+// DELIVERIES TESTS
+//
+// Note: the BUG-165 test ("Print Receipt" printed a blank page) was removed, because
+// PR #73 removed the Print Receipt button from the delivery details.
 
 import { test, expect } from '@playwright/test';
-import { Api, loginAs } from './helpers';
-
-// BUG-165 in BUGS.md.
-// "Print Receipt" in the delivery details calls window.print(), but the app's print styles
-// hide everything except a POS receipt. The printed delivery page comes out blank.
-// Playwright can switch the page into "print mode" to see exactly what would be printed.
-test('@bug BUG-165 a printed delivery receipt is not blank', async ({ page }) => {
-  await loginAs(page, 'admin');
-  await page.goto('/dashboard/inventory/deliveries');
-  await page.getByRole('button', { name: 'View' }).first().click();
-
-  const dialog = page.getByRole('dialog');
-  await expect(dialog.getByRole('button', { name: /Print Receipt/ })).toBeVisible();
-  const title = page.getByText(/Delivery Receipt #/);
-  await expect(title).toBeVisible(); // visible on screen...
-
-  await page.emulateMedia({ media: 'print' });
-  await expect(title).toBeVisible(); // ...and it should still be visible on paper
-});
+import { Api } from './helpers';
 
 // BUG-015 in BUGS.md (backend rule, tested through the API).
 // When receiving a delivery, the backend accepts any conversion factor the client sends.

@@ -85,6 +85,23 @@ export class Api {
     return body;
   }
 
+  // Records two stock adjustments (count +1, then back to the original), so the
+  // Adjustments page has movements from today even on a freshly seeded database.
+  async createTodaysTestMovements(reason: string) {
+    const { body } = await this.get('/products?limit=20');
+    const product = body.data.find((p: any) => Number(p.current_quantity) >= 1); // a count of 0 is not allowed
+    const original = Number(product.current_quantity);
+    for (const newCount of [original + 1, original]) {
+      const res = await this.post('/inventory/adjust', {
+        productId: product.id,
+        current_uom: product.base_uom,
+        new_count: newCount,
+        reason,
+      });
+      expect(res.status, 'creating a test adjustment').toBeLessThan(400);
+    }
+  }
+
   async firstSupplierId(): Promise<number> {
     const { body } = await this.get('/suppliers?limit=1');
     return (body.data ?? body)[0].id;

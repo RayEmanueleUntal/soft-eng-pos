@@ -7,6 +7,7 @@ Tests for the Inventory pages: Inventory, Adjustments, Bins, Deliveries, Purchas
 1. Backend running: `npm run start:dev` in `soft-eng-pos-api` (port 3001)
 2. Frontend running: `npm run dev` in `soft-eng-pos` (port 3000)
 3. Database seeded: `npx prisma db seed` and `npx prisma db seed -- --csv`
+   (the tests create most of their own data, but need the seeded users, suppliers and products)
 
 ## How to run
 
@@ -36,11 +37,13 @@ Tests for the Inventory pages: Inventory, Adjustments, Bins, Deliveries, Purchas
 | BUG-046 | Filtering start and end date to today shows nothing | Adjustments |
 | BUG-062 | Stock staff get 403 errors on the Adjustments page | Adjustments |
 | BUG-044 | Cashier and stock staff see "Add Bin Location", but saving fails with 403 | Bins |
-| BUG-165 | "Print Receipt" on a delivery prints a blank page | Deliveries |
 | BUG-015 | Receiving 5 pieces with a typed factor of 999 adds 4,995 to stock | Deliveries (backend) |
 | BUG-036 | A PO can be set to FULFILLED with no delivery | Purchase Orders (backend) |
 | BUG-126 | Same product in two units on one PO crashes the server (500) | Purchase Orders (backend) |
 | NEW | Paging through products shows some twice and skips others | Inventory (backend) |
+
+No longer tested: BUG-165 (delivery "Print Receipt" printed a blank page). PR #73 removed that
+button, so the bug cannot happen anymore.
 
 The NEW bug is not in `BUGS.md`. Cause: `products.service.ts` sorts only by `createdAt`, and
 the CSV seed creates many products at the same moment. Likely fix:
