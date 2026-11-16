@@ -189,11 +189,13 @@ export function SupplierModal({
               id="leadTimeDays"
               type="number"
               min="0"
-              value={formData.leadTimeDays}
+              placeholder="0"
+              value={formData.leadTimeDays === 0 ? "" : formData.leadTimeDays}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  leadTimeDays: parseInt(e.target.value) || 0,
+                  leadTimeDays:
+                    e.target.value === "" ? 0 : parseInt(e.target.value, 10),
                 })
               }
             />

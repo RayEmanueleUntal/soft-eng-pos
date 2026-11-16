@@ -1,5 +1,4 @@
 // Shipments subpage of the POS inventory module (/dashboard/inventory/shipments).
-// Active tab lists PENDING/DISPATCHED shipments (GET /shipments/active); History lists DELIVERED ones.
 // Staff can log a shipment, move it through PENDING -> DISPATCHED -> DELIVERED, edit or cancel it.
 "use client";
 
@@ -7,8 +6,15 @@ import * as React from "react";
 import { CheckCircle2, Plus, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/pageheader";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CreateShipmentModal } from "./_components/CreateShipmentModal";
 import { ShipmentDetailDrawer } from "./_components/ShipmentDetailDrawer";
 import { ShipmentTable } from "./_components/ShipmentTable";
@@ -23,20 +29,26 @@ import {
   fetchActiveShipments,
   fetchShipmentHistory,
 } from "@/lib/inventory/shipment-api";
-import { Shipment } from "@/lib/inventory/shipment-types";
+import { Shipment, TrackingStatus } from "@/lib/inventory/shipment-types";
 import { STATUS_LABELS } from "@/lib/inventory/shipment-utils";
 import { getErrorMessage } from "@/lib/utils";
 
-type ShipmentTab = "active" | "history";
+type ShipmentFilter = "ALL" | TrackingStatus;
+
+const FILTER_LABELS: Record<ShipmentFilter, string> = {
+  ALL: "All Status",
+  PENDING: "Pending",
+  DISPATCHED: "Dispatched",
+  DELIVERED: "Delivered",
+};
 
 const PAGE_LIMIT = 10;
 
 export default function ShipmentsPage() {
   const role = useCurrentRole();
 
-  const [tab, setTab] = React.useState<ShipmentTab>("active");
-  const [activePage, setActivePage] = React.useState(1);
-  const [historyPage, setHistoryPage] = React.useState(1);
+  const [statusFilter, setStatusFilter] = React.useState<ShipmentFilter>("ALL");
+  const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
   const [reloadKey, setReloadKey] = React.useState(0);
@@ -54,41 +66,89 @@ export default function ShipmentsPage() {
   const [statusTarget, setStatusTarget] = React.useState<Shipment | null>(null);
 
   const requestId = React.useRef(0);
-  const page = tab === "active" ? activePage : historyPage;
-  const setPage = tab === "active" ? setActivePage : setHistoryPage;
 
-  // Applies the search box after a short pause and returns both tabs to page 1.
+  // Applies the search box after a short pause and resets to page 1.
   React.useEffect(() => {
     const timer = setTimeout(() => {
       setSearch(searchInput.trim());
-      setActivePage(1);
-      setHistoryPage(1);
+      setPage(1);
     }, 300);
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // Loads the current tab; ignores responses from requests that were superseded.
+  // Loads shipments for the active status filter; ignores superseded responses.
   React.useEffect(() => {
     const current = ++requestId.current;
     setLoading(true);
     setError(null);
 
-    const request =
-      tab === "active"
-        ? fetchActiveShipments({ page, limit: PAGE_LIMIT, search })
-        : fetchShipmentHistory({ page, limit: PAGE_LIMIT, search });
+    const load = async () => {
+      if (statusFilter === "DELIVERED") {
+        const res = await fetchShipmentHistory({
+          page,
+          limit: PAGE_LIMIT,
+          search,
+        });
+        return {
+          items: res.items ?? [],
+          totalItems: res.meta?.totalItems ?? 0,
+          totalPages: res.meta?.totalPages ?? 1,
+        };
+      }
 
-    request
+      if (statusFilter === "PENDING" || statusFilter === "DISPATCHED") {
+        // Fetch active shipments (PENDING + DISPATCHED) and filter to the selected status
+        const res = await fetchActiveShipments({
+          page: 1,
+          limit: 100,
+          search,
+        });
+        const filtered = (res.items ?? []).filter(
+          (item) => item.tracking_status === statusFilter,
+        );
+        const computedTotalPages = Math.max(
+          1,
+          Math.ceil(filtered.length / PAGE_LIMIT),
+        );
+        const start = (page - 1) * PAGE_LIMIT;
+        return {
+          items: filtered.slice(start, start + PAGE_LIMIT),
+          totalItems: filtered.length,
+          totalPages: computedTotalPages,
+        };
+      }
+
+      // statusFilter === "ALL": combine active (PENDING/DISPATCHED) and history (DELIVERED)
+      const [activeRes, historyRes] = await Promise.all([
+        fetchActiveShipments({ page: 1, limit: 100, search }),
+        fetchShipmentHistory({ page: 1, limit: 100, search }),
+      ]);
+      const combined = [
+        ...(activeRes.items ?? []),
+        ...(historyRes.items ?? []),
+      ];
+      const computedTotalPages = Math.max(
+        1,
+        Math.ceil(combined.length / PAGE_LIMIT),
+      );
+      const start = (page - 1) * PAGE_LIMIT;
+      return {
+        items: combined.slice(start, start + PAGE_LIMIT),
+        totalItems: combined.length,
+        totalPages: computedTotalPages,
+      };
+    };
+
+    load()
       .then((res) => {
         if (current !== requestId.current) return;
-        // The last item of the last page may have just left this list; step back one page.
         if (res.items.length === 0 && page > 1) {
-          setPage(Math.max(1, Math.min(page - 1, res.meta.totalPages)));
+          setPage(Math.max(1, Math.min(page - 1, res.totalPages)));
           return;
         }
-        setShipments(res.items ?? []);
-        setTotal(res.meta?.totalItems ?? 0);
-        setTotalPages(res.meta?.totalPages ?? 1);
+        setShipments(res.items);
+        setTotal(res.totalItems);
+        setTotalPages(res.totalPages);
         setLoading(false);
       })
       .catch((err) => {
@@ -105,9 +165,7 @@ export default function ShipmentsPage() {
         setTotalPages(1);
         setLoading(false);
       });
-    // setPage is derived from `tab`, which is already a dependency.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, page, search, reloadKey]);
+  }, [statusFilter, page, search, reloadKey]);
 
   const reload = () => setReloadKey((key) => key + 1);
 
@@ -117,8 +175,8 @@ export default function ShipmentsPage() {
         shipment.transaction?.invoice_number ?? `order #${shipment.transactionId}`
       } (Pending).`,
     );
-    setTab("active");
-    setActivePage(1);
+    setStatusFilter("ALL");
+    setPage(1);
     reload();
   };
 
@@ -148,60 +206,78 @@ export default function ShipmentsPage() {
           header="Shipments"
           subheader="Assign forwarders to completed orders and track delivery status."
         />
-
-        {canCreateShipment(role) && (
-          <Button
-            onClick={() => {
-              setNotice(null);
-              setCreateOpen(true);
-            }}
-            className="h-8 gap-1.5 rounded-sm bg-primary px-3 text-xs font-semibold tracking-wide text-primary-foreground hover:bg-primary/90"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Log Shipment
-          </Button>
-        )}
       </div>
 
       <div className="bg-card p-6 rounded-lg shadow-sm border border-border space-y-6">
-        {/* Tabs, search and refresh */}
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <Tabs
-            value={tab}
-            onValueChange={(value) => setTab(value as ShipmentTab)}
-          >
-            <TabsList>
-              <TabsTrigger value="active" className="px-3">
-                Active
-              </TabsTrigger>
-              <TabsTrigger value="history" className="px-3">
-                History
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <div className="flex items-center gap-2">
-            <div className="relative w-full sm:w-72">
-              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search invoice or tracking no."
-                className="h-9 pl-8 text-xs"
-              />
+        <div className="space-y-4">
+          <div className="grid items-end gap-3 md:grid-cols-2 lg:grid-cols-5">
+            {/* Search */}
+            <div className="space-y-2 lg:col-span-2">
+              <Label>Search</Label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Search invoice or tracking no."
+                  className="pl-9 h-9 text-sm font-sans focus-visible:ring-1 focus-visible:ring-primary"
+                />
+              </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={reload}
-              disabled={loading}
-              className="rounded-md gap-1.5 text-xs h-9 hover:bg-muted"
-            >
-              <RefreshCw
-                className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
-              />
-              Refresh
-            </Button>
+
+            {/* Filter by Status + Refresh directly beside it */}
+            <div className="flex flex-wrap items-end gap-2 lg:col-span-3">
+              <div className="flex flex-col gap-2">
+                <Label>Status</Label>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value) => {
+                    setStatusFilter((value ?? "ALL") as ShipmentFilter);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="!h-9 w-[160px] text-sm rounded-[4px]">
+                    <SelectValue placeholder="All Status">
+                      {FILTER_LABELS[statusFilter]}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent alignItemWithTrigger={false}>
+                    <SelectItem value="ALL">All Status</SelectItem>
+                    <SelectItem value="PENDING">Pending</SelectItem>
+                    <SelectItem value="DISPATCHED">Dispatched</SelectItem>
+                    <SelectItem value="DELIVERED" >Delivered</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={reload}
+                disabled={loading}
+                className="h-9 px-2.5 text-xs rounded-[4px] gap-1.5 hover:bg-muted"
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
+                />
+                Refresh
+              </Button>
+
+              {canCreateShipment(role) && (
+                <div className="ml-auto">
+                  <Button
+                    onClick={() => {
+                      setNotice(null);
+                      setCreateOpen(true);
+                    }}
+                    className="h-9 px-4 font-semibold text-xs tracking-wider bg-[#0060B2] hover:bg-[#004888] text-white rounded-md shadow-none"
+                  >
+                    <Plus className="mr-1.5 h-4 w-4" />
+                    Log Shipment
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -224,9 +300,9 @@ export default function ShipmentsPage() {
           emptyMessage={
             search
               ? "No shipments match your search."
-              : tab === "active"
-                ? 'No active shipments. Use "Log Shipment" to assign a forwarder to a completed order.'
-                : "No delivered shipments yet."
+              : statusFilter === "DELIVERED"
+                ? "No delivered shipments yet."
+                : 'No shipments found. Use "Log Shipment" to assign a forwarder to a completed order.'
           }
           canUpdate={canUpdateShipment(role)}
           onView={handleView}

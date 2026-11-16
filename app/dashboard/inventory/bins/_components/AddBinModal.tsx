@@ -98,16 +98,19 @@ export function AddBinModal({ onSuccess }: AddBinModalProps) {
 
   return (
     <>
-      <Button
-        onClick={() => {
-          setErrorMsg(null);
-          setOpen(true);
-        }}
-        className="h-8 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm"
-      >
-        <Plus className="h-3.5 w-3.5" />
-        <span>Add Bin Location</span>
-      </Button>
+      <div className="lg:col-start-5 flex lg:justify-end">
+        <Button
+          onClick={() => {
+            setErrorMsg(null);
+            setOpen(true);
+          }}
+          className="h-9 px-4 font-semibold text-xs tracking-wider bg-[#0060B2] hover:bg-[#004888] text-white rounded-md shadow-none"
+        >
+          <Plus className="mr-1.5 h-4 w-4" />
+          <span>Add Bin Location</span>
+        </Button>
+      </div>
+      
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[420px] border-[#CBD5E1] rounded-sm p-5 bg-white shadow-md">

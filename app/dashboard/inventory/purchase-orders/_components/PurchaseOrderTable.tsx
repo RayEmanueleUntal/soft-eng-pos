@@ -18,7 +18,20 @@ import { PurchaseOrderDto } from "@/lib/inventory/purchase-order-types";
 import { formatPeso } from "@/lib/utils";
 import { PurchaseOrderItemsDetail } from "./PurchaseOrderItemsDetail";
 import { PurchaseOrderStatusBadge } from "./PurchaseOrderStatusBadge";
+import { Plus, RefreshCw } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  PO_STATUSES
+} from "@/lib/inventory/purchase-order-types";
 
+type POStatus = PurchaseOrderDto["po_status"];
 const COLUMN_COUNT = 9;
 
 interface PurchaseOrderTableProps {
@@ -30,6 +43,13 @@ interface PurchaseOrderTableProps {
   canCancel: boolean;
   onPageChange: (page: number) => void;
   onCancelRequest: (order: PurchaseOrderDto) => void;
+
+  // Filter & action props
+  statusFilter: POStatus | "ALL";
+  onStatusFilterChange: (status: POStatus | "ALL") => void;
+  onRefresh: () => void;
+  canCreate: boolean;
+  onOpenCreateModal: () => void;
 }
 
 // Renders the PO list with expandable rows and pagination controls.
@@ -42,6 +62,11 @@ export function PurchaseOrderTable({
   canCancel,
   onPageChange,
   onCancelRequest,
+  statusFilter,
+  onStatusFilterChange,
+  onRefresh,
+  canCreate,
+  onOpenCreateModal,
 }: PurchaseOrderTableProps) {
   const [expandedIds, setExpandedIds] = React.useState<Set<number>>(new Set());
 
@@ -55,8 +80,70 @@ export function PurchaseOrderTable({
     });
   };
 
+  const formatStatusLabel = (status: string) =>
+  status === "ALL"
+    ? "All Status"
+    : status
+        .toLowerCase()
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+
   return (
     <div className="space-y-4">
+      <div className="grid items-end gap-3 md:grid-cols-2 lg:grid-cols-5">
+        {/* Status / Category + Refresh directly beside it */}
+        <div className="flex flex-wrap items-end gap-2 lg:col-span-3">
+          <div className="flex flex-col gap-2">
+            <Label>Status</Label>
+            <Select
+              value={statusFilter}
+              onValueChange={(value) =>
+                onStatusFilterChange((value ?? "ALL") as POStatus | "ALL")
+              }
+            >
+              <SelectTrigger className="!h-9 w-full rounded-[4px] sm:w-56">
+                <SelectValue placeholder="All Status">
+                  {(value: string) => formatStatusLabel(value)}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent alignItemWithTrigger={false}>
+                <SelectItem value="ALL">All Status</SelectItem>
+                {PO_STATUSES.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {formatStatusLabel(status)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRefresh}
+            disabled={loading}
+            className="h-9 px-2.5 text-xs rounded-[4px]"
+          >
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </Button>
+        </div>
+
+        {/* New Purchase Order Button (Furthest Right) */}
+        {canCreate && (
+          <div className="lg:col-start-5 flex lg:justify-end">
+            <Button
+              onClick={onOpenCreateModal}
+              className="h-9 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm"
+            >
+              <Plus className="h-4 w-4" /> New Purchase Order
+            </Button>
+          </div>
+        )}
+      </div>
+
       <div className="overflow-hidden rounded-md border border-border">
         <Table>
           <TableHeader className="bg-muted/50">

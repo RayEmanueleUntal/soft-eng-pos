@@ -84,14 +84,17 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <div className="mx-auto min-h-[calc(100vh-4rem)] max-w-[1600px] space-y-4 bg-background p-1">
-      <PageHeader
-        header="Executive Analytics"
-        subheader="Real-time KPIs, financial performance, operating expenses, inventory velocity, and accounts receivable."
-      />
+    <div className="flex-1 space-y-6">
+      <div className="shrink-0 mt-4 mb-4">
+        <PageHeader
+          header="Executive Analytics"
+          subheader="Real-time KPIs, financial performance, operating expenses, inventory velocity, and accounts receivable."
+        />
+      </div>
+ 
 
       {/* Global controls */}
-      <div className="flex flex-wrap items-center gap-2 rounded-md border bg-card px-3 py-2">
+      <div className="bg-card p-6 rounded-lg shadow-sm border border-border flex flex-col gap-4">
         <div className="flex items-center gap-1">
           {DATE_PRESETS.map((preset) => (
             <Button
