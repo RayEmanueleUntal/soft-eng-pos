@@ -264,6 +264,7 @@ export default function InventoryAdjustmentsPage() {
       const missingStaffIds = Array.from(
         new Set(
           list
+            .filter((m) => !m.staff) // the backend already sends the name with each movement
             .map((m) => m.staffId)
             .filter((id) => Boolean(id) && !knownStaff[id]),
         ),
