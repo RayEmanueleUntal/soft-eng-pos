@@ -1,9 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AlertCircle, Barcode, Loader2, RefreshCw } from "lucide-react";
+import { AlertCircle, Loader2, RefreshCw, SearchIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ProductCard } from "./ProductCard";
 import {
   usePosCatalog,
@@ -44,65 +51,65 @@ export function PosCatalog({
 
   return (
     <div className="lg:col-span-6 flex flex-col gap-3 overflow-hidden">
-      {/* Barcode / Search Input */}
-      <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Barcode className="h-4 w-4 text-muted-foreground/80" />
+      <div className="flex items-center gap-2 shrink-0">
+        {/* Barcode / Search Input */}
+        <div className="relative min-w-0 flex-1">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <SearchIcon className="h-4 w-4 text-muted-foreground/80" /> 
+          </div>
+          <Input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Search SKU..."
+            className="pl-9 h-9 rounded-[4px] border-input focus-visible:ring-0 focus-visible:border-primary focus-visible:ring-offset-0 focus-visible:ring-transparent focus-visible:shadow-[0_0_0_2px_rgba(0,96,178,0.2)]"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setSelectedCategoryId(undefined);
+            }}
+          />
+          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <span className="inline-flex items-center justify-center px-1.5 h-5 text-[10px] font-mono font-bold rounded-[2px] border border-input bg-muted/80 text-foreground">
+              [F2]
+            </span>
+          </div>
         </div>
-        <Input
-          ref={searchInputRef}
-          type="text"
-          placeholder="Scan Barcode or Search SKU..."
-          className="pl-9 h-9 rounded-[4px] border-input focus-visible:ring-0 focus-visible:border-primary focus-visible:ring-offset-0 focus-visible:ring-transparent focus-visible:shadow-[0_0_0_2px_rgba(0,96,178,0.2)]"
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-            setSelectedCategoryId(undefined);
-          }}
-        />
-        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-          <span className="inline-flex items-center justify-center px-1.5 h-5 text-[10px] font-mono font-bold rounded-[2px] border border-input bg-muted/80 text-foreground">
-            [F2]
-          </span>
-        </div>
-      </div>
 
-      {/* Category Filter Pills */}
-      {categories.length > 0 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 shrink-0 scrollbar-none text-xs">
-          {/* "All" Button to reset category */}
-          <button
-            type="button"
-            onClick={() => setSelectedCategoryId(undefined)}
-            className={`px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-              selectedCategoryId === undefined
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            }`}
+        {/* Category Filter */}
+        {categories.length > 0 && (
+          <Select
+            value={selectedCategoryId === undefined ? "all" : String(selectedCategoryId)}
+            onValueChange={(value) =>
+              setSelectedCategoryId(value === "all" ? undefined : Number(value))
+            }
           >
-            All
-          </button>
-          {/* Individual Category Chips (clicking an active chip toggles it off) */}
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() =>
-                setSelectedCategoryId((prev) =>
-                  prev === cat.id ? undefined : cat.id,
-                )
-              }
-              className={`px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-                selectedCategoryId === cat.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+            <SelectTrigger
+              className={`!h-9 w-[50%] min-w-[160px] max-w-[260px] rounded-[4px] text-[13px] ${
+                selectedCategoryId !== undefined
+                  ? "border-primary bg-primary text-primary-foreground [&_svg]:text-primary-foreground"
+                  : ""
               }`}
             >
-              {cat.name}
-            </button>
-          ))}
-        </div>
-      )}
+              <SelectValue placeholder="Select category">
+                {(value: string | null) =>
+                  !value || value === "all"
+                    ? "All Categories"
+                    : categories.find((category) => String(category.id) === value)
+                        ?.name ?? "Select category"
+                }
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent side="bottom" alignItemWithTrigger={false}>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={String(category.id)}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
 
       {/* Product Catalog Grid */}
       <div className="overflow-y-auto flex-1 pr-1">

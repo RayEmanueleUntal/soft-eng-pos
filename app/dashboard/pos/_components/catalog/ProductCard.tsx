@@ -145,10 +145,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
     >
       <div>
         <div className="flex justify-between items-start gap-1.5 mb-1">
-          <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[100px]">
-            {product.sku}
-          </span>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center  justify-between gap-1 w-full">
             {isOutOfStock ? (
               <Badge
                 variant="destructive"
@@ -162,10 +159,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
                 <strong className="text-foreground">{availableStock}</strong>
               </span>
             )}
-            {/* Always visible UoM pill badge */}
-            <span className="text-[9px] px-1.5 py-0.5 rounded-[2px] bg-primary/10 border border-primary/20 text-primary font-mono font-bold uppercase">
-              {selectedUom}
-            </span>
+            
             <span className="text-[9px] px-1 py-0.2 rounded-[2px] bg-muted border border-border text-muted-foreground truncate max-w-[70px]">
               {product.category}
             </span>
@@ -179,10 +173,10 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
 
       <div className="flex items-end justify-between gap-1.5 mt-2.5 pt-1.5 border-t border-border/40">
         <div>
-          <span className="font-bold text-primary font-mono text-[13px] tabular-nums">
+          <span className="font-bold text-primary text-[13px] tabular-nums">
             {formatPeso(displayPrice)}
           </span>
-          <span className="text-[10px] text-muted-foreground font-mono ml-0.5">
+          <span className="text-[8px] text-muted-foreground font-mono ml-0.5">
             /{selectedUom}
           </span>
         </div>
