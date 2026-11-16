@@ -67,7 +67,7 @@ const navigation: NavItem[] = [
     href: "/dashboard/inventory",
     icon: Boxes,
     children: [
-      { name: "ROP", href: "/dashboard/inventory/rop" },
+      //{ name: "ROP", href: "/dashboard/inventory/rop" },
       { name: "Bin Locations", href: "/dashboard/inventory/bins" },
       {
         name: "Adjustments",

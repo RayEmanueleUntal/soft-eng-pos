@@ -105,6 +105,16 @@ export function ProductTable() {
     return () => clearTimeout(timer);
   }, [successMsg]);
 
+  const handleProductSaved = (createdProduct?: Product) => {
+    setBannerError(null);
+    setSuccessMsg(
+      createdProduct?.name
+        ? `Product "${createdProduct.name}" added successfully.`
+        : "Product added successfully.",
+    );
+    fetchProducts();
+  };
+
   const handleSaved = (updatedProduct?: Product) => {
     const productName = selectedProduct?.name;
 
@@ -203,18 +213,7 @@ export function ProductTable() {
           onSizeChange={setSize}
           categoryId={categoryId}
           onCategoryChange={setCategoryId}
-        />
-
-        <AddProductModal
-          onSaved={(createdProduct) => {
-            setBannerError(null);
-            setSuccessMsg(
-              createdProduct?.name
-                ? `Product "${createdProduct.name}" added successfully.`
-                : "Product added successfully.",
-            );
-            fetchProducts();
-          }}
+          actionSlot={<AddProductModal onSaved={handleProductSaved} />}
         />
       </div>
 

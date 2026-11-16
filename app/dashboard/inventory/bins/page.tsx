@@ -176,49 +176,6 @@ export default function BinLocationsPage() {
             Filter
           </Button>
         </form>
-
-        {/* Exact Endpoint Search (GET /bin-location/search) */}
-        <form
-          onSubmit={handleExactLookup}
-          className="lg:col-span-6 bg-[#EFF4FF] border border-[#C8DCFF] p-2.5 rounded-sm flex flex-wrap items-center gap-2"
-        >
-          <span className="text-xs font-semibold text-[#004888] font-['Space_Grotesk'] shrink-0 flex items-center gap-1">
-            <Layers className="h-3.5 w-3.5" /> Exact Lookup:
-          </span>
-          <Input
-            placeholder="Aisle (Aisle-01)"
-            value={searchAisle}
-            onChange={(e) => setSearchAisle(e.target.value)}
-            className="h-8 text-xs font-mono border-[#CBD5E1] bg-white rounded-sm w-28 grow"
-          />
-          <Input
-            placeholder="Shelf (Shelf-B)"
-            value={searchShelf}
-            onChange={(e) => setSearchShelf(e.target.value)}
-            className="h-8 text-xs font-mono border-[#CBD5E1] bg-white rounded-sm w-28 grow"
-          />
-          <Button
-            type="submit"
-            disabled={isExactSearching}
-            className="h-8 text-xs bg-[#004888] hover:bg-[#001C3B] text-white rounded-sm px-3 font-semibold"
-          >
-            {isExactSearching ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              "Lookup"
-            )}
-          </Button>
-          {(searchAisle || searchShelf || bins.length === 1) && (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleClearExactSearch}
-              className="h-8 text-xs text-[#565E74] hover:text-[#0F172A] px-2"
-            >
-              Reset
-            </Button>
-          )}
-        </form>
       </div>
 
       {/* Success Banner */}

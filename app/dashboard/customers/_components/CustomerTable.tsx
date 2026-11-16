@@ -179,19 +179,13 @@ export function CustomerTable() {
       <CustomerFilterBar
         filters={filters}
         onFiltersChange={handleFiltersChange}
+        onOpenAddModal={() => setIsAddOpen(true)}
       />
 
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          {total} customer{total === 1 ? "" : "s"}
+            {total} customer{total === 1 ? "" : "s"}
         </p>
-
-        <Button
-          className="h-8 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm"
-          onClick={() => setIsAddOpen(true)}
-        >
-          <Plus className="mr-2 h-4 w-4" /> Add Customer
-        </Button>
       </div>
 
       {successMsg && (

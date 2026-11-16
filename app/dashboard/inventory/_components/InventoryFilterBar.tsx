@@ -84,32 +84,11 @@ export function InventoryFilterBar({
         />
       </div>
 
-      <Input
-        placeholder="Filter by size..."
-        value={size ?? ""}
-        onChange={(event) => setSize(event.target.value || null)}
-        className="w-[160px] h-8 text-[13px] rounded-[2px]"
-      />
-
-      <Input
-        placeholder="Filter by thread type..."
-        value={threadType ?? ""}
-        onChange={(event) => setThreadType(event.target.value || null)}
-        className="w-[160px] h-8 text-[13px] rounded-[2px]"
-      />
-
-      <Input
-        placeholder="Filter by material..."
-        value={material ?? ""}
-        onChange={(event) => setMaterial(event.target.value || null)}
-        className="w-[160px] h-8 text-[13px] rounded-[2px]"
-      />
-
       <Select
         value={category || "all"}
         onValueChange={(value) => setCategory(value === "all" ? null : value)}
       >
-        <SelectTrigger className="w-[180px] h-8 text-[13px] rounded-[2px]">
+        <SelectTrigger className="w-[260px] h-8 text-[13px] rounded-[2px]">
           <SelectValue placeholder="Filter by category...">
             {(val: string | null) => {
               if (!val || val === "all") return "All Categories";
@@ -132,16 +111,6 @@ export function InventoryFilterBar({
           </SelectGroup>
         </SelectContent>
       </Select>
-
-      <Button
-        variant="ghost"
-        onClick={handleClearFilters}
-        disabled={!areFiltersActive}
-        className="h-8 px-3 text-[13px] rounded-[2px]"
-      >
-        <X className="h-4 w-4 mr-1" />
-        Clear
-      </Button>
     </div>
   );
 }
