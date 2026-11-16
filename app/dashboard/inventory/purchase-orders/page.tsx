@@ -4,7 +4,7 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, CheckCircle2, Plus, RefreshCw } from "lucide-react";
+import { Search, AlertCircle, CheckCircle2, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -26,6 +26,7 @@ import { CancelPurchaseOrderDialog } from "./_components/CancelPurchaseOrderDial
 import { CreatePurchaseOrderModal } from "./_components/CreatePurchaseOrderModal";
 import { PurchaseOrderTable } from "./_components/PurchaseOrderTable";
 import { PageHeader } from "@/components/ui/pageheader";
+import { Label } from "@/components/ui/label";
 
 const PAGE_LIMIT = 10;
 
@@ -107,78 +108,15 @@ export default function PurchaseOrdersPage() {
 
   return (
     <div className="flex-1 space-y-6 font-sans">
-      {/* <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Purchase Orders</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Create orders from low-stock items, inspect line items and track their status.
-          </p>
-        </div>
-
-        {canCreatePO(role) && (
-          <Button onClick={() => setCreateOpen(true)} className="gap-2 font-semibold">
-            <Plus className="h-4 w-4" /> New Purchase Order
-          </Button>
-        )}
-      </div> */}
-
       <div className="shrink-0 mt-4 mb-4 flex justify-between">
-        {/* Header Bar */}
-        <PageHeader
-          header="Purchase Orders"
-          subheader="Create orders from low-stock items, inspect line items and track their status."
-        />
-
-        {canCreatePO(role) && (
-          <Button
-            onClick={() => setCreateOpen(true)}
-            className="h-8 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm"
-          >
-            <Plus className="h-4 w-4" /> New Purchase Order
-          </Button>
-        )}
-      </div>
+          {/* Header Bar */}
+          <PageHeader
+            header="Purchase Orders"
+            subheader="Create orders from low-stock items, inspect line items and track their status."
+          />
+        </div>
 
       <div className="space-y-6 rounded-lg border border-border bg-card p-6 shadow-sm">
-        <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
-          <Select
-            value={statusFilter}
-            onValueChange={(value) => {
-              setStatusFilter((value ?? "ALL") as POStatus | "ALL");
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="h-9 w-full rounded-[4px] sm:w-56">
-              <SelectValue placeholder="Status">
-                {(value: string) =>
-                  value === "ALL" ? "All statuses" : value.replace(/_/g, " ")
-                }
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent alignItemWithTrigger={false}>
-              <SelectItem value="ALL">All statuses</SelectItem>
-              {PO_STATUSES.map((status) => (
-                <SelectItem key={status} value={status}>
-                  {status.replace(/_/g, " ")}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadOrders}
-            disabled={loading}
-            className="h-9 gap-1.5 text-xs"
-          >
-            <RefreshCw
-              className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </Button>
-        </div>
-
         {notice && (
           <div
             role="status"
@@ -220,6 +158,14 @@ export default function PurchaseOrdersPage() {
           canCancel={canManagePOStatus(role)}
           onPageChange={setPage}
           onCancelRequest={setCancelTarget}
+          statusFilter={statusFilter}
+          onStatusFilterChange={(val) => {
+            setStatusFilter(val);
+            setPage(1);
+          }}
+          onRefresh={loadOrders}
+          canCreate={canCreatePO(role)}
+          onOpenCreateModal={() => setCreateOpen(true)}
         />
       </div>
 

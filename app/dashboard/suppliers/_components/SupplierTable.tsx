@@ -217,7 +217,7 @@ export function SupplierTable() {
                 setSelectedSupplier(null);
                 setIsModalOpen(true);
               }}
-                className="h-9 px-4 font-semibold text-xs tracking-wider uppercase bg-[#0060B2] hover:bg-[#004888] text-white rounded-md shadow-none"
+                className="h-9 px-4 font-semibold text-xs tracking-wider bg-[#0060B2] hover:bg-[#004888] text-white rounded-md shadow-none"
             >
               <Plus className="mr-1.5 h-4 w-4" /> Add Supplier
             </Button>

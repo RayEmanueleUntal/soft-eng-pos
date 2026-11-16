@@ -75,14 +75,6 @@ const navigation: NavItem[] = [
         requiresStockRole: true,
       },
       {
-        name: "Deliveries",
-        href: "/dashboard/inventory/deliveries",
-      },
-      {
-        name: "Shipments",
-        href: "/dashboard/inventory/shipments",
-      },
-      {
         name: "Purchase Orders",
         href: "/dashboard/inventory/purchase-orders",
         allowedRoles: ROLE_PERMISSIONS["/dashboard/inventory/purchase-orders"],
@@ -95,19 +87,31 @@ const navigation: NavItem[] = [
     icon: Package,
   },
   {
-    name: "Customers",
-    href: "/dashboard/customers",
-    icon: Users,
-  },
-  {
     name: "Suppliers",
     href: "/dashboard/suppliers",
     icon: Truck,
+    children: [
+      {
+        name: "Receive Deliveries",
+        href: "/dashboard/inventory/deliveries",
+      },
+    ]  
   },
   {
     name: "Forwarders",
     href: "/dashboard/forwarders",
     icon: Truck,
+    children: [
+      {
+        name: "Outgoing Shipments",
+        href: "/dashboard/inventory/shipments",
+      }
+    ]
+  },
+  {
+    name: "Customers",
+    href: "/dashboard/customers",
+    icon: Users,
   },
   {
     name: "Staff",

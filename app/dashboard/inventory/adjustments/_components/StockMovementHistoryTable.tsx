@@ -19,7 +19,7 @@ import { StockMovementResponse } from "@/lib/inventory/stock-movement-api";
 import { StockAdjustmentModal } from "@/components/inventory/StockAdjustmentModal";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { RotateCcw, Search, X } from "lucide-react";
+import { RefreshCw, RotateCcw, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -130,7 +130,9 @@ export function StockMovementHistoryTable({
           </div>
         </div>
 
-        <Select
+        <div className="flex flex-col gap-2">
+          <Label>Movement Type</Label>
+          <Select
           value={typeFilter}
           onValueChange={(val) => onTypeFilterChange(val ?? "ALL")}
         >
@@ -158,78 +160,87 @@ export function StockMovementHistoryTable({
             </SelectItem>
           </SelectContent>
         </Select>
-
-        {categoriesList.length > 0 && (
-          <Select
-            value={categoryFilter}
-            onValueChange={(val) => onCategoryFilterChange(val ?? "ALL")}
-          >
-            <SelectTrigger className="h-8 w-[150px] text-xs rounded-[2px]">
-              <SelectValue placeholder="Category">
-                {(val: string | null) => {
-                  if (!val || val === "ALL") return "All Categories";
-                  return (
-                    categoriesList.find((cat) => String(cat.id) === val)
-                      ?.name ?? "Category"
-                  );
-                }}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL" className="text-xs">
-                All Categories
-              </SelectItem>
-              {categoriesList.map((cat) => (
-                <SelectItem
-                  key={cat.id}
-                  value={String(cat.id)}
-                  className="text-xs"
-                >
-                  {cat.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11px] text-muted-foreground">From:</span>
-          <Input
-            type="date"
-            value={startDate}
-            onChange={(e) => onStartDateChange(e.target.value)}
-            className="h-8 w-[130px] text-xs rounded-[2px] font-mono"
-          />
-          <span className="text-[11px] text-muted-foreground">To:</span>
-          <Input
-            type="date"
-            value={endDate}
-            onChange={(e) => onEndDateChange(e.target.value)}
-            className="h-8 w-[130px] text-xs rounded-[2px] font-mono"
-          />
-
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onResetFilters}
-              className="h-8 px-2 text-xs rounded-[2px] text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-3.5 w-3.5 mr-1" />
-              Clear
-            </Button>
-          )}
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onRefresh}
-            className="h-8 px-2.5 text-xs rounded-[2px]"
-            title="Refresh movements"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-          </Button>
         </div>
+        
+        <div className="flex flex-col gap-2">
+          <Label>Category</Label>
+            {categoriesList.length > 0 && (
+              <Select
+                value={categoryFilter}
+                onValueChange={(val) => onCategoryFilterChange(val ?? "ALL")}
+              >
+                <SelectTrigger className="h-8 w-[260px] text-xs rounded-[2px]">
+                  <SelectValue placeholder="Category">
+                    {(val: string | null) => {
+                      if (!val || val === "ALL") return "All Categories";
+                      return (
+                        categoriesList.find((cat) => String(cat.id) === val)
+                          ?.name ?? "Category"
+                      );
+                    }}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL" className="text-xs">
+                    All Categories
+                  </SelectItem>
+                  {categoriesList.map((cat) => (
+                    <SelectItem
+                      key={cat.id}
+                      value={String(cat.id)}
+                      className="text-xs"
+                    >
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label>Date Range</Label>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-muted-foreground">From:</span>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => onStartDateChange(e.target.value)}
+              className="h-8 w-[130px] text-xs rounded-[2px] font-mono"
+            />
+            <span className="text-[11px] text-muted-foreground">To:</span>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => onEndDateChange(e.target.value)}
+              className="h-8 w-[130px] text-xs rounded-[2px] font-mono"
+            />
+
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onResetFilters}
+                className="h-8 px-2 text-xs rounded-[2px] text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5 mr-1" />
+                Clear
+              </Button>
+            )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRefresh}
+              className="h-8 px-2.5 text-xs rounded-[2px]"
+              title="Refresh movements"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Refresh
+            </Button>
+          </div>
+        </div>
+        
 
         {/* Add Stock Adjustment Button (Furthest Right) */}
         <div className="ml-auto">
@@ -241,10 +252,10 @@ export function StockMovementHistoryTable({
           <h2 className="text-[15px] font-heading font-semibold text-foreground">
             Stock Movement History
           </h2>
-          <span className="text-xs font-mono text-muted-foreground tabular-nums">
+           <span className="text-xs font-mono text-muted-foreground tabular-nums">
             Total records: {totalCount}
           </span>
-        </div>
+      </div>
 
       {/* Table */}
       <div className="bg-card rounded-[4px] border border-border overflow-hidden">
