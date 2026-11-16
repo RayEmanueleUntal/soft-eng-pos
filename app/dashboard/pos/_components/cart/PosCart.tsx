@@ -31,17 +31,12 @@ interface PosCartProps {
     productId: string | number | undefined,
     delta: number,
   ) => void;
-  onSetQuantity?: (
-    productId: string | number | undefined,
-    qty: number,
-  ) => void;
+  onSetQuantity?: (productId: string | number | undefined, qty: number) => void;
   onUpdateDiscount?: (
     productId: string | number | undefined,
     discount: number,
   ) => void;
-  onRemoveItem?: (
-    productId: string | number | undefined,
-  ) => void;
+  onRemoveItem?: (productId: string | number | undefined) => void;
   onUpdateOrderDiscountPercent?: (percent: number) => void;
   onToggleItemPricing?: (productId: string | number | undefined) => void;
   onToggleAllPricing?: (targetType: "RETAIL" | "WHOLESALE") => void;
@@ -109,8 +104,8 @@ export function PosCart({
   );
 
   return (
-    <div className="lg:col-span-4 flex h-full flex-col rounded-[4px] gap-3 ">
-      <div className="flex items-center justify-between gap-2 shrink-0">
+    <div className="lg:col-span-4 min-h-0 overflow-hidden flex h-full flex-col rounded-[4px] gap-3 ">
+      <div className="flex  items-center justify-between gap-2 shrink-0">
         <div className="relative flex-1 min-w-0" ref={containerRef}>
           <div
             onClick={() => !loading && setIsOpen(!isOpen)}
@@ -290,22 +285,27 @@ export function PosCart({
           </div>
         </div>
 
-        {/* Cart Item List */}
-        <div className="flex-1 overflow-y-auto min-h-0 bg-card">
-          <table className="w-full text-left border-collapse">
+        <div className="min-h-0 bg-card">
+          <table className="w-full text-left ">
             <thead className="sticky top-0 bg-muted border-b border-border shadow-sm z-10">
               <tr>
-                <th className="px-2 py-1 text-[11px] font-mono text-muted-foreground font-semibold w-full">
+                <th className="px-2 py-1 text-[11px] font-mono text-muted-foreground font-semibold w-[56%]">
                   Item
                 </th>
                 <th className="px-2 py-1 text-[11px] font-mono text-muted-foreground font-semibold text-right">
                   Qty
                 </th>
-                <th className="px-2 py-1 text-[11px] font-mono text-muted-foreground font-semibold text-right whitespace-nowrap">
+                <th className="px-9 py-1 text-[11px] font-mono text-muted-foreground font-semibold text-right whitespace-nowrap">
                   Total
                 </th>
               </tr>
             </thead>
+          </table>
+        </div>
+
+        {/* Cart Item List */}
+        <div className="flex-1 overflow-y-auto min-h-0 bg-card">
+          <table className="w-full text-left border-collapse">
             <tbody>
               {cart.length === 0 ? (
                 <tr>

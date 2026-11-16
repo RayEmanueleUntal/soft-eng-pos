@@ -144,10 +144,10 @@ export function CartItemRow({
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[10px] text-muted-foreground font-mono">
+        <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[10px] text-muted-foreground ">
           <span className="tabular-nums">
-            @{formatPeso(item.unitPrice)}
-            <span className="text-[9px] text-muted-foreground">
+            {formatPeso(item.unitPrice)}
+            <span className="text-[7px] font-mono text-muted-foreground">
               /{currentUom}
             </span>
           </span>
@@ -175,10 +175,10 @@ export function CartItemRow({
         </div>
 
         {/* Per-item monetary cash discount input */}
-        <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground font-mono">
+        <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground ">
           <span className="text-[10px]">Disc:</span>
           <div className="flex items-center gap-0.5">
-            <span className="text-[10px] text-muted-foreground">₱</span>
+            <span className="text-[10px] text-muted-foreground">{formatPeso(0).replace("0.00", "")}</span>
             <input
               type="text"
               inputMode="decimal"
@@ -187,7 +187,7 @@ export function CartItemRow({
               onKeyDown={handleNumberKeyDown}
               onChange={handleDiscountInputChange}
               onBlur={handleDiscountInputBlur}
-              className="w-14 h-4 px-1 font-mono text-[10px] rounded-[2px] border border-input bg-card focus:outline-none focus:border-primary text-foreground text-right tabular-nums"
+              className="w-14 h-4 px-1 text-[10px] rounded-[2px] border border-input bg-card focus:outline-none focus:border-primary text-foreground text-right tabular-nums"
               title="Per-item cash discount in Pesos"
             />
           </div>
@@ -228,11 +228,11 @@ export function CartItemRow({
 
       {/* Subtotal */}
       <td className="px-2 py-2 text-right align-middle">
-        <p className="font-semibold text-foreground font-mono text-[12px] tabular-nums whitespace-nowrap">
+        <p className="font-semibold text-foreground text-[12px] tabular-nums whitespace-nowrap">
           {formatPeso(item.subtotal)}
         </p>
         {(item.line_discount ?? 0) > 0 && (
-          <p className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">
+          <p className="text-[10px]  text-emerald-600 dark:text-emerald-400 tabular-nums">
             -{formatPeso(item.line_discount!)}
           </p>
         )}
