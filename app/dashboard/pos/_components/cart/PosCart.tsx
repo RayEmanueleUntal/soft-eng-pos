@@ -286,16 +286,21 @@ export function PosCart({
         </div>
 
         <div className="min-h-0 bg-card">
-          <table className="w-full text-left ">
+          <table className="w-full max-w-full table-fixed text-left">
+            <colgroup>
+              <col />
+              <col className="w-28" />
+              <col className="w-32" />
+            </colgroup>
             <thead className="sticky top-0 bg-muted border-b border-border shadow-sm z-10">
               <tr>
-                <th className="px-2 py-1 text-[11px] font-mono text-muted-foreground font-semibold w-[56%]">
+                <th className="px-2 py-1 text-[11px] font-mono text-muted-foreground font-semibold">
                   Item
                 </th>
                 <th className="px-2 py-1 text-[11px] font-mono text-muted-foreground font-semibold text-right">
                   Qty
                 </th>
-                <th className="px-9 py-1 text-[11px] font-mono text-muted-foreground font-semibold text-right whitespace-nowrap">
+                <th className="px-2 py-1 text-[11px] font-mono text-muted-foreground font-semibold text-right whitespace-nowrap">
                   Total
                 </th>
               </tr>
@@ -305,7 +310,12 @@ export function PosCart({
 
         {/* Cart Item List */}
         <div className="flex-1 overflow-y-auto min-h-0 bg-card">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full max-w-full table-fixed text-left border-collapse">
+            <colgroup>
+              <col />
+              <col className="w-28" />
+              <col className="w-23" />
+            </colgroup>
             <tbody>
               {cart.length === 0 ? (
                 <tr>

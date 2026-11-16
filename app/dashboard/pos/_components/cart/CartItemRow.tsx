@@ -122,7 +122,7 @@ export function CartItemRow({
   return (
     <tr
       key={`${itemId}-${currentUom}`}
-      className={`group border-b border-border last:border-b-0 ${
+      className={`group border-b border-border  ${
         index % 2 === 0 ? "bg-card" : "bg-background"
       } hover:bg-accent/40 transition-colors`}
     >
@@ -227,7 +227,7 @@ export function CartItemRow({
       </td>
 
       {/* Subtotal */}
-      <td className="px-2 py-2 text-right align-middle">
+      <td className="px-2 py-2 text-right align-middle border-l border-border ">
         <p className="font-semibold text-foreground text-[12px] tabular-nums whitespace-nowrap">
           {formatPeso(item.subtotal)}
         </p>
