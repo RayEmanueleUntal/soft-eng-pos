@@ -80,13 +80,21 @@ export function PurchaseOrderTable({
     });
   };
 
+  const formatStatusLabel = (status: string) =>
+  status === "ALL"
+    ? "All Status"
+    : status
+        .toLowerCase()
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+
   return (
     <div className="space-y-4">
       <div className="grid items-end gap-3 md:grid-cols-2 lg:grid-cols-5">
         {/* Status / Category + Refresh directly beside it */}
         <div className="flex flex-wrap items-end gap-2 lg:col-span-3">
           <div className="flex flex-col gap-2">
-            <Label>Category</Label>
+            <Label>Status</Label>
             <Select
               value={statusFilter}
               onValueChange={(value) =>
@@ -94,17 +102,15 @@ export function PurchaseOrderTable({
               }
             >
               <SelectTrigger className="!h-9 w-full rounded-[4px] sm:w-56">
-                <SelectValue placeholder="Status">
-                  {(value: string) =>
-                    value === "ALL" ? "All statuses" : value.replace(/_/g, " ")
-                  }
+                <SelectValue placeholder="All Status">
+                  {(value: string) => formatStatusLabel(value)}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent alignItemWithTrigger={false}>
-                <SelectItem value="ALL">All statuses</SelectItem>
+                <SelectItem value="ALL">All Status</SelectItem>
                 {PO_STATUSES.map((status) => (
                   <SelectItem key={status} value={status}>
-                    {status.replace(/_/g, " ")}
+                    {formatStatusLabel(status)}
                   </SelectItem>
                 ))}
               </SelectContent>

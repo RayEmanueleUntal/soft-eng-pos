@@ -10,6 +10,7 @@ import { ForwarderTable } from "./_components/ForwarderTable";
 import { CreateForwarderModal } from "./_components/CreateForwarderModal";
 import { EditForwarderModal } from "./_components/EditForwarderModal";
 import { DeleteForwarderModal } from "./_components/DeleteForwarderModal";
+import { PageHeader } from "@/components/ui/pageheader";
 
 export default function ForwardersPage() {
   const [forwarders, setForwarders] = useState<Forwarder[]>([]);
@@ -86,14 +87,11 @@ export default function ForwardersPage() {
   return (
     <div className="flex-1 space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Forwarders Management
-        </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Manage courier and logistics vendor accounts, contact channels, and
-          status tracking.
-        </p>
+      <div className="shrink-0 mt-4 mb-4">
+        <PageHeader
+          header="Forwarders Management"
+          subheader="Manage courier and logistics vendor accounts, contact channels, and status tracking."
+        />
       </div>
 
       {/* Main Content Card */}

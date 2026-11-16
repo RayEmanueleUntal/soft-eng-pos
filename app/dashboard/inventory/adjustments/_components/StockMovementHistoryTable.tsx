@@ -2,6 +2,7 @@
 // Shows each recorded movement with product, type, quantity change, before/after, reason and resolved staff name.
 "use client";
 
+import * as React from "react";
 import {
   Table,
   TableHeader,
@@ -19,7 +20,7 @@ import { StockMovementResponse } from "@/lib/inventory/stock-movement-api";
 import { StockAdjustmentModal } from "@/components/inventory/StockAdjustmentModal";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { RefreshCw, RotateCcw, Search, X } from "lucide-react";
+import { ArrowUpDown, RefreshCw, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -29,6 +30,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+type MovementSortOrder =
+  | "DEFAULT"
+  | "NAME_ASC"
+  | "NAME_DESC"
+  | "QTY_DESC"
+  | "QTY_ASC";
+
+const SORT_LABELS: Record<MovementSortOrder, string> = {
+  DEFAULT: "Default Sort",
+  NAME_ASC: "A-Z",
+  NAME_DESC: "Z-A",
+  QTY_DESC: "High to Low",
+  QTY_ASC: "Low to High",
+};
 
 interface CategoryOption {
   id: number | string;
@@ -63,9 +78,18 @@ interface StockMovementHistoryTableProps {
 }
 
 const HEAD_CLASS =
-  "text-foreground font-semibold font-mono text-[11px] uppercase tracking-wider";  
+  "text-foreground font-semibold font-mono text-[11px] uppercase tracking-wider";
 
 type BadgeVariant = "default" | "destructive" | "secondary" | "outline";
+
+const MOVEMENT_TYPE_LABELS: Record<string, string> = {
+  ALL: "All Types",
+  IN: "In",
+  OUT: "Out",
+  ADJUSTMENT: "Adjustment",
+  SALE: "Sale",
+  RETURN: "Return",
+};
 
 // Picks a badge style for a movement type.
 function badgeVariant(type: StockMovementResponseDto["type"]): BadgeVariant {
@@ -112,11 +136,34 @@ export function StockMovementHistoryTable({
   onRefresh,
   onAdjustmentSuccess,
 }: StockMovementHistoryTableProps) {
+  const [sortOrder, setSortOrder] = React.useState<MovementSortOrder>("DEFAULT");
+
+  const displayedMovements = React.useMemo(() => {
+    const list = [...movements];
+    if (sortOrder === "NAME_ASC") {
+      list.sort((a, b) =>
+        (a.product?.name ?? `Product #${a.productId}`).localeCompare(
+          b.product?.name ?? `Product #${b.productId}`,
+        ),
+      );
+    } else if (sortOrder === "NAME_DESC") {
+      list.sort((a, b) =>
+        (b.product?.name ?? `Product #${b.productId}`).localeCompare(
+          a.product?.name ?? `Product #${a.productId}`,
+        ),
+      );
+    } else if (sortOrder === "QTY_ASC") {
+      list.sort((a, b) => a.quantity_changed - b.quantity_changed);
+    } else if (sortOrder === "QTY_DESC") {
+      list.sort((a, b) => b.quantity_changed - a.quantity_changed);
+    }
+    return list;
+  }, [movements, sortOrder]);
 
   return (
     <div className="space-y-4">
-      {/* Multi-attribute Filter Bar */}
-      <div className="flex flex-wrap items-end gap-3">
+      {/* Single-Row Multi-attribute Filter Bar */}
+      <div className="flex flex-wrap items-end gap-2.5">
         <div className="flex flex-col gap-2">
           <Label>Search</Label>
           <div className="relative">
@@ -125,7 +172,7 @@ export function StockMovementHistoryTable({
               placeholder="Search product, SKU, or reason..."
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="h-8 pl-8 w-[270px] text-xs rounded-[2px]"
+              className="h-8 pl-8 w-[220px] text-xs rounded-[2px]"
             />
           </div>
         </div>
@@ -133,114 +180,149 @@ export function StockMovementHistoryTable({
         <div className="flex flex-col gap-2">
           <Label>Movement Type</Label>
           <Select
-          value={typeFilter}
-          onValueChange={(val) => onTypeFilterChange(val ?? "ALL")}
-        >
-          <SelectTrigger className="h-8 w-[140px] text-xs font-mono rounded-[2px]">
-            <SelectValue placeholder="Movement Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL" className="text-xs">
-              All Types
-            </SelectItem>
-            <SelectItem value="IN" className="text-xs font-mono">
-              IN
-            </SelectItem>
-            <SelectItem value="OUT" className="text-xs font-mono">
-              OUT
-            </SelectItem>
-            <SelectItem value="ADJUSTMENT" className="text-xs font-mono">
-              ADJUSTMENT
-            </SelectItem>
-            <SelectItem value="SALE" className="text-xs font-mono">
-              SALE
-            </SelectItem>
-            <SelectItem value="RETURN" className="text-xs font-mono">
-              RETURN
-            </SelectItem>
-          </SelectContent>
-        </Select>
+            value={typeFilter}
+            onValueChange={(val) => onTypeFilterChange(val ?? "ALL")}
+          >
+            <SelectTrigger className="!h-8 w-[120px] text-xs rounded-[2px]">
+              <SelectValue placeholder="All Types">
+                {MOVEMENT_TYPE_LABELS[typeFilter] ?? "All Types"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent alignItemWithTrigger={false}>
+              <SelectItem value="ALL" className="text-xs">
+                All Types
+              </SelectItem>
+              <SelectItem value="IN" className="text-xs">
+                In
+              </SelectItem>
+              <SelectItem value="OUT" className="text-xs">
+                Out
+              </SelectItem>
+              <SelectItem value="ADJUSTMENT" className="text-xs">
+                Adjustment
+              </SelectItem>
+              <SelectItem value="SALE" className="text-xs">
+                Sale
+              </SelectItem>
+              <SelectItem value="RETURN" className="text-xs">
+                Return
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        
-        <div className="flex flex-col gap-2">
-          <Label>Category</Label>
-            {categoriesList.length > 0 && (
-              <Select
-                value={categoryFilter}
-                onValueChange={(val) => onCategoryFilterChange(val ?? "ALL")}
-              >
-                <SelectTrigger className="h-8 w-[260px] text-xs rounded-[2px]">
-                  <SelectValue placeholder="Category">
-                    {(val: string | null) => {
-                      if (!val || val === "ALL") return "All Categories";
-                      return (
-                        categoriesList.find((cat) => String(cat.id) === val)
-                          ?.name ?? "Category"
-                      );
-                    }}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL" className="text-xs">
-                    All Categories
+
+        {categoriesList.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <Label>Category</Label>
+            <Select
+              value={categoryFilter}
+              onValueChange={(val) => onCategoryFilterChange(val ?? "ALL")}
+            >
+              <SelectTrigger className="!h-8 w-[160px] text-xs rounded-[2px]">
+                <SelectValue placeholder="Category">
+                  {(val: string | null) => {
+                    if (!val || val === "ALL") return "All Categories";
+                    return (
+                      categoriesList.find((cat) => String(cat.id) === val)
+                        ?.name ?? "Category"
+                    );
+                  }}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent alignItemWithTrigger={false}>
+                <SelectItem value="ALL" className="text-xs">
+                  All Categories
+                </SelectItem>
+                {categoriesList.map((cat) => (
+                  <SelectItem
+                    key={cat.id}
+                    value={String(cat.id)}
+                    className="text-xs"
+                  >
+                    {cat.name}
                   </SelectItem>
-                  {categoriesList.map((cat) => (
-                    <SelectItem
-                      key={cat.id}
-                      value={String(cat.id)}
-                      className="text-xs"
-                    >
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-        </div>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="flex flex-col gap-2">
           <Label>Date Range</Label>
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] text-muted-foreground">From:</span>
+            <span className="text-xs text-muted-foreground">From:</span>
             <Input
               type="date"
               value={startDate}
               onChange={(e) => onStartDateChange(e.target.value)}
-              className="h-8 w-[130px] text-xs rounded-[2px] font-mono"
+              className="h-8 w-[125px] text-xs rounded-[2px] font-mono"
             />
-            <span className="text-[11px] text-muted-foreground">To:</span>
+            <span className="text-xs text-muted-foreground">To:</span>
             <Input
               type="date"
               value={endDate}
               onChange={(e) => onEndDateChange(e.target.value)}
-              className="h-8 w-[130px] text-xs rounded-[2px] font-mono"
+              className="h-8 w-[125px] text-xs rounded-[2px] font-mono"
             />
-
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onResetFilters}
-                className="h-8 px-2 text-xs rounded-[2px] text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-3.5 w-3.5 mr-1" />
-                Clear
-              </Button>
-            )}
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onRefresh}
-              className="h-8 px-2.5 text-xs rounded-[2px]"
-              title="Refresh movements"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              Refresh
-            </Button>
           </div>
         </div>
-        
+
+        <div className="flex flex-col gap-2">
+          <Label>Sort</Label>
+          <Select
+            value={sortOrder}
+            onValueChange={(val) =>
+              setSortOrder((val ?? "DEFAULT") as MovementSortOrder)
+            }
+          >
+            <SelectTrigger className="!h-8 w-[125px] text-xs rounded-[2px] justify-start gap-2 [&>svg:last-child]:hidden">
+              <ArrowUpDown className="h-3.5 w-2.5 shrink-0 text-muted-foreground" />
+              <SelectValue placeholder="Filters">
+                {SORT_LABELS[sortOrder] ?? "Filters"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent alignItemWithTrigger={false}>
+              <SelectItem value="NAME_ASC" className="text-xs">
+                Alphabetical A-Z
+              </SelectItem>
+              <SelectItem value="NAME_DESC" className="text-xs">
+                Alphabetical Z-A
+              </SelectItem>
+              <SelectItem value="QTY_DESC" className="text-xs">
+                Qty High to Low
+              </SelectItem>
+              <SelectItem value="QTY_ASC" className="text-xs">
+                Qty Low to High
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {(hasActiveFilters || sortOrder !== "DEFAULT") && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSortOrder("DEFAULT");
+              onResetFilters();
+            }}
+            className="h-8 px-2 text-xs rounded-[2px] text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5 mr-1" />
+            Clear
+          </Button>
+        )}
+
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={onRefresh}
+          className="h-8 w-8 rounded-[2px] shrink-0"
+          title="Refresh movements"
+          aria-label="Refresh movements"
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+        </Button>
 
         {/* Add Stock Adjustment Button (Furthest Right) */}
         <div className="ml-auto">
@@ -249,12 +331,12 @@ export function StockMovementHistoryTable({
       </div>
 
       <div className="flex items-center justify-between">
-          <h2 className="text-[15px] font-heading font-semibold text-foreground">
-            Stock Movement History
-          </h2>
-           <span className="text-xs font-mono text-muted-foreground tabular-nums">
-            Total records: {totalCount}
-          </span>
+        <h2 className="text-[15px] font-heading font-semibold text-foreground">
+          Stock Movement History
+        </h2>
+        <span className="text-xs font-mono text-muted-foreground tabular-nums">
+          Total records: {totalCount}
+        </span>
       </div>
 
       {/* Table */}
@@ -285,7 +367,7 @@ export function StockMovementHistoryTable({
                   Loading stock movements...
                 </TableCell>
               </TableRow>
-            ) : movements.length === 0 ? (
+            ) : displayedMovements.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={7}
@@ -295,7 +377,7 @@ export function StockMovementHistoryTable({
                 </TableCell>
               </TableRow>
             ) : (
-              movements.map((log) => {
+              displayedMovements.map((log) => {
                 const productName =
                   log.product?.name ?? `Product #${log.productId}`;
                 const productSku = log.product?.sku ?? null;

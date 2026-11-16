@@ -210,29 +210,6 @@ export function DeliveryDetailViewModal({
             </div>
           </div>
         ) : null}
-        <DialogFooter className="flex justify-between sm:justify-between items-center pt-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handlePrint}
-            disabled={!record}
-            className="rounded-md gap-1.5 text-xs"
-          >
-            <Printer className="h-3.5 w-3.5" />
-            Print Receipt
-          </Button>
-
-          <Button
-            type="button"
-            variant="default"
-            size="sm"
-            onClick={() => onOpenChange(false)}
-            className="rounded-md text-xs font-medium"
-          >
-            Close
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

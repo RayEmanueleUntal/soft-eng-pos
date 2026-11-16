@@ -55,7 +55,7 @@ export function ProductSearch({
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search products by name, description, or SKU..."
+              placeholder="Search by name, description, or SKU..."
               className="pl-8 h-9"
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}

@@ -23,6 +23,7 @@ import {
   BinLocationMeta,
 } from "@/lib/bin-locations/bin-locations";
 import { PageHeader } from "@/components/ui/pageheader";
+import { Label } from "@/components/ui/label";
 
 export default function BinLocationsPage() {
   const [bins, setBins] = useState<BinLocation[]>([]);
@@ -134,198 +135,191 @@ export default function BinLocationsPage() {
   };
 
   return (
-    <div className="space-y-3 mx-auto">
+    <div className="flex-1 space-y-6">
       <div className="shrink-0 mt-4 mb-4 flex justify-between items-center">
         <PageHeader
           header="Bin Locations"
           subheader="Store aisles, physical shelf identifiers, and digital coordinates."
         />
-        <AddBinModal
-          onSuccess={(newBin) => {
-            setSuccessMsg(
-              `Bin Location BIN-${newBin.aisle_number}-${newBin.shelf_location} successfully created.`,
-            );
-            setPage(1);
-            fetchBins(1);
-          }}
-        />
       </div>
 
-      {/* Filter / Search Toolbars */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5">
-        {/* Table Filter */}
-        <form
-          onSubmit={handleSearchSubmit}
-          className="lg:col-span-6 bg-white border border-[#CBD5E1] p-2.5 rounded-sm flex items-center gap-2"
-        >
-          <div className="relative flex-1">
-            <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-[#727783]" />
-            <Input
-              type="text"
-              placeholder="Filter by aisle or shelf..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-7 h-8 text-xs font-mono border-[#CBD5E1] rounded-sm focus-visible:ring-1 focus-visible:ring-[#0060B2]"
-            />
+      <div className="bg-card p-6 rounded-lg shadow-sm border border-border space-y-4">
+              <div className="space-y-4">
+        <div className="grid items-end gap-3 md:grid-cols-2 lg:grid-cols-5">
+          <div className="space-y-2 lg:col-span-2">
+              <Label>Search</Label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search by aisle or shelf..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-9 text-sm font-sans focus-visible:ring-1 focus-visible:ring-primary"
+                />
+              </div>
           </div>
-          <Button
-            type="submit"
-            variant="outline"
-            className="h-8 text-xs font-medium border-[#CBD5E1] text-[#0F172A] hover:bg-[#F1F5F9] rounded-sm px-3"
-          >
-            Filter
-          </Button>
-        </form>
+
+          <AddBinModal
+            onSuccess={(newBin) => {
+              setSuccessMsg(
+                `Bin Location BIN-${newBin.aisle_number}-${newBin.shelf_location} successfully created.`,
+              );
+              setPage(1);
+              fetchBins(1);
+            }}
+          />
+        </div>
       </div>
-
-      {/* Success Banner */}
-      {successMsg && (
-        <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium rounded-sm flex items-center justify-between animate-in fade-in duration-200">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-            <span>{successMsg}</span>
+        {/* Success Banner */}
+        {successMsg && (
+          <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium rounded-sm flex items-center justify-between animate-in fade-in duration-200">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+              <span>{successMsg}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSuccessMsg(null)}
+              className="h-5 text-[10px] text-emerald-800 hover:bg-black/5 px-2"
+            >
+              Dismiss
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSuccessMsg(null)}
-            className="h-5 text-[10px] text-emerald-800 hover:bg-black/5 px-2"
-          >
-            Dismiss
-          </Button>
-        </div>
-      )}
+        )}
 
-      {/* Exception Error Banner */}
-      {errorMsg && (
-        <div className="p-2.5 bg-[#FFDAD6] border border-[#BA1A1A] text-[#93000A] text-xs font-medium rounded-sm flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{errorMsg}</span>
+        {/* Exception Error Banner */}
+        {errorMsg && (
+          <div className="p-2.5 bg-[#FFDAD6] border border-[#BA1A1A] text-[#93000A] text-xs font-medium rounded-sm flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setErrorMsg(null)}
+              className="h-5 text-[10px] text-[#93000A] hover:bg-black/5 px-2"
+            >
+              Dismiss
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setErrorMsg(null)}
-            className="h-5 text-[10px] text-[#93000A] hover:bg-black/5 px-2"
-          >
-            Dismiss
-          </Button>
-        </div>
-      )}
+        )}
 
-      {/* Data Table */}
-      <div className="bg-white border border-[#CBD5E1] rounded-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-[#F1F5F9] border-b border-[#CBD5E1] text-[11px] font-mono uppercase font-semibold text-[#475569] h-8">
-                <th className="px-3 py-1 w-20">ID</th>
-                <th className="px-3 py-1">Aisle Number</th>
-                <th className="px-3 py-1">Shelf Location</th>
-                <th className="px-3 py-1">Barcode Tag</th>
-                <th className="px-3 py-1 text-right w-24">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#E2E8F0] font-['Inter'] text-xs">
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="py-10 text-center text-[#565E74]">
-                    <div className="flex items-center justify-center gap-2 font-mono">
-                      <Loader2 className="h-4 w-4 animate-spin text-[#0060B2]" />
-                      <span>Loading records...</span>
-                    </div>
-                  </td>
+        {/* Data Table */}
+        <div className="bg-white border border-[#CBD5E1] rounded-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-[#F1F5F9] border-b border-[#CBD5E1] text-[11px] font-mono uppercase font-semibold text-[#475569] h-8">
+                  <th className="px-3 py-1 w-20">ID</th>
+                  <th className="px-3 py-1">Aisle Number</th>
+                  <th className="px-3 py-1">Shelf Location</th>
+                  <th className="px-3 py-1">Barcode Tag</th>
+                  <th className="px-3 py-1 text-right w-24">Actions</th>
                 </tr>
-              ) : bins.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="py-10 text-center text-[#565E74] font-mono text-xs"
-                  >
-                    No bin locations found.
-                  </td>
-                </tr>
-              ) : (
-                bins.map((bin) => (
-                  <tr
-                    key={bin.id}
-                    className="h-8 hover:bg-[#EFF4FF] transition-colors border-b border-[#E2E8F0]"
-                  >
-                    <td className="px-3 py-1 font-mono font-medium text-[#727783]">
-                      #{bin.id}
-                    </td>
-                    <td className="px-3 py-1 font-mono font-bold text-[#0F172A]">
-                      {bin.aisle_number}
-                    </td>
-                    <td className="px-3 py-1 font-mono text-[#0060B2] font-semibold">
-                      {bin.shelf_location}
-                    </td>
-                    <td className="px-3 py-1">
-                      <span className="font-mono text-[11px] border border-[#CBD5E1] bg-[#F8FAFC] text-[#0F172A] px-1.5 py-0.5 rounded-xs">
-                        BIN-{bin.aisle_number.toUpperCase()}-
-                        {bin.shelf_location.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-3 py-1 text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedBin(bin);
-                          setDetailsOpen(true);
-                        }}
-                        className="h-6 px-2 text-[11px] font-medium text-[#0060B2] hover:bg-[#C8DCFF] rounded-xs flex items-center gap-1 ml-auto"
-                      >
-                        <Info className="h-3 w-3" />
-                        <span>View</span>
-                      </Button>
+              </thead>
+              <tbody className="divide-y divide-[#E2E8F0] font-['Inter'] text-xs">
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="py-10 text-center text-[#565E74]">
+                      <div className="flex items-center justify-center gap-2 font-mono">
+                        <Loader2 className="h-4 w-4 animate-spin text-[#0060B2]" />
+                        <span>Loading records...</span>
+                      </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Footer Bar */}
-        <div className="bg-[#F8FAFC] border-t border-[#E2E8F0] px-3 py-2 flex items-center justify-between text-xs font-mono text-[#565E74]">
-          <div>
-            Page <span className="font-bold text-[#0F172A]">{meta.page}</span>{" "}
-            of{" "}
-            <span className="font-bold text-[#0F172A]">{meta.totalPages}</span>
+                ) : bins.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="py-10 text-center text-[#565E74] font-mono text-xs"
+                    >
+                      No bin locations found.
+                    </td>
+                  </tr>
+                ) : (
+                  bins.map((bin) => (
+                    <tr
+                      key={bin.id}
+                      className="h-8 hover:bg-[#EFF4FF] transition-colors border-b border-[#E2E8F0]"
+                    >
+                      <td className="px-3 py-1 font-mono font-medium text-[#727783]">
+                        #{bin.id}
+                      </td>
+                      <td className="px-3 py-1 font-mono font-bold text-[#0F172A]">
+                        {bin.aisle_number}
+                      </td>
+                      <td className="px-3 py-1 font-mono text-[#0060B2] font-semibold">
+                        {bin.shelf_location}
+                      </td>
+                      <td className="px-3 py-1">
+                        <span className="font-mono text-[11px] border border-[#CBD5E1] bg-[#F8FAFC] text-[#0F172A] px-1.5 py-0.5 rounded-xs">
+                          BIN-{bin.aisle_number.toUpperCase()}-
+                          {bin.shelf_location.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-3 py-1 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedBin(bin);
+                            setDetailsOpen(true);
+                          }}
+                          className="h-6 px-2 text-[11px] font-medium text-[#0060B2] hover:bg-[#C8DCFF] rounded-xs flex items-center gap-1 ml-auto"
+                        >
+                          <Info className="h-3 w-3" />
+                          <span>View</span>
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
 
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1 || loading}
-              onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-              className="h-7 text-xs border-[#CBD5E1] rounded-sm px-2"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-              <span>Prev</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page >= meta.totalPages || loading}
-              onClick={() => setPage((prev) => prev + 1)}
-              className="h-7 text-xs border-[#CBD5E1] rounded-sm px-2"
-            >
-              <span>Next</span>
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Button>
+          {/* Footer Bar */}
+          <div className="bg-[#F8FAFC] border-t border-[#E2E8F0] px-3 py-2 flex items-center justify-between text-xs font-mono text-[#565E74]">
+            <div>
+              Page <span className="font-bold text-[#0F172A]">{meta.page}</span>{" "}
+              of{" "}
+              <span className="font-bold text-[#0F172A]">{meta.totalPages}</span>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1 || loading}
+                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                className="h-7 text-xs border-[#CBD5E1] rounded-sm px-2"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+                <span>Prev</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= meta.totalPages || loading}
+                onClick={() => setPage((prev) => prev + 1)}
+                className="h-7 text-xs border-[#CBD5E1] rounded-sm px-2"
+              >
+                <span>Next</span>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <BinDetailsModal
-        bin={selectedBin}
-        open={detailsOpen}
-        onOpenChange={setDetailsOpen}
-      />
-    </div>
+        <BinDetailsModal
+          bin={selectedBin}
+          open={detailsOpen}
+          onOpenChange={setDetailsOpen}
+        />
+      </div>        
+    </div>   
   );
 }

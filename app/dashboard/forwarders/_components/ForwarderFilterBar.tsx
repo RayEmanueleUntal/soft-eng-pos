@@ -53,12 +53,12 @@ export function ForwarderFilterBar({
             
             {/* Status Filter */}
             <div className="flex flex-col gap-2">
-              <Label>Filter by Status</Label>
+              <Label>Status</Label>
               <Select 
                 value={statusFilter} 
                 onValueChange={(val) => onStatusFilterChange(val ?? "all")}
               >
-                <SelectTrigger className="w-[160px] h-9 text-sm">
+                <SelectTrigger className="w-[160px] !h-9">
                   <SelectValue placeholder="Filter by Status">
                     {STATUS_LABELS[statusFilter] ?? "All Status"}
                   </SelectValue>
@@ -75,7 +75,7 @@ export function ForwarderFilterBar({
               {/* Add Forwarder Button */}
               <Button
                 onClick={onOpenCreateModal}
-                className="h-9 px-4 font-semibold text-xs tracking-wider uppercase bg-[#0060B2] hover:bg-[#004888] text-white rounded-md shadow-none"
+                className="h-9 px-4 font-semibold text-xs tracking-wider bg-[#0060B2] hover:bg-[#004888] text-white rounded-md shadow-none"
               >
                 <Plus className="mr-1.5 h-4 w-4" />
                 Add Forwarder
