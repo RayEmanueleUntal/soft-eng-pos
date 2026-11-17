@@ -104,16 +104,6 @@ export function TablePagination({
               variant="secondary"
               size="icon-xs"
               className="text-muted-foreground"
-              aria-label="First page"
-              disabled={loading || page <= 1}
-              onClick={() => goTo(1)}
-            >
-              <ChevronsLeft />
-            </Button>
-            <Button
-              variant="secondary"
-              size="icon-xs"
-              className="text-muted-foreground"
               aria-label="Previous page"
               disabled={loading || page <= 1}
               onClick={() => goTo(page - 1)}
@@ -189,16 +179,6 @@ export function TablePagination({
               onClick={() => goTo(page + 1)}
             >
               <ChevronRight />
-            </Button>
-            <Button
-              variant="secondary"
-              size="icon-xs"
-              className="text-muted-foreground"
-              aria-label="Last page"
-              disabled={loading || page >= totalPages}
-              onClick={() => goTo(totalPages)}
-            >
-              <ChevronsRight />
             </Button>
           </nav>
         </div>
