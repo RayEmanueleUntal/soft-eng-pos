@@ -30,6 +30,7 @@ import { EditROPModal } from "../../../../components/inventory/EditROPModal";
 
 interface InventoryTableProps {
   inventory: InventoryItem[];
+  totalRecords: number; 
   categories: Record<number, string>;
   onRefresh: () => void;
   canManageStock: boolean;
@@ -49,6 +50,7 @@ interface ActiveAction {
 // Renders the inventory list and manages whichever row-action modal is open.
 export function InventoryTable({
   inventory,
+  totalRecords,
   categories,
   onRefresh,
   canManageStock,
@@ -75,7 +77,7 @@ export function InventoryTable({
           Product Profile List
         </h2>
         <span className="text-xs font-mono text-muted-foreground tabular-nums">
-          Total records:
+          Total records: {totalRecords}
         </span>
       </div>
 

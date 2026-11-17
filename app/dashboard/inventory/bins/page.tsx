@@ -220,7 +220,7 @@ export default function BinLocationsPage() {
             Bin Location List
           </h2>
           <span className="text-xs font-mono text-muted-foreground tabular-nums">
-            Total records: 
+            Total records: {meta.total}
           </span>
         </div>
 

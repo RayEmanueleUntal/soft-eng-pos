@@ -18,6 +18,7 @@ interface InventoryResult {
   key: string;
   inventory: InventoryItem[];
   totalPages: number;
+  totalRecords: number; 
   error: string | null;
 }
 
@@ -113,6 +114,7 @@ export function useInventory() {
             key: queryKey,
             inventory: response.data.data,
             totalPages: response.data.meta.totalPages,
+            totalRecords: response.data.meta.total,
             error: null,
           });
         })
@@ -128,6 +130,7 @@ export function useInventory() {
                   key: queryKey,
                   inventory: [],
                   totalPages: 1,
+                  totalRecords: 0,
                   error: "Failed to load inventory.",
                 },
           );
@@ -182,6 +185,7 @@ export function useInventory() {
     page,
     setPage,
     totalPages: current?.totalPages ?? 1,
+    totalRecords: current?.totalRecords ?? 0, 
     loading: current === null,
     error: current?.error ?? null,
     refetch,

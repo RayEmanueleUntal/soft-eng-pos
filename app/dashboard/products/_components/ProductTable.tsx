@@ -231,7 +231,7 @@ export function ProductTable() {
           Product Profile List
         </h2>
         <span className="text-xs font-mono text-muted-foreground tabular-nums">
-          Total records:
+          Total records: {total}
         </span>
       </div>
 
