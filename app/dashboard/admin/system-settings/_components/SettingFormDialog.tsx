@@ -3,7 +3,7 @@
 // Validates input before calling the API and shows API errors inside the dialog.
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,15 @@ export function SettingFormDialog({
   const [description, setDescription] = useState(setting?.description ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // Re-initialize the form whenever the dialog opens for a (possibly different) setting.
+  useEffect(() => {
+    if (!open) return;
+    setKey(setting?.key ?? "");
+    setValue(setting?.value ?? "");
+    setDescription(setting?.description ?? "");
+    setError("");
+  }, [open, setting]);
 
   // Returns a validation message, or an empty string when the form is valid.
   function validate(): string {
