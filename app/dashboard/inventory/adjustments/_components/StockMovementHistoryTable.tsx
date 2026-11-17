@@ -29,6 +29,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Eye } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type MovementSortOrder =
   | "DEFAULT"
@@ -137,6 +145,7 @@ export function StockMovementHistoryTable({
   onAdjustmentSuccess,
 }: StockMovementHistoryTableProps) {
   const [sortOrder, setSortOrder] = React.useState<MovementSortOrder>("DEFAULT");
+  const [selectedReason, setSelectedReason] = React.useState<string | null>(null);
 
   const displayedMovements = React.useMemo(() => {
     const list = [...movements];
@@ -353,8 +362,8 @@ export function StockMovementHistoryTable({
               <TableHead className={`${HEAD_CLASS} text-right`}>
                 Before / After
               </TableHead>
-              <TableHead className={HEAD_CLASS}>Reason</TableHead>
               <TableHead className={HEAD_CLASS}>Staff</TableHead>
+              <TableHead className={HEAD_CLASS}>Reason</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -401,9 +410,12 @@ export function StockMovementHistoryTable({
 
                 return (
                   <TableRow key={log.id}>
+                    {/* date */}
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       {formatDate(log.date)}
                     </TableCell>
+
+                    {/* product */}
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-medium text-xs text-foreground">
@@ -414,6 +426,8 @@ export function StockMovementHistoryTable({
                         </span>
                       </div>
                     </TableCell>
+
+                    {/* type */}
                     <TableCell>
                       <div className="flex items-center gap-1.5">
                         <Badge
@@ -429,6 +443,8 @@ export function StockMovementHistoryTable({
                         )}
                       </div>
                     </TableCell>
+
+                    {/* qty changed */}
                     <TableCell
                       className={`text-right font-mono tabular-nums text-xs font-bold ${
                         log.quantity_changed >= 0
@@ -441,17 +457,33 @@ export function StockMovementHistoryTable({
                         : log.quantity_changed}{" "}
                       {log.current_uom}
                     </TableCell>
+                                        
+                    {/* before/after */}
                     <TableCell className="text-right font-mono tabular-nums text-xs text-muted-foreground">
                       {log.previous_quantity} → {log.new_quantity}
                     </TableCell>
-                    <TableCell
-                      className="text-muted-foreground text-xs max-w-[200px] truncate"
-                      title={log.reason}
-                    >
-                      {log.reason || "-"}
-                    </TableCell>
+
+                    {/* staff */}
                     <TableCell className="text-xs font-medium text-foreground">
                       {staffDisplayName}
+                    </TableCell>
+
+                    {/* reason */}
+                    <TableCell className="text-xs">
+                      {log.reason ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedReason(log.reason ?? null)}
+                          className="h-7 gap-1.5 rounded-[4px] text-xs border-input hover:bg-muted font-sans"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          View
+                        </Button>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -459,6 +491,25 @@ export function StockMovementHistoryTable({
             )}
           </TableBody>
         </Table>
+
+        <Dialog
+          open={selectedReason !== null}
+          onOpenChange={(open) => {
+            if (!open) setSelectedReason(null);
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Movement Reason</DialogTitle>
+              <DialogDescription className="sr-only">
+                Full reason note recorded for this stock movement
+              </DialogDescription>
+            </DialogHeader>
+            <div className="rounded-md border border-border bg-muted/40 p-3 text-sm text-foreground whitespace-pre-wrap break-words">
+              {selectedReason}
+            </div>
+          </DialogContent>
+        </Dialog>        
       </div>
     </div>
   );

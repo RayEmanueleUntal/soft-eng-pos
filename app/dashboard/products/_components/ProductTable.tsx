@@ -240,13 +240,11 @@ export function ProductTable() {
           <TableHeader>
             <TableRow>
               <TableHead>Product</TableHead>
-              <TableHead>SKU</TableHead>
-              <TableHead>Category</TableHead>
               <TableHead>Specifications</TableHead>
               <TableHead>Stock</TableHead>
               <TableHead>Retail</TableHead>
               <TableHead>Wholesale</TableHead>
-              <TableHead className="w-[60px]" />
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -269,41 +267,55 @@ export function ProductTable() {
             ) : (
               products.map((product) => (
                 <TableRow key={product.id}>
-                  <TableCell>
-                    <div className="font-medium">{product.name}</div>
+                  <TableCell className="align-top py-3">
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-sm text-foreground">
+                          {product.name}
+                        </span>
 
-                    {product.needsRecount && (
-                      <Badge variant="destructive" className="mt-1">
-                        Recount Required
-                      </Badge>
-                    )}
+                        {product.needsRecount && (
+                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                            Recount Required
+                          </Badge>
+                        )}
+                      </div>
+
+                      <span className="font-mono text-[11px] text-muted-foreground mt-0.5">
+                        {product.sku ?? "-"}
+                      </span>
+                    </div>
+
+                    <div className="mt-2">
+                        <span className="inline-flex items-center rounded-md bg-muted border border-border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground">
+                          {product.category_name ||
+                            product.category?.name ||
+                            (product.categoryId ? `Category #${product.categoryId}` : "-")}
+                        </span>
+                      </div>
                   </TableCell>
 
-                  <TableCell className="font-mono text-xs">
-                    {product.sku || "-"}
-                  </TableCell>
-
-                  <TableCell>
-                    {product.category_name ||
-                      product.category?.name ||
-                      product.categoryId}
-                  </TableCell>
-
-                  <TableCell>
-                    <div className="space-y-1 text-sm">
+                  <TableCell className="align-top py-3">
+                    <div className="space-y-0.5 text-xs">
                       <div>
-                        <span className="font-medium">Size:</span>{" "}
-                        {product.size_dimensions || "-"}
+                        <span className="text-muted-foreground">Size:</span>{" "}
+                        <span className="font-medium text-foreground">
+                          {product.size_dimensions || "-"}
+                        </span>
                       </div>
 
                       <div>
-                        <span className="font-medium">Thread:</span>{" "}
-                        {product.thread_type || "-"}
+                        <span className="text-muted-foreground">Thread:</span>{" "}
+                        <span className="font-medium text-foreground">
+                          {product.thread_type || "-"}
+                        </span>
                       </div>
 
                       <div>
-                        <span className="font-medium">Material:</span>{" "}
-                        {product.material_grade || "-"}
+                        <span className="text-muted-foreground">Material:</span>{" "}
+                        <span className="font-medium text-foreground">
+                          {product.material_grade || "-"}
+                        </span>
                       </div>
 
                       {renderAltUoms(product)}

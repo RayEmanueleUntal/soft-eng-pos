@@ -86,12 +86,8 @@ export function InventoryTable({
         <Table>
           <TableHeader>
             <TableRow className="bg-[#F1F5F9] hover:bg-[#F1F5F9]">
-              <TableHead className={HEAD_CLASS}>SKU</TableHead>
-              <TableHead className={HEAD_CLASS}>Name</TableHead>
-              <TableHead className={HEAD_CLASS}>Category</TableHead>
-              <TableHead className={HEAD_CLASS}>Thread Type</TableHead>
-              <TableHead className={HEAD_CLASS}>Material</TableHead>
-              <TableHead className={HEAD_CLASS}>Size</TableHead>
+              <TableHead className={HEAD_CLASS}>Product</TableHead>
+              <TableHead className={HEAD_CLASS}>Specifications</TableHead>
               <TableHead className={`${HEAD_CLASS} text-right`}>
                 Current Qty
               </TableHead>
@@ -108,21 +104,53 @@ export function InventoryTable({
             {inventory.length > 0 ? (
               inventory.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="font-mono">{item.sku ?? "-"}</TableCell>
 
-                  <TableCell>{item.name}</TableCell>
+               
 
-                  <TableCell>
-                    {item.category_name ||
-                      categories[item.categoryId] ||
-                      `Category #${item.categoryId}`}
+                  {/* unified name */}
+                  <TableCell className="align-top py-3">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-sm text-foreground">
+                        {item.name}
+                      </span>
+                      <span className="font-mono text-[11px] text-muted-foreground mt-0.5">
+                        {item.sku ?? "-"}
+                      </span>
+                    </div>
+
+                    <div className="mt-2">
+                      <span className="inline-flex items-center rounded-md bg-muted border border-border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground">
+                        {item.category_name ||
+                          categories[item.categoryId] ||
+                          `Category #${item.categoryId}`}
+                      </span>
+                    </div>
                   </TableCell>
 
-                  <TableCell>{item.thread_type ?? "-"}</TableCell>
+                  <TableCell className="align-top py-3">
+                    <div className="space-y-0.5 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">Size:</span>{" "}
+                        <span className="font-medium text-foreground">
+                          {item.size_dimensions || "-"}
+                        </span>
+                      </div>
 
-                  <TableCell>{item.material_grade ?? "-"}</TableCell>
+                      <div>
+                        <span className="text-muted-foreground">Thread:</span>{" "}
+                        <span className="font-medium text-foreground">
+                          {item.thread_type || "-"}
+                        </span>
+                      </div>
 
-                  <TableCell>{item.size_dimensions ?? "-"}</TableCell>
+                      <div>
+                        <span className="text-muted-foreground">Material:</span>{" "}
+                        <span className="font-medium text-foreground">
+                          {item.material_grade || "-"}
+                        </span>
+                      </div>
+                    </div>
+                  </TableCell>
 
                   <TableCell className="text-right font-mono tabular-nums">
                     {item.current_quantity}
@@ -144,6 +172,7 @@ export function InventoryTable({
                       : "-"}
                   </TableCell>
 
+                  {/* action */}
                   {showActions && (
                     <TableCell>
                       <DropdownMenu>
@@ -189,7 +218,7 @@ export function InventoryTable({
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
-                  )}
+                  )}   
                 </TableRow>
               ))
             ) : (

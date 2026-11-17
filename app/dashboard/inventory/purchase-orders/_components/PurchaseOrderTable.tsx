@@ -195,10 +195,12 @@ export function PurchaseOrderTable({
                 const expanded = expandedIds.has(order.id);
                 return (
                   <React.Fragment key={order.id}>
-                    <TableRow
-                      className="cursor-pointer text-xs"
-                      onClick={() => toggleRow(order.id)}
-                    >
+                  <TableRow
+                          className={`cursor-pointer text-xs transition-colors ${
+                            expanded ? "bg-muted/40 font-medium" : ""
+                          }`}
+                          onClick={() => toggleRow(order.id)}
+                        >
                       <TableCell>
                         <Button
                           type="button"
