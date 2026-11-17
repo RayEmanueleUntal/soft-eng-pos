@@ -277,8 +277,6 @@ export function buildCheckoutPayload(
             cash_tendered: cash?.cashTendered,
             change_given: cash?.changeDue,
             reference_number: gcash?.referenceNumber || credit?.poNumber,
-            mobile_number: gcash?.mobileNumber,
-            gcash_mobile_number: gcash?.mobileNumber,
             credit_due_date: credit?.dueDate,
             po_number: credit?.poNumber,
           },
@@ -353,7 +351,6 @@ export async function submitCheckout(
         } else if (paymentMethod === "GCASH") {
           details = {
             reference_number: p.reference_number || "N/A",
-            gcash_mobile_number: p.gcash_mobile_number || p.mobile_number || "",
           };
         } else if (paymentMethod === "CREDIT") {
           details = {

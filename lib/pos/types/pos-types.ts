@@ -156,7 +156,6 @@ export type PaymentTabDetails =
       type: "GCASH";
       amount: number;
       referenceNumber: string;
-      mobileNumber: string;
       isValid?: boolean;
       errorMessage?: string;
     }

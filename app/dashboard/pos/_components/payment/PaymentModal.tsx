@@ -166,10 +166,8 @@ export default function PaymentModal({
           payment_method: "GCASH",
           amount_paid: currentAmount,
           reference_number: currentPayment.referenceNumber,
-          mobile_number: currentPayment.mobileNumber,
-          gcash_mobile_number: currentPayment.mobileNumber,
         },
-        description: `Ref: ${currentPayment.referenceNumber} (${currentPayment.mobileNumber})`,
+        description: `Ref: ${currentPayment.referenceNumber}`,
       };
     }
 

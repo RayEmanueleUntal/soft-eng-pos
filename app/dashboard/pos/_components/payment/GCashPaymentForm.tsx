@@ -8,7 +8,6 @@ export interface GCashPaymentDetails {
   type: "GCASH";
   amount: number;
   referenceNumber: string;
-  mobileNumber: string;
   isValid?: boolean;
   errorMessage?: string;
 }
@@ -21,8 +20,7 @@ interface GCashPaymentFormProps {
 export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPaymentFormProps) {
   const [amount, setAmount] = useState<number | "">(amountDue ?? "");
   const [referenceNumber, setReferenceNumber] = useState("");
-  const [mobileNumber, setMobileNumber] = useState("");
-  const [touched, setTouched] = useState({ ref: false, mobile: false });
+  const [touched, setTouched] = useState({ ref: false });
 
   const [prevAmountDue, setPrevAmountDue] = useState(amountDue);
   if (amountDue !== prevAmountDue) {
@@ -34,12 +32,8 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
 
   // Validation rules
   const trimmedRef = referenceNumber.trim();
-  const trimmedMobile = mobileNumber.trim();
 
   const isRefValid = trimmedRef.length >= 6;
-  // Validates Philippine mobile number: 09XXXXXXXXX (11 digits) or +639XXXXXXXXX
-  const mobileRegex = /^(09\d{9}|\+639\d{9})$/;
-  const isMobileValid = mobileRegex.test(trimmedMobile);
   const isAmountValid = typeof amount === "number" && amount > 0;
 
   const isNotExceedingDue = amountDue === undefined || (typeof amount === "number" && amount <= amountDue + 0.001);
@@ -51,22 +45,19 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
     errorMessage = `GCash payment cannot exceed remaining due (₱${amountDue.toFixed(2)}).`;
   } else if (!isRefValid) {
     errorMessage = "GCash Reference Number is required (at least 6 digits).";
-  } else if (!isMobileValid) {
-    errorMessage = "A valid 11-digit GCash mobile number (09XXXXXXXXX) is required.";
   }
 
-  const isValid = isAmountValid && isNotExceedingDue && isRefValid && isMobileValid;
+  const isValid = isAmountValid && isNotExceedingDue && isRefValid;
 
   useEffect(() => {
     onPaymentChange({
       type: "GCASH",
       amount: amount === "" ? 0 : amount,
       referenceNumber: trimmedRef,
-      mobileNumber: trimmedMobile,
       isValid,
       errorMessage: errorMessage || undefined,
     });
-  }, [amount, trimmedRef, trimmedMobile, isValid, errorMessage, onPaymentChange]);
+  }, [amount, trimmedRef, isValid, errorMessage, onPaymentChange]);
 
   return (
     <div className="space-y-4 py-4">
@@ -118,34 +109,6 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
         )}
       </div>
 
-      {/* Mobile Number Field */}
-      <div className="grid gap-1.5">
-        <div className="flex justify-between items-center">
-          <Label htmlFor="gcash-mobile" className="font-sans text-xs font-semibold text-foreground">
-            GCash Mobile Number *
-          </Label>
-          <span className="text-[11px] font-mono text-muted-foreground">09XXXXXXXXX</span>
-        </div>
-        <Input
-          id="gcash-mobile"
-          type="tel"
-          maxLength={11}
-          placeholder="09171234567"
-          value={mobileNumber}
-          onBlur={() => setTouched((prev) => ({ ...prev, mobile: true }))}
-          onChange={(e) => {
-            // Keep only numbers
-            const clean = e.target.value.replace(/\D/g, "");
-            setMobileNumber(clean);
-          }}
-          className={`h-9 rounded-[4px] border-input font-mono text-sm ${touched.mobile && !isMobileValid ? "border-destructive text-destructive" : ""}`}
-        />
-        {touched.mobile && !isMobileValid && (
-          <p className="text-xs font-sans text-destructive">
-            Enter a valid 11-digit mobile number starting with 09.
-          </p>
-        )}
-      </div>
     </div>
   );
 }
