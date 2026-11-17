@@ -165,14 +165,20 @@ export function AddCustomerModal({
         </div>
 
         <div className="grid gap-2">
-          <label className="text-sm font-medium">Customer Type </label>
+          <label
+              className={`text-sm font-medium ${
+                mode === "edit" ? "text-muted-foreground" : ""
+              }`}
+            >
+              Customer Type
+            </label>
 
           <select
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-50"            
             value={type}
             onChange={(e) => setType(e.target.value as CustomerType)}
-            disabled={isSaving}
-          >
+            disabled={isSaving || mode === "edit"}          
+            >
             <option value="RETAIL">Retail</option>
             <option value="WHOLESALE">Wholesale</option>
           </select>

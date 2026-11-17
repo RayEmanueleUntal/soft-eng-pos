@@ -18,7 +18,7 @@ import { Loader2 } from "lucide-react";
 interface CreateForwarderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (createdCompanyName: string) => void;
 }
 
 export function CreateForwarderModal({
@@ -32,30 +32,32 @@ export function CreateForwarderModal({
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!companyName.trim() || !trackingContactInfo.trim()) {
-      setError("Company Name and Contact Info are required.");
-      return;
-    }
+      e.preventDefault();
+      if (!companyName.trim() || !trackingContactInfo.trim()) {
+        setError("Company Name and Contact Info are required.");
+        return;
+      }
 
-    try {
-      setLoading(true);
-      setError(null);
-      await apiClient.post("/forwarders", {
-        company_name: companyName.trim(),
-        tracking_contact_info: trackingContactInfo.trim(),
-      });
+      try {
+        setLoading(true);
+        setError(null);
+        const trimmedCompany = companyName.trim();
 
-      // Reset form and close
-      setCompanyName("");
-      setTrackingContactInfo("");
-      onOpenChange(false);
-      onSuccess();
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
+        await apiClient.post("/forwarders", {
+          company_name: trimmedCompany,
+          tracking_contact_info: trackingContactInfo.trim(),
+        });
+
+        // Reset form and close
+        setCompanyName("");
+        setTrackingContactInfo("");
+        onOpenChange(false);
+        onSuccess(trimmedCompany);
+      } catch (err) {
+        setError(getErrorMessage(err));
+      } finally {
+        setLoading(false);
+      }
   };
 
   return (

@@ -5,7 +5,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StockMovementHistoryTable } from "@/app/dashboard/inventory/adjustments/_components/StockMovementHistoryTable";
-import { StockAdjustmentModal } from "@/components/inventory/StockAdjustmentModal";
 import {
   InventoryItem,
   InventoryResponse,
@@ -18,16 +17,8 @@ import {
   StockMovementResponse,
   StockMovementsQueryParams,
 } from "@/lib/inventory/stock-movement-api";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Search, X, RotateCcw } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { getErrorMessage } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/pageheader";
@@ -133,6 +124,16 @@ export default function InventoryAdjustmentsPage() {
   >([]);
   const [staffMap, setStaffMap] = useState<Record<number, string>>({});
   const staffMapRef = useRef(staffMap);
+
+  // Success banner for stock adjustments
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Auto-dismiss success message after 4 seconds
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(null), 4000);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
 
   useEffect(() => {
     staffMapRef.current = staffMap;
@@ -311,11 +312,12 @@ export default function InventoryAdjustmentsPage() {
     loadMovements();
   }, [loadMovements]);
 
-  // When a new adjustment is submitted via modal, refresh the movements
+  // When a new adjustment is submitted via modal, show the banner & refresh movements
   const handleAdjustmentSuccess = (
     _movement: StockMovementResponse,
-    _item: InventoryItem,
+    item: InventoryItem,
   ) => {
+    setSuccessMessage(`${item.name} adjusted successfully.`);
     setPage(1);
     loadMovements();
   };
@@ -343,200 +345,34 @@ export default function InventoryAdjustmentsPage() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background min-h-[calc(100vh-4rem)]space-y-5">
-      {/* Page Header */}
-      {/* <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card p-4 rounded-[4px] border border-border shadow-sm">
-        <div>
-          <h1 className="text-[22px] font-bold font-heading tracking-tight text-foreground">
-            Stock Adjustments & Movements
-          </h1>
-          <p className="text-[13px] text-muted-foreground mt-0.5">
-            Audit inventory logs, filter movements, and record physical count adjustments.
-          </p>
-        </div>
-        <StockAdjustmentModal onSuccess={handleAdjustmentSuccess} />
-      </div> */}
-
-      <div className="shrink-0 mt-4 mb-4 flex justify-between">
+    <div className="flex flex-col h-full bg-background min-h-[calc(100vh-4rem)] space-y-5">
+      <div className="shrink-0 mt-4 mb-4">
         {/* Header Bar */}
         <PageHeader
           header="Stock Adjustments & Movements"
           subheader="Audit inventory logs, filter movements, and record physical count adjustments."
         />
-        <StockAdjustmentModal onSuccess={handleAdjustmentSuccess} />
       </div>
 
-      {/* Multi-attribute Filter Bar */}
-      <div className="bg-card p-3 rounded-[4px] border border-border shadow-xs space-y-2.5">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="relative">
-            <Search className="h-3.5 w-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
-            <Input
-              placeholder="Search product, SKU, reason..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="h-8 pl-8 w-[220px] text-xs rounded-[2px]"
-            />
+      {/* Success Banner */}
+      {successMessage && (
+        <div className="shrink-0 mb-3 flex items-center justify-between gap-2 text-xs font-sans p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-[4px] animate-in fade-in duration-200">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span>{successMessage}</span>
           </div>
-
-          <Select
-            value={typeFilter}
-            onValueChange={(val) => {
-              setTypeFilter(val ?? "ALL");
-              setPage(1);
-            }}
+          <button
+            type="button"
+            onClick={() => setSuccessMessage(null)}
+            className="text-emerald-700 hover:text-emerald-950 font-mono text-xs px-1"
           >
-            <SelectTrigger className="h-8 w-[140px] text-xs font-mono rounded-[2px]">
-              <SelectValue placeholder="Movement Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL" className="text-xs">
-                All Types
-              </SelectItem>
-              <SelectItem value="IN" className="text-xs font-mono">
-                IN
-              </SelectItem>
-              <SelectItem value="OUT" className="text-xs font-mono">
-                OUT
-              </SelectItem>
-              <SelectItem value="ADJUSTMENT" className="text-xs font-mono">
-                ADJUSTMENT
-              </SelectItem>
-              <SelectItem value="SALE" className="text-xs font-mono">
-                SALE
-              </SelectItem>
-              <SelectItem value="RETURN" className="text-xs font-mono">
-                RETURN
-              </SelectItem>
-            </SelectContent>
-          </Select>
-
-          {categoriesList.length > 0 && (
-            <Select
-              value={categoryFilter}
-              onValueChange={(val) => {
-                setCategoryFilter(val ?? "ALL");
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="h-8 w-[150px] text-xs rounded-[2px]">
-                <SelectValue placeholder="Category">
-                  {(val: string | null) => {
-                    if (!val || val === "ALL") return "All Categories";
-                    return (
-                      categoriesList.find((cat) => String(cat.id) === val)
-                        ?.name ?? "Category"
-                    );
-                  }}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL" className="text-xs">
-                  All Categories
-                </SelectItem>
-                {categoriesList.map((cat) => (
-                  <SelectItem
-                    key={cat.id}
-                    value={String(cat.id)}
-                    className="text-xs"
-                  >
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          <Input
-            placeholder="Size..."
-            value={sizeFilter}
-            onChange={(e) => {
-              setSizeFilter(e.target.value);
-              setPage(1);
-            }}
-            className="h-8 w-[110px] text-xs rounded-[2px]"
-          />
-
-          <Input
-            placeholder="Thread..."
-            value={threadFilter}
-            onChange={(e) => {
-              setThreadFilter(e.target.value);
-              setPage(1);
-            }}
-            className="h-8 w-[110px] text-xs rounded-[2px]"
-          />
-
-          <Input
-            placeholder="Material..."
-            value={materialFilter}
-            onChange={(e) => {
-              setMaterialFilter(e.target.value);
-              setPage(1);
-            }}
-            className="h-8 w-[110px] text-xs rounded-[2px]"
-          />
-
-          <div className="flex items-center gap-1.5 ml-auto">
-            <span className="text-[11px] text-muted-foreground">From:</span>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value);
-                setPage(1);
-              }}
-              className="h-8 w-[130px] text-xs rounded-[2px] font-mono"
-            />
-            <span className="text-[11px] text-muted-foreground">To:</span>
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value);
-                setPage(1);
-              }}
-              className="h-8 w-[130px] text-xs rounded-[2px] font-mono"
-            />
-
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleResetFilters}
-                className="h-8 px-2 text-xs rounded-[2px] text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-3.5 w-3.5 mr-1" />
-                Clear
-              </Button>
-            )}
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => loadMovements()}
-              className="h-8 px-2.5 text-xs rounded-[2px]"
-              title="Refresh movements"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+            ✕
+          </button>
         </div>
-      </div>
+      )}
 
       {/* Movements Table */}
       <div className="rounded-[4px] border border-border bg-card shadow-sm overflow-hidden flex-1 p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-[15px] font-heading font-semibold text-foreground">
-            Stock Movement History
-          </h2>
-          <span className="text-xs font-mono text-muted-foreground tabular-nums">
-            Total records: {totalCount}
-          </span>
-        </div>
 
         {error ? (
           <div className="flex items-center justify-between gap-3 rounded-[2px] border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive">
@@ -550,6 +386,37 @@ export default function InventoryAdjustmentsPage() {
             movements={movements}
             staffMap={staffMap}
             loading={loading}
+            search={search}
+            totalCount={totalCount}
+            onSearchChange={(val) => {
+              setSearch(val);
+              setPage(1);
+            }}
+            typeFilter={typeFilter}
+            onTypeFilterChange={(val) => {
+              setTypeFilter(val);
+              setPage(1);
+            }}
+            categoryFilter={categoryFilter}
+            onCategoryFilterChange={(val) => {
+              setCategoryFilter(val);
+              setPage(1);
+            }}
+            categoriesList={categoriesList}
+            startDate={startDate}
+            onStartDateChange={(val) => {
+              setStartDate(val);
+              setPage(1);
+            }}
+            endDate={endDate}
+            onEndDateChange={(val) => {
+              setEndDate(val);
+              setPage(1);
+            }}
+            hasActiveFilters={hasActiveFilters}
+            onResetFilters={handleResetFilters}
+            onRefresh={() => loadMovements()}
+            onAdjustmentSuccess={handleAdjustmentSuccess}
           />
         )}
 

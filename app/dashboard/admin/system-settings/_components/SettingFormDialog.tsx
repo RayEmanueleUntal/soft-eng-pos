@@ -139,7 +139,7 @@ export function SettingFormDialog({
                   placeholder="RETURN_WINDOW_DAYS"
                   autoComplete="off"
                   onChange={(e) => {
-                    setKey(e.target.value);
+                    setKey(e.target.value.toUpperCase());
                     setError("");
                   }}
                   className={`h-8 font-mono ${FIELD_CLASS}`}

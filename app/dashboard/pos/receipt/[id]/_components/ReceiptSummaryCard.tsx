@@ -92,7 +92,7 @@ export function ReceiptSummaryCard({ receipt, className }: ReceiptSummaryCardPro
         <div className="flex justify-between gap-3">
           <span className="text-muted-foreground">Total</span>
           <span
-            className={`font-mono font-bold ${
+            className={` font-bold ${
               showAdjustments ? "line-through text-muted-foreground" : "text-primary"
             }`}
           >
@@ -102,7 +102,7 @@ export function ReceiptSummaryCard({ receipt, className }: ReceiptSummaryCardPro
         {showAdjustments && (
           <div className="flex justify-between gap-3">
             <span className="text-muted-foreground font-medium">Adjusted Net Total</span>
-            <span className="font-mono font-bold text-primary">
+            <span className=" font-bold text-primary">
               {formatPeso(adjustedTotal)}
             </span>
           </div>
@@ -148,7 +148,7 @@ export function ReceiptSummaryCard({ receipt, className }: ReceiptSummaryCardPro
                 </div>
               )}
             </div>
-            <span className="font-mono text-foreground shrink-0 tabular-nums">
+            <span className=" text-foreground shrink-0 tabular-nums">
               {item.quantity} {item.pricing_uom ? item.pricing_uom : ""} × {formatPeso(item.applied_price)}
             </span>
           </div>
@@ -186,7 +186,7 @@ export function ReceiptSummaryCard({ receipt, className }: ReceiptSummaryCardPro
             <span className="text-destructive text-xs uppercase tracking-wider">
               Total Refunds
             </span>
-            <span className="font-mono font-bold text-destructive">
+            <span className=" font-bold text-destructive">
               −{formatPeso(totalRefunds)}
             </span>
           </div>

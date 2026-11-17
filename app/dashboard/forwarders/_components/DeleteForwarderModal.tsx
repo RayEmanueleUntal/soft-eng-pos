@@ -51,45 +51,53 @@ export function DeleteForwarderModal({
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px] border-border shadow-md">
+return (
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && !loading) {
+          onOpenChange(false);
+        }
+      }}
+    >
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="text-lg font-bold tracking-tight text-destructive">
-            Delete Forwarder
-          </DialogTitle>
-          <DialogDescription className="text-xs pt-2">
-            Are you sure you want to remove{" "}
+          <DialogTitle>Are you sure?</DialogTitle>
+          <DialogDescription>
+            This action will remove or deactivate{" "}
             <span className="font-semibold text-foreground">
-              {forwarder?.company_name}
+              {forwarder?.company_name || "this forwarder"}
             </span>
-            ? This action will soft-delete the record or deactivate courier assignment.
+            . This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
 
         {error && (
-          <div className="p-2.5 rounded text-xs font-mono bg-destructive/10 text-destructive border border-destructive/20 mt-2">
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2.5 text-sm text-destructive">
             {error}
           </div>
         )}
 
-        <DialogFooter className="pt-4">
+        <DialogFooter className="gap-2 sm:gap-0 mt-4">
           <Button
+            type="button"
             variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="h-9 text-xs"
             disabled={loading}
+            onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
           <Button
+            type="button"
             variant="destructive"
-            onClick={handleDelete}
             disabled={loading}
-            className="h-9 text-xs"
+            onClick={async (e: React.MouseEvent<HTMLButtonElement>) => {
+              e.preventDefault();
+              await handleDelete();
+            }}
           >
-            {loading && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-            Confirm Delete
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Delete Forwarder
           </Button>
         </DialogFooter>
       </DialogContent>

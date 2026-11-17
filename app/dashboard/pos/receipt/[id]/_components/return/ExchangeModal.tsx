@@ -232,8 +232,8 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
             <Input
               id="quantity"
               type="number"
-              min="0.01"
-              step="0.01"
+              min="1"
+              step="1"
               max={maxQuantity}
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
@@ -345,8 +345,8 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
             <Input
               id="new-quantity"
               type="number"
-              min="0.01"
-              step="0.01"
+              min="1"
+              step="1"
               value={newQuantity}
               onChange={(e) => setNewQuantity(e.target.value)}
               disabled={!selectedItem}

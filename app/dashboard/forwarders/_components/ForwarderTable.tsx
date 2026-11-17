@@ -99,7 +99,7 @@ export function ForwarderTable({
                         size="icon"
                         onClick={() => onDelete(item)}
                         title="Deactivate / Delete"
-                        className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                        className="h-7 w-7 rounded-[2px] hover:bg-red-50 text-muted-foreground hover:text-red-700 inline-flex items-center justify-center"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>

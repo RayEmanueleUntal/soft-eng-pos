@@ -4,7 +4,7 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, Plus, RefreshCw } from "lucide-react";
+import { AlertCircle, CheckCircle2, Plus, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/pageheader";
@@ -51,6 +51,20 @@ export default function ExpensesPage() {
   );
 
   const rangeInvalid = isInvalidDateRange(filters);
+
+  // Auto-dismiss success notice after 4 seconds
+  React.useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  // Auto-dismiss error banner after 4 seconds
+  React.useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(null), 4000);
+    return () => clearTimeout(timer);
+  }, [error]);
 
   // Loads the current page of expenses for the active filters.
   const loadExpenses = React.useCallback(async () => {
@@ -101,6 +115,7 @@ export default function ExpensesPage() {
   // Closes the create dialog, announces the new expense and reloads the list.
   const handleCreated = (expense: ExpenseDto) => {
     setCreateOpen(false);
+    setError(null);
     setNotice(`Expense #${expense.id} recorded.`);
     if (page === 1) loadExpenses();
     else setPage(1);
@@ -123,6 +138,7 @@ export default function ExpensesPage() {
   // Closes the edit dialog, announces the update and reloads the list.
   const handleUpdated = (expense: ExpenseDto) => {
     setEditTarget(null);
+    setError(null);
     setNotice(`Expense #${expense.id} updated.`);
     loadExpenses();
   };
@@ -131,6 +147,7 @@ export default function ExpensesPage() {
   const handleMissing = (message: string) => {
     setEditTarget(null);
     setDeleteTarget(null);
+    setNotice(null);
     setError(message);
     loadExpenses();
   };
@@ -138,6 +155,7 @@ export default function ExpensesPage() {
   // Closes the delete dialog, announces the result and reloads (or steps back a page).
   const handleDeleted = (expense: ExpenseDto) => {
     setDeleteTarget(null);
+    setError(null);
     setNotice(`Expense #${expense.id} deleted.`);
     if (expenses.length === 1 && page > 1) setPage(page - 1);
     else loadExpenses();
@@ -181,20 +199,42 @@ export default function ExpensesPage() {
         </div>
 
         {notice && (
-          <div className="flex items-center justify-between gap-3 rounded-md border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
+          <div
+            role="status"
+            className="flex items-center justify-between gap-3 rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-700 animate-in fade-in duration-200"
+          >
             <span className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
               {notice}
             </span>
-            <Button variant="ghost" size="xs" onClick={() => setNotice(null)}>
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => setNotice(null)}
+              className="text-emerald-700 hover:bg-emerald-500/20 hover:text-emerald-900"
+            >
               Dismiss
             </Button>
           </div>
         )}
 
         {error && (
-          <div className="break-words rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
-            {error}
+          <div
+            role="alert"
+            className="flex items-center justify-between gap-3 break-words rounded-md border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-700 animate-in fade-in duration-200"
+          >
+            <span className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+              {error}
+            </span>
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => setError(null)}
+              className="text-red-700 hover:bg-red-500/20 hover:text-red-900"
+            >
+              Dismiss
+            </Button>
           </div>
         )}
 

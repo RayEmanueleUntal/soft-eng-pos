@@ -25,8 +25,6 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
       (u) => u.uom && u.uom.toUpperCase() !== baseUom.toUpperCase(),
     );
 
-  const [selectedUom, setSelectedUom] = useState<string>(pricingUom);
-
   // Resolve the price for a given UoM directly from backend data:
   //   • For the base UoM → use product.retailPrice (retail_price from API, per base unit)
   //   • For an alternate UoM → use uoms[].retail_price if present, else multiply base × convFactor
@@ -58,6 +56,49 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
     return Number((basePrice * (factor || 1)).toFixed(2));
   };
 
+  
+
+  
+  const getConversionFactor = (uom: string) => {
+    if (uom.toUpperCase() === baseUom.toUpperCase()) return 1;
+
+    const entry = (product.uoms ?? []).find(
+      (u) => u.uom?.toUpperCase() === uom.toUpperCase(),
+    );
+
+    const factor = Number(
+      entry?.conversion_factor ??
+        entry?.conversionFactor ??
+        entry?.multiplier ??
+        (uom.toUpperCase() === pricingUom.toUpperCase() ? pricingUnitQty : 1),
+    );
+
+    return factor > 0 ? factor : 1;
+  };
+   const totalBaseStock =
+    typeof product.current_quantity === "number" ? product.current_quantity : 0;
+
+  const canSellUom = (uom: string) =>
+    totalBaseStock >= getConversionFactor(uom);
+
+  const [selectedUom, setSelectedUom] = useState<string>(
+    canSellUom(pricingUom) ? pricingUom : baseUom,
+  );
+
+
+  // Conversion factor for stock display: how many base units = 1 of selectedUom
+  const conversionFactor = getConversionFactor(selectedUom);
+
+  // Compute dynamic stock availability: current_quantity / conversion_factor
+ 
+  const rawAvailableStock = totalBaseStock / conversionFactor;
+  const availableStock =
+    conversionFactor > 1
+      ? Number(rawAvailableStock.toFixed(2))
+      : totalBaseStock;
+
+  const isOutOfStock = totalBaseStock <= 0 || availableStock <= 0;
+
   const displayPrice = resolvePrice(selectedUom, baseRetailPrice);
 
   const displayWholesalePrice = (() => {
@@ -86,35 +127,6 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
     );
     return Number((baseWholesalePrice * (factor || 1)).toFixed(2));
   })();
-
-  // Conversion factor for stock display: how many base units = 1 of selectedUom
-  const conversionFactor = (() => {
-    if (selectedUom.toUpperCase() === baseUom.toUpperCase()) return 1;
-    const entry = (product.uoms ?? []).find(
-      (u) => u.uom && u.uom.toUpperCase() === selectedUom.toUpperCase(),
-    );
-    if (entry) {
-      const f = Number(
-        entry.conversion_factor ??
-          entry.conversionFactor ??
-          entry.multiplier ??
-          0,
-      );
-      if (f > 0) return f;
-    }
-    return pricingUnitQty;
-  })();
-
-  // Compute dynamic stock availability: current_quantity / conversion_factor
-  const totalBaseStock =
-    typeof product.current_quantity === "number" ? product.current_quantity : 0;
-  const rawAvailableStock = totalBaseStock / conversionFactor;
-  const availableStock =
-    conversionFactor > 1
-      ? Number(rawAvailableStock.toFixed(2))
-      : totalBaseStock;
-
-  const isOutOfStock = totalBaseStock <= 0 || availableStock <= 0;
 
   const handleCardClick = () => {
     if (isOutOfStock) return;
@@ -145,10 +157,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
     >
       <div>
         <div className="flex justify-between items-start gap-1.5 mb-1">
-          <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[100px]">
-            {product.sku}
-          </span>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center  justify-between gap-1 w-full">
             {isOutOfStock ? (
               <Badge
                 variant="destructive"
@@ -158,15 +167,11 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
               </Badge>
             ) : (
               <span className="text-[10px] font-mono text-muted-foreground tabular-nums">
-                Stock:{" "}
-                <strong className="text-foreground">{availableStock}</strong>
+                Stock: {availableStock}
               </span>
             )}
-            {/* Always visible UoM pill badge */}
-            <span className="text-[9px] px-1.5 py-0.5 rounded-[2px] bg-primary/10 border border-primary/20 text-primary font-mono font-bold uppercase">
-              {selectedUom}
-            </span>
-            <span className="text-[9px] px-1 py-0.2 rounded-[2px] bg-muted border border-border text-muted-foreground truncate max-w-[70px]">
+
+            <span className="text-[9px] px-1 py-0.2 rounded-[2px] bg-accent border border-primary/20 text-primary truncate max-w-[70px]">
               {product.category}
             </span>
           </div>
@@ -179,16 +184,16 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
 
       <div className="flex items-end justify-between gap-1.5 mt-2.5 pt-1.5 border-t border-border/40">
         <div>
-          <span className="font-bold text-primary font-mono text-[13px] tabular-nums">
+          <span className="font-bold text-primary text-[13px] tabular-nums">
             {formatPeso(displayPrice)}
           </span>
-          <span className="text-[10px] text-muted-foreground font-mono ml-0.5">
+          <span className="text-[8px] text-muted-foreground font-mono ml-0.5">
             /{selectedUom}
           </span>
         </div>
 
         {/* UoM Switcher if alternate UoM exists */}
-        {hasAlternateUom && (
+        {hasAlternateUom ? (
           <div
             className="flex items-center gap-0.5 bg-muted/80 p-0.5 rounded-[3px] border border-border"
             onClick={(e) => e.stopPropagation()}
@@ -200,25 +205,40 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
                 selectedUom.toUpperCase() === baseUom.toUpperCase()
                   ? "bg-primary text-primary-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
-              }`}
+              } ${!canSellUom(baseUom) ? "opacity-40" : ""}`}
               title={`Switch to Base unit (${baseUom})`}
+              disabled={!canSellUom(baseUom)}
             >
               {baseUom}
             </button>
             <button
+            
               type="button"
               onClick={(e) => handleUomToggle(e, pricingUom)}
-              className={`px-1.5 py-0.5 text-[9px] font-mono font-bold rounded-[2px] transition-colors ${
+              className={`px-1.5 py-0.5 text-[9px] font-mono font-bold rounded-[2px] transition-colors  ${
                 selectedUom.toUpperCase() === pricingUom.toUpperCase()
                   ? "bg-primary text-primary-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
-              }`}
-              title={`Switch to Pricing unit (${pricingUom}) - 1 ${pricingUom} = ${pricingUnitQty} ${baseUom}`}
+              } ${!canSellUom(pricingUom) ? "opacity-40" : ""}`}
+              title={`Switch unit`}
+              disabled={!canSellUom(pricingUom)}
             >
               {pricingUom}
             </button>
           </div>
-        )}
+        ) : <button
+              type="button"
+              onClick={(e) => handleUomToggle(e, baseUom)}
+              className={`px-1.5 py-0.5 text-[9px] font-mono font-bold rounded-[2px] transition-colors ${
+                selectedUom.toUpperCase() === baseUom.toUpperCase()
+                  ? "bg-primary text-primary-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              } ${!canSellUom(baseUom) ? "opacity-40" : ""}`}
+              title={`Switch to Base unit (${baseUom})`}
+              disabled={!canSellUom(baseUom)}
+            >
+              {baseUom}
+            </button>}
       </div>
     </div>
   );

@@ -95,27 +95,6 @@ export function ProductPicker({ onSelect }: ProductPickerProps) {
         className="rounded-[2px]"
       />
 
-      <div className="grid grid-cols-3 gap-2">
-        <Input
-          placeholder="Size..."
-          value={size}
-          onChange={(event) => setSize(event.target.value)}
-          className="rounded-[2px] h-7 text-xs"
-        />
-        <Input
-          placeholder="Thread..."
-          value={thread}
-          onChange={(event) => setThread(event.target.value)}
-          className="rounded-[2px] h-7 text-xs"
-        />
-        <Input
-          placeholder="Material..."
-          value={material}
-          onChange={(event) => setMaterial(event.target.value)}
-          className="rounded-[2px] h-7 text-xs"
-        />
-      </div>
-
       {isLoading && (
         <p className="text-xs text-muted-foreground">Searching products...</p>
       )}
@@ -148,7 +127,7 @@ export function ProductPicker({ onSelect }: ProductPickerProps) {
                   )}
                 </div>
                 <span className="shrink-0 font-mono text-muted-foreground">
-                  {item.sku ?? "-"} · {item.current_quantity} {item.base_uom}
+                  {item.current_quantity} {item.base_uom}
                 </span>
               </button>
             </li>

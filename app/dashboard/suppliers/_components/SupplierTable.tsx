@@ -17,6 +17,7 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
+  ArrowUpDown
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -41,6 +42,7 @@ import {
 } from "@/lib/suppliers/suppliers";
 import { SupplierModal } from "./SupplierModal";
 import { SupplierDeleteDialog } from "./SupplierDeleteDialog";
+import { Label } from "@/components/ui/label";
 
 export function SupplierTable() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -53,7 +55,9 @@ export function SupplierTable() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalItems, setTotalItems] = useState<number>(0);
+  const [sortOrder, setSortOrder] = useState<"DEFAULT" | "ASC" | "DESC">("DEFAULT");
   const pageSize = 10;
+  // Pagination & Filtering state
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -146,6 +150,26 @@ export function SupplierTable() {
     }
   };
 
+  //for parsing status
+  const STATUS_LABELS: Record<string, string> = {
+    ALL: "All Status",
+    ACTIVE: "Active",
+    INACTIVE: "Inactive",
+  };  
+
+  //for filtering
+  const SORT_LABELS: Record<string, string> = {
+    DEFAULT: "Default Sort",
+    ASC: "Alphabetical A-Z",
+    DESC: "Alphabetical Z-A",
+  };
+
+  const displayedSuppliers = [...suppliers].sort((a, b) => {
+    if (sortOrder === "ASC") return a.name.localeCompare(b.name);
+    if (sortOrder === "DESC") return b.name.localeCompare(a.name);
+    return 0;
+  });
+
   return (
     <div className="space-y-4">
       {/* Toast Banner */}
@@ -162,48 +186,88 @@ export function SupplierTable() {
       )}
 
       {/* Controls Row */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 flex-1 max-w-md">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search supplier by name or contact..."
-              className="pl-8 bg-muted/50"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-            />
+      <div className="space-y-4">
+        <div className="grid items-end gap-3 md:grid-cols-2 lg:grid-cols-5">
+          {/* Search */}
+          <div className="space-y-2 lg:col-span-2">
+            <Label>Search</Label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search supplier by name or contact..."
+                className="pl-8 h-9"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
           </div>
 
-          <Select
-            value={statusFilter}
-            onValueChange={(val) => {
-              if (val) setStatusFilter(val);
-              setCurrentPage(1);
-            }}
-          >
-            <SelectTrigger className="w-[130px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All Status</SelectItem>
-              <SelectItem value="ACTIVE">Active</SelectItem>
-              <SelectItem value="INACTIVE">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          {/* Supplier Status + Filters Dropdown */}
+          <div className="flex flex-wrap items-end gap-2 lg:col-span-2">
+            {/* Supplier Status */}
+            <div className="flex flex-col gap-2">
+              <Label>Supplier Status</Label>
+              <Select
+                value={statusFilter}
+                onValueChange={(val) => {
+                  if (val) setStatusFilter(val);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[150px] !h-9">
+                  <SelectValue placeholder="Filter by Status">
+                    {STATUS_LABELS[statusFilter] ?? "All Status"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false}>
+                  <SelectItem value="ALL">All Status</SelectItem>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="INACTIVE">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        <Button
-          onClick={() => {
-            setSelectedSupplier(null);
-            setIsModalOpen(true);
-          }}
-          className="h-8 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm"
-        >
-          <Plus className=" h-4 w-4" /> Add Supplier
-        </Button>
+            {/* Filters (Sort) */}
+            <div className="flex flex-col gap-2">
+              <Label>Sort</Label>
+              <Select
+                value={sortOrder}
+                onValueChange={(val) => {
+                  setSortOrder((val ?? "DEFAULT") as "DEFAULT" | "ASC" | "DESC");
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[175px] !h-9 [&>svg:last-child]:hidden">
+                  <ArrowUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <SelectValue placeholder="Sort">
+                    {SORT_LABELS[sortOrder] ?? "Sort"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false}>
+                  <SelectItem value="DEFAULT">Default Order</SelectItem>
+                  <SelectItem value="ASC">Alphabetical A-Z</SelectItem>
+                  <SelectItem value="DESC">Alphabetical Z-A</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Big Blue Button */}
+          <div className="lg:col-start-5 flex lg:justify-end">
+            <Button
+              onClick={() => {
+                setSelectedSupplier(null);
+                setIsModalOpen(true);
+              }}
+              className="h-9 px-4 font-semibold text-xs tracking-wider bg-[#0060B2] hover:bg-[#004888] text-white rounded-md shadow-none"
+            >
+              <Plus className="mr-1.5 h-4 w-4" /> Add Supplier
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Table Container */}
@@ -253,7 +317,7 @@ export function SupplierTable() {
                 </TableCell>
               </TableRow>
             ) : (
-              suppliers.map((supplier) => {
+              displayedSuppliers.map((supplier) => {
                 const name = supplier.companyName || supplier.name || "N/A";
                 const contact =
                   supplier.contactPerson || supplier.contact_person || "N/A";
@@ -290,11 +354,14 @@ export function SupplierTable() {
                     <TableCell className="font-mono">{leadTime} Days</TableCell>
                     <TableCell>
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        className={`inline-flex items-center px-2 py-0.5 rounded-sm text-[11px] font-mono font-semibold ${
                           status === "ACTIVE"
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                             : "bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-300"
                         }`}
+
+ 
+
                       >
                         {status}
                       </span>

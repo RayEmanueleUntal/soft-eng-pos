@@ -4,7 +4,7 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, Plus, RefreshCw } from "lucide-react";
+import { Search, AlertCircle, CheckCircle2, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -26,6 +26,7 @@ import { CancelPurchaseOrderDialog } from "./_components/CancelPurchaseOrderDial
 import { CreatePurchaseOrderModal } from "./_components/CreatePurchaseOrderModal";
 import { PurchaseOrderTable } from "./_components/PurchaseOrderTable";
 import { PageHeader } from "@/components/ui/pageheader";
+import { Label } from "@/components/ui/label";
 
 const PAGE_LIMIT = 10;
 
@@ -35,8 +36,6 @@ export default function PurchaseOrdersPage() {
   const [orders, setOrders] = React.useState<PurchaseOrderDto[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [notice, setNotice] = React.useState<string | null>(null);
-
   const [page, setPage] = React.useState(1);
   const [totalPages, setTotalPages] = React.useState(1);
   const [total, setTotal] = React.useState(0);
@@ -73,110 +72,80 @@ export default function PurchaseOrdersPage() {
     loadOrders();
   }, [loadOrders]);
 
-  // Closes the create dialog, announces the new PO and reloads the list.
+  const [notice, setNotice] = React.useState<{
+    message: string;
+    variant: "success" | "cancelled";
+  } | null>(null);
+
+  // Auto-dismiss after 4 seconds
+  React.useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(timer);
+  }, [notice]);  
+
+  // Closes the create dialog, announces the new PO (green) and reloads the list.
   const handleCreated = (order: PurchaseOrderDto) => {
     setCreateOpen(false);
-    setNotice(`Purchase order #${order.id} created.`);
+    setNotice({
+      message: `Purchase order #${order.id} created.`,
+      variant: "success",
+    });
     if (page === 1) loadOrders();
     else setPage(1);
   };
 
-  // Closes the cancel dialog, announces the result and reloads the list.
+  // Closes the cancel dialog, announces the result (red) and reloads the list.
   const handleCancelled = (order: PurchaseOrderDto) => {
     setCancelTarget(null);
-    setNotice(`Purchase order #${order.id} cancelled.`);
+    setNotice({
+      message: `Purchase order #${order.id} cancelled.`,
+      variant: "cancelled",
+    });
     loadOrders();
   };
+  
 
   return (
     <div className="flex-1 space-y-6 font-sans">
-      {/* <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Purchase Orders</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Create orders from low-stock items, inspect line items and track their status.
-          </p>
-        </div>
-
-        {canCreatePO(role) && (
-          <Button onClick={() => setCreateOpen(true)} className="gap-2 font-semibold">
-            <Plus className="h-4 w-4" /> New Purchase Order
-          </Button>
-        )}
-      </div> */}
-
       <div className="shrink-0 mt-4 mb-4 flex justify-between">
-        {/* Header Bar */}
-        <PageHeader
-          header="Purchase Orders"
-          subheader="Create orders from low-stock items, inspect line items and track their status."
-        />
-
-        {canCreatePO(role) && (
-          <Button
-            onClick={() => setCreateOpen(true)}
-            className="h-8 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm"
-          >
-            <Plus className="h-4 w-4" /> New Purchase Order
-          </Button>
-        )}
-      </div>
+          {/* Header Bar */}
+          <PageHeader
+            header="Purchase Orders"
+            subheader="Create orders from low-stock items, inspect line items and track their status."
+          />
+        </div>
 
       <div className="space-y-6 rounded-lg border border-border bg-card p-6 shadow-sm">
-        <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
-          <Select
-            value={statusFilter}
-            onValueChange={(value) => {
-              setStatusFilter((value ?? "ALL") as POStatus | "ALL");
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="h-9 w-full rounded-[4px] sm:w-56">
-              <SelectValue placeholder="Status">
-                {(value: string) =>
-                  value === "ALL" ? "All statuses" : value.replace(/_/g, " ")
-                }
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent alignItemWithTrigger={false}>
-              <SelectItem value="ALL">All statuses</SelectItem>
-              {PO_STATUSES.map((status) => (
-                <SelectItem key={status} value={status}>
-                  {status.replace(/_/g, " ")}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadOrders}
-            disabled={loading}
-            className="h-9 gap-1.5 text-xs"
-          >
-            <RefreshCw
-              className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </Button>
-        </div>
-
         {notice && (
-          <div className="flex items-center justify-between gap-3 rounded-md border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
+          <div
+            role="status"
+            className={`flex items-center justify-between gap-3 rounded-md border p-3 text-xs animate-in fade-in duration-200 ${
+              notice.variant === "cancelled"
+                ? "border-red-500/30 bg-red-500/10 text-red-700"
+                : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
+            }`}
+          >
             <span className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              {notice}
+              {notice.variant === "cancelled" ? (
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+              )}
+              {notice.message}
             </span>
-            <Button variant="ghost" size="xs" onClick={() => setNotice(null)}>
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => setNotice(null)}
+              className={
+                notice.variant === "cancelled"
+                  ? "text-red-700 hover:bg-red-500/20 hover:text-red-900"
+                  : "text-emerald-700 hover:bg-emerald-500/20 hover:text-emerald-900"
+              }
+            >
               Dismiss
             </Button>
-          </div>
-        )}
-
-        {error && (
-          <div className="break-words rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
-            {error}
           </div>
         )}
 
@@ -189,6 +158,14 @@ export default function PurchaseOrdersPage() {
           canCancel={canManagePOStatus(role)}
           onPageChange={setPage}
           onCancelRequest={setCancelTarget}
+          statusFilter={statusFilter}
+          onStatusFilterChange={(val) => {
+            setStatusFilter(val);
+            setPage(1);
+          }}
+          onRefresh={loadOrders}
+          canCreate={canCreatePO(role)}
+          onOpenCreateModal={() => setCreateOpen(true)}
         />
       </div>
 

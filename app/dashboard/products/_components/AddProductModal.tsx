@@ -10,24 +10,25 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ProductForm } from "./ProductForm";
+import type { Product } from "@/lib/products/types";
 
 interface AddProductModalProps {
-  onSaved?: () => void;
+  onSaved?: (product?: Product) => void;
 }
 
 export function AddProductModal({ onSaved }: AddProductModalProps) {
   const [open, setOpen] = useState(false);
 
-  const handleSaved = () => {
+  const handleSaved = (product?: Product) => {
     setOpen(false);
-    onSaved?.();
+    onSaved?.(product);
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button className="h-8 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm">
+          <Button className="h-9 px-4 font-semibold text-xs tracking-wider bg-[#0060B2] hover:bg-[#004888] text-white rounded-md shadow-none">
             + Add Product
           </Button>
         }
