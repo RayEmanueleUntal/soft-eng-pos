@@ -267,7 +267,7 @@ function AdjustmentForm({
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1.5">
               <Label htmlFor="newCount" className="text-xs">
-                New Counted Qty <span className="text-destructive">*</span><span className="text-destructive">*</span>
+                New Counted Qty <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="newCount"
@@ -458,18 +458,6 @@ export function StockAdjustmentModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>
-      {!isControlled && (
-        <DialogTrigger
-          render={
-            trigger ?? (
-              <Button className="h-8 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm">
-                <Plus className="h-3.5 w-3.5" />
-                <span>Adjust Stock</span>
-              </Button>
-            )
-          }
-        />
-      )}
       <DialogContent className="rounded-[4px] border border-[#0F172A] shadow-[0px_4px_0px_rgba(15,23,42,0.08)] ring-0 sm:max-w-[440px]">
         <DialogHeader>
           <DialogTitle className="font-heading font-bold text-foreground">

@@ -353,7 +353,7 @@ export default function InventoryAdjustmentsPage() {
       <div className="shrink-0 mt-4 mb-4">
         {/* Header Bar */}
         <PageHeader
-          header="Stock Adjustments & Movements"
+          header="Stock Movements & Adjustments"
           subheader="Audit inventory logs, filter movements, and record physical count adjustments."
         />
       </div>

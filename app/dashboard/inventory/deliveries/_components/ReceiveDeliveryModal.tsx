@@ -190,8 +190,8 @@ export function ReceiveDeliveryModal({
         uomInvalid,
         baseInvalid,
         exceeds,
-        invalid:
-          qtyInvalid || factorInvalid || uomInvalid || baseInvalid || exceeds,
+        // Removed `|| exceeds` so over-delivery is allowed to submit
+        invalid: qtyInvalid || factorInvalid || uomInvalid || baseInvalid,
       };
     });
   }, [selectedPO, lines]);
@@ -429,22 +429,32 @@ try {
                                 base: null,
                               })
                             }
-                            className={inputClass(r.qtyInvalid || r.exceeds)}
+                            className={inputClass(r.qtyInvalid)}
                           />
                           <p
                             className={`text-[11px] ${
-                              r.qtyInvalid || r.exceeds
+                              r.qtyInvalid
                                 ? "text-destructive"
-                                : "text-muted-foreground"
+                                : r.exceeds
+                                  ? "text-amber-600 dark:text-amber-400 font-medium"
+                                  : "text-muted-foreground"
                             }`}
                           >
-                            {r.qtyEmpty
-                              ? "Please enter a number. This cannot be empty."
-                              : r.qtyInvalid
-                                ? "Must be greater than 0"
-                                : r.exceeds
-                                  ? `Exceeds expected (max ${r.item.expected_base_quantity.toLocaleString()} ${r.item.base_uom})`
-                                  : `Max ${r.item.requested_quantity.toLocaleString()} ${r.item.ordered_uom}`}
+                            {r.qtyEmpty ? (
+                              "Please enter a number. This cannot be empty."
+                            ) : r.qtyInvalid ? (
+                              "Must be greater than 0"
+                            ) : r.exceeds && r.base !== null ? (
+                              <span>
+                                Exceeded by{" "}
+                                {(
+                                  Math.round((r.base - r.item.expected_base_quantity) * 1000) / 1000
+                                ).toLocaleString()}{" "}
+                                {r.item.base_uom}
+                              </span>
+                            ) : (
+                              `Expected ${r.item.requested_quantity.toLocaleString()} ${r.item.ordered_uom}`
+                            )}
                           </p>
                         </div>
 

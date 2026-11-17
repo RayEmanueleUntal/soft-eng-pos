@@ -28,9 +28,7 @@ import {
 import { formatPeso, getErrorMessage } from "@/lib/utils";
 import { fetchTransactionsApi, type TransactionSummary } from "@/lib/pos";
 import { PageHeader } from "@/components/ui/pageheader";
-import { TablePagination } from "@/components/ui/table-pagination";
-
-const PAGE_SIZE = 15;
+import { Label } from "@/components/ui/label";
 
 export default function TransactionHistoryPage() {
   const router = useRouter();
@@ -87,60 +85,31 @@ export default function TransactionHistoryPage() {
     }
   };
 
-  return (
-    <div className="space-y-6 mx-auto">
-      {/* Header */}
-      <div className="shrink-0 mt-4 mb-4 flex justify-between">
-        <div>
-          {/* <Link href="/dashboard/pos">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1 pl-0 text-muted-foreground hover:text-foreground text-xs font-sans rounded-[4px]"
-            >
-              <ArrowLeft className="w-4 h-4" /> Back to POS Terminal
-            </Button>
-          </Link> */}
-          <PageHeader
-            header="Historical Transaction Logs"
-            subheader="Browse completed sales, search past receipts, and view detailed
-            printable invoices."
-          />
-        </div>
+return (
+  <div className="flex-1 space-y-6">
+    {/* Header */}
+    <div className="shrink-0 mt-4 mb-4">
+      <PageHeader
+        header="Invoices"
+        subheader="Browse completed sales, search past invoices, and view handle refund/exchanges"
+      />
+    </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          className="gap-2 self-start"
-        >
-          <RefreshCw
-            className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`}
-          />{" "}
-          Refresh
-        </Button>
-      </div>
-      {/* <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Link href="/dashboard/pos">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1 pl-0 text-muted-foreground hover:text-foreground text-xs font-sans rounded-[4px]"
-              >
-                <ArrowLeft className="w-4 h-4" /> Back to Terminal
-              </Button>
-            </Link>
+    {/* Main Content Card (Search, Refresh, and Table) */}
+    <div className="bg-card p-6 rounded-lg shadow-sm border border-border space-y-4">
+      {/* Toolbar matching InventoryFilterBar style */}
+      <div className="grid items-end gap-3 md:grid-cols-2 lg:grid-cols-5">
+        <div className="space-y-2 lg:col-span-2">
+          <Label>Search</Label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by Invoice #, Receipt ID or Customer..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 h-9 text-sm font-sans focus-visible:ring-1 focus-visible:ring-primary"
+            />
           </div>
-          <h1 className="text-[24px] font-bold font-heading tracking-tight flex items-center gap-2 text-foreground">
-            <FileText className="w-6 h-6 text-primary" /> Historical Transaction
-            Logs
-          </h1>
-          <p className="text-[13px] text-muted-foreground mt-1">
-            Browse completed sales, search past receipts, and view detailed
-            printable invoices.
-          </p>
         </div>
 
         <Button
@@ -172,6 +141,17 @@ export default function TransactionHistoryPage() {
         </div>
       </div>
 
+      {/*info subheading*/}
+      <div className="flex items-center justify-between">
+        <h2 className="text-[15px] font-heading font-semibold text-foreground">
+          Invoice History
+        </h2>
+        <span className="text-xs font-mono text-muted-foreground tabular-nums">
+          Total records: {filteredTransactions.length}
+          {searchTerm && ` (of ${safeTransactions.length})`}
+        </span>
+      </div>
+
       {/* Error Alert */}
       {error && (
         <div className="flex items-center gap-2 p-3 text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-[4px] font-sans font-medium">
@@ -186,7 +166,7 @@ export default function TransactionHistoryPage() {
           <TableHeader className="bg-muted border-b border-border">
             <TableRow>
               <TableHead className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
-                Receipt / Invoice #
+                Invoice #
               </TableHead>
               <TableHead className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
                 Date & Time
@@ -264,7 +244,7 @@ export default function TransactionHistoryPage() {
                         }
                         className="gap-1.5 rounded-[4px] text-xs border-input hover:bg-muted font-sans"
                       >
-                        <Eye className="w-3.5 h-3.5" /> View Receipt
+                        <Eye className="w-3.5 h-3.5" /> View Invoice
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -285,5 +265,6 @@ export default function TransactionHistoryPage() {
         onPageChange={setPage}
       />
     </div>
-  );
+  </div>
+);
 }
