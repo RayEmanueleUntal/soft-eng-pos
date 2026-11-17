@@ -127,6 +127,7 @@ export default function ApprovalRequestsPage() {
   const handleConfirmApprove = async () => {
     if (!approvingRequest) return;
     setSubmitting(true);
+    setActionError(null);
     try {
       const updated = await approveApprovalRequest(approvingRequest.id);
       // Update local state with real backend response
@@ -147,6 +148,7 @@ export default function ApprovalRequestsPage() {
   const handleConfirmReject = async () => {
     if (!rejectingRequest) return;
     setSubmitting(true);
+    setActionError(null);
     try {
       const updated = await rejectApprovalRequest(rejectingRequest.id, {
         rejectionReason: rejectionReasonInput,
@@ -573,6 +575,12 @@ export default function ApprovalRequestsPage() {
               ? This action will execute the associated system override.
             </DialogDescription>
           </DialogHeader>
+          {actionError && (
+            <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span className="break-words">{actionError}</span>
+            </div>
+          )}
           <DialogFooter className="gap-2">
             <Button
               variant="outline"
@@ -608,6 +616,13 @@ export default function ApprovalRequestsPage() {
               .
             </DialogDescription>
           </DialogHeader>
+
+          {actionError && (
+            <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span className="break-words">{actionError}</span>
+            </div>
+          )}
 
           <div className="space-y-2 py-2">
             <label className="text-xs font-semibold text-muted-foreground">

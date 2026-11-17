@@ -69,6 +69,7 @@ export default function ExpensesPage() {
 
   // Loads the current page of expenses for the active filters.
   const loadExpenses = React.useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     if (rangeInvalid) {
       setExpenses([]);
       setTotal(0);
@@ -77,7 +78,6 @@ export default function ExpensesPage() {
       return;
     }
 
-    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     try {
