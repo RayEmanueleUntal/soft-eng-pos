@@ -225,6 +225,16 @@ export function ProductTable() {
         </div>
       )}
 
+      {/*info subheading*/}
+      <div className="flex items-center justify-between">
+        <h2 className="text-[15px] font-heading font-semibold text-foreground">
+          Product Profile List
+        </h2>
+        <span className="text-xs font-mono text-muted-foreground tabular-nums">
+          Total records: {total}
+        </span>
+      </div>
+
       <div className="rounded-lg border bg-background">
         <Table>
           <TableHeader>

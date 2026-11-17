@@ -270,6 +270,17 @@ export function SupplierTable() {
         </div>
       </div>
 
+      {/*info subheading */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-[15px] font-heading font-semibold text-foreground">
+          Supplier Profile List
+        </h2>
+        <span className="text-xs font-mono text-muted-foreground tabular-nums">
+          Total records: {totalItems}
+        </span>
+      </div>
+
+
       {/* Table Container */}
       <div className="rounded-md border bg-card overflow-x-auto">
         <Table>

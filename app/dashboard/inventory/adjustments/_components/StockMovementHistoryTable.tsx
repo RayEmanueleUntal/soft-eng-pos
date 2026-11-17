@@ -289,10 +289,10 @@ export function StockMovementHistoryTable({
                 Alphabetical Z-A
               </SelectItem>
               <SelectItem value="QTY_DESC" className="text-xs">
-                Qty High to Low
+                Qty Adj High to Low
               </SelectItem>
               <SelectItem value="QTY_ASC" className="text-xs">
-                Qty Low to High
+                Qty Adj Low to High
               </SelectItem>
             </SelectContent>
           </Select>

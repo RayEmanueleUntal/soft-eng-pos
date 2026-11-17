@@ -27,6 +27,7 @@ export default function InventoryPage() {
     page,
     setPage,
     totalPages,
+    totalRecords,
     loading,
     error,
     refetch,
@@ -109,6 +110,7 @@ export default function InventoryPage() {
           <>
             <InventoryTable
               inventory={visibleInventory}
+              totalRecords={statusTab === "all" ? totalRecords : visibleInventory.length} 
               categories={categories}
               onRefresh={refetch}
               canManageStock={canManageStock(role)}
