@@ -23,6 +23,7 @@ export default function ForwardersPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const limit = 10;
 
   // Modal State
@@ -56,6 +57,7 @@ export default function ForwardersPage() {
       });
       setForwarders(response.data.data || []);
       setTotalPages(response.data.meta?.totalPages || 1);
+      setTotal(response.data.meta?.total || 0);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -132,6 +134,7 @@ export default function ForwardersPage() {
         />
 
         <ForwarderTable
+          total={total}
           data={forwarders}
           loading={loading}
           currentPage={page}
