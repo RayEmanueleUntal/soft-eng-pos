@@ -1,3 +1,6 @@
+// Historical POS receipt list for browsing completed sales and opening invoices.
+// Fetches paginated GET /transactions results with optional search.
+// Footer uses shared TablePagination at 15 receipts per page.
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -25,68 +28,49 @@ import {
 import { formatPeso, getErrorMessage } from "@/lib/utils";
 import { fetchTransactionsApi, type TransactionSummary } from "@/lib/pos";
 import { PageHeader } from "@/components/ui/pageheader";
+import { TablePagination } from "@/components/ui/table-pagination";
+
+const PAGE_SIZE = 15;
 
 export default function TransactionHistoryPage() {
   const router = useRouter();
   const [transactions, setTransactions] = useState<TransactionSummary[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const handleRefresh = useCallback(async () => {
+  const loadTransactions = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchTransactionsApi();
-      setTransactions(data);
+      const result = await fetchTransactionsApi({
+        page,
+        limit: PAGE_SIZE,
+        search: searchTerm,
+      });
+      setTransactions(result.items);
+      setTotal(result.total);
+      setTotalPages(result.totalPages);
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to load transaction history"));
+      setTransactions([]);
+      setTotal(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, searchTerm]);
+
+  const handleRefresh = useCallback(async () => {
+    await loadTransactions();
+  }, [loadTransactions]);
 
   useEffect(() => {
-    let ignore = false;
-
-    fetchTransactionsApi()
-      .then((data) => {
-        if (!ignore) {
-          setTransactions(data);
-          setError(null);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!ignore) {
-          setError(getErrorMessage(err, "Failed to load transaction history"));
-        }
-      })
-      .finally(() => {
-        if (!ignore) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  const safeTransactions = Array.isArray(transactions) ? transactions : [];
-  const filteredTransactions = safeTransactions.filter((tx) => {
-    const search = searchTerm.toLowerCase();
-    const idMatch = (
-      tx.invoice_number ||
-      String(tx.id || "") ||
-      String(tx.transactionId || "")
-    )
-      .toLowerCase()
-      .includes(search);
-    const customerMatch = (tx.customerName || "")
-      .toLowerCase()
-      .includes(search);
-    return idMatch || customerMatch;
-  });
+    void loadTransactions();
+  }, [loadTransactions]);
 
   const getBadgeVariant = (method: TransactionSummary["paymentMethod"]) => {
     switch (method) {
@@ -179,7 +163,10 @@ export default function TransactionHistoryPage() {
           <Input
             placeholder="Search by Invoice #, Receipt ID or Customer..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setPage(1);
+            }}
             className="pl-9 h-9 rounded-[4px] border-input text-xs font-mono"
           />
         </div>
@@ -228,7 +215,7 @@ export default function TransactionHistoryPage() {
                   Loading transaction logs...
                 </TableCell>
               </TableRow>
-            ) : filteredTransactions.length === 0 ? (
+            ) : transactions.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={6}
@@ -238,7 +225,7 @@ export default function TransactionHistoryPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredTransactions.map((tx) => {
+              transactions.map((tx) => {
                 const receiptId =
                   tx.id || tx.invoice_number || tx.transactionId || "";
                 return (
@@ -287,6 +274,16 @@ export default function TransactionHistoryPage() {
           </TableBody>
         </Table>
       </div>
+
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        totalItems={total}
+        pageSize={PAGE_SIZE}
+        itemLabel="receipts"
+        loading={loading}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

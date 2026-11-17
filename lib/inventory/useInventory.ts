@@ -22,7 +22,7 @@ interface InventoryResult {
   error: string | null;
 }
 
-const PAGE_LIMIT = 20;
+export const INVENTORY_PAGE_LIMIT = 15;
 const POLL_INTERVAL_MS = 30000;
 
 // Provides inventory data, filters, pagination state and a silent refetch function.
@@ -105,7 +105,7 @@ export function useInventory() {
             material: filters.material || undefined,
             categoryId: filters.category ? Number(filters.category) : undefined,
             page,
-            limit: PAGE_LIMIT,
+            limit: INVENTORY_PAGE_LIMIT,
           },
           signal: controller.signal,
         })

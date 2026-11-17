@@ -42,7 +42,7 @@ const FILTER_LABELS: Record<ShipmentFilter, string> = {
   DELIVERED: "Delivered",
 };
 
-const PAGE_LIMIT = 10;
+const PAGE_LIMIT = 15;
 
 export default function ShipmentsPage() {
   const role = useCurrentRole();
@@ -310,6 +310,7 @@ export default function ShipmentsPage() {
           page={page}
           totalPages={totalPages}
           total={total}
+          pageSize={PAGE_LIMIT}
           onPageChange={setPage}
         />
       </div>

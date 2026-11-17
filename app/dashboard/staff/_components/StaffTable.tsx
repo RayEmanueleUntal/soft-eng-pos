@@ -1,3 +1,6 @@
+// Staff directory table for dashboard user accounts and role assignment.
+// Loads staff-users, filters by search, active status and role, and supports add/edit/toggle.
+// Pages the filtered roster in the browser at 15 rows using shared TablePagination.
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -31,8 +34,9 @@ import {
 import { StaffRow } from "./StaffRow";
 import { AddStaffModal } from "./AddStaffModal";
 import { Staff, AssignedRole } from "@/lib/staff/types";
+import { TablePagination } from "@/components/ui/table-pagination";
 
-const LIMIT = 10;
+const PAGE_SIZE = 15;
 type StatusFilter = "ALL" | "ACTIVE" | "INACTIVE";
 type RoleFilter = "ALL" | AssignedRole;
 
@@ -159,7 +163,16 @@ export function StaffTable() {
     return matchesSearch && matchesStatus && matchesRole;
   });
 
-  const paginatedStaff = filteredStaff.slice((page - 1) * LIMIT, page * LIMIT);
+  const totalPages = Math.max(1, Math.ceil(filteredStaff.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedStaff = filteredStaff.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, statusFilter, roleFilter]);
 
   // Modal Handlers
   const handleAddStaff = () => {
@@ -273,7 +286,6 @@ export function StaffTable() {
                 variant={isActive ? "default" : "ghost"}
                 onClick={() => {
                   setStatusFilter(key);
-                  setPage(1);
                 }}
                 className={`h-8 px-3 text-xs font-sans rounded-[2px] transition-colors ${
                   isActive
@@ -295,7 +307,6 @@ export function StaffTable() {
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
-                setPage(1);
               }}
               className="pl-8 h-8 w-60 rounded-[2px] text-xs font-sans border-border bg-card placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary"
             />
@@ -333,7 +344,6 @@ export function StaffTable() {
               <DropdownMenuItem
                 onClick={() => {
                   setRoleFilter("ALL");
-                  setPage(1);
                 }}
                 className="flex items-center justify-between text-xs font-sans cursor-pointer py-1.5 px-2 rounded-[2px]"
               >
@@ -366,7 +376,6 @@ export function StaffTable() {
                     key={role}
                     onClick={() => {
                       setRoleFilter(role);
-                      setPage(1);
                     }}
                     className="flex items-center justify-between text-xs font-sans cursor-pointer py-1.5 px-2 rounded-[2px]"
                   >
@@ -399,7 +408,6 @@ export function StaffTable() {
               size="sm"
               onClick={() => {
                 setRoleFilter("ALL");
-                setPage(1);
               }}
               title="Reset role filter"
               className="h-8 px-2 text-xs font-sans rounded-[2px] text-muted-foreground hover:text-foreground"
@@ -512,43 +520,15 @@ export function StaffTable() {
         </Table>
       </div>
 
-      {/* Pagination Footer */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground font-mono px-1">
-        <span>
-          {filteredStaff.length === 0
-            ? "Showing 0 entries"
-            : `Showing ${(page - 1) * LIMIT + 1}-${Math.min(
-                page * LIMIT,
-                filteredStaff.length,
-              )} of ${filteredStaff.length} entries`}
-        </span>
-
-        {filteredStaff.length > LIMIT && (
-          <div className="flex items-center gap-1.5">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="h-7 px-2 text-[11px] rounded-[2px]"
-            >
-              Previous
-            </Button>
-            <span className="text-[11px] px-1">
-              Page {page} of {Math.ceil(filteredStaff.length / LIMIT)}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page * LIMIT >= filteredStaff.length}
-              onClick={() => setPage((p) => p + 1)}
-              className="h-7 px-2 text-[11px] rounded-[2px]"
-            >
-              Next
-            </Button>
-          </div>
-        )}
-      </div>
+      <TablePagination
+        page={currentPage}
+        totalPages={totalPages}
+        totalItems={filteredStaff.length}
+        pageSize={PAGE_SIZE}
+        itemLabel="staff"
+        loading={loading}
+        onPageChange={setPage}
+      />
 
       {/* Add / Edit Modal */}
       <AddStaffModal

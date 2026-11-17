@@ -1,12 +1,10 @@
+// Shared numbered table pager used under dashboard list tables.
+// Shows previous/next, padded page buttons, and optional "Showing X-Y of Z" copy.
+// Stays visible on a single page so short seed lists still match the products bar.
 "use client";
 
 import * as React from "react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -62,33 +60,34 @@ export function TablePagination({
     }
   }, [editing]);
 
-  if (totalPages <= 1) {
-    return null;
-  }
+  const pages = Math.max(1, totalPages);
+  const current = Math.min(Math.max(page, 1), pages);
 
   const goTo = (target: number) => {
-    if (!loading && target >= 1 && target <= totalPages && target !== page) {
+    if (!loading && target >= 1 && target <= pages && target !== current) {
       onPageChange(target);
     }
   };
 
   const startEditing = () => {
-    setDraft(String(page));
+    setDraft(String(current));
     setEditing(true);
   };
 
   const commit = () => {
     const typed = parseInt(draft, 10);
     if (!Number.isNaN(typed)) {
-      goTo(Math.min(Math.max(typed, 1), totalPages));
+      goTo(Math.min(Math.max(typed, 1), pages));
     }
     setEditing(false);
   };
 
   const countText =
     totalItems !== undefined && pageSize !== undefined
-      ? `Showing ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, totalItems)} of ${totalItems} ${itemLabel}`
-      : `Page ${page} of ${totalPages}`;
+      ? totalItems === 0
+        ? `Showing 0 of 0 ${itemLabel}`
+        : `Showing ${(current - 1) * pageSize + 1}-${Math.min(current * pageSize, totalItems)} of ${totalItems} ${itemLabel}`
+      : `Page ${current} of ${pages}`;
 
     return (
         <div
@@ -105,13 +104,13 @@ export function TablePagination({
               size="icon-xs"
               className="text-muted-foreground"
               aria-label="Previous page"
-              disabled={loading || page <= 1}
-              onClick={() => goTo(page - 1)}
+              disabled={loading || current <= 1}
+              onClick={() => goTo(current - 1)}
             >
               <ChevronLeft />
             </Button>
     
-            {getPageItems(page, totalPages).map((item) => {
+            {getPageItems(current, pages).map((item) => {
               if (typeof item !== "number") {
                 return (
                   <span
@@ -124,15 +123,15 @@ export function TablePagination({
                 );
               }
     
-              if (item === page) {
+              if (item === current) {
                 return editing ? (
                   <input
                     key={item}
                     ref={inputRef}
                     value={draft}
                     inputMode="numeric"
-                    maxLength={String(totalPages).length}
-                    aria-label={`Go to page (1 to ${totalPages})`}
+                    maxLength={String(pages).length}
+                    aria-label={`Go to page (1 to ${pages})`}
                     // Keeps digits only, also when text is pasted.
                     onChange={(e) => setDraft(e.target.value.replace(/\D/g, ""))}
                     onKeyDown={(e) => {
@@ -175,8 +174,8 @@ export function TablePagination({
               size="icon-xs"
               className="text-muted-foreground"
               aria-label="Next page"
-              disabled={loading || page >= totalPages}
-              onClick={() => goTo(page + 1)}
+              disabled={loading || current >= pages}
+              onClick={() => goTo(current + 1)}
             >
               <ChevronRight />
             </Button>
