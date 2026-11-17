@@ -182,10 +182,14 @@ export function CustomerTable() {
         onOpenAddModal={() => setIsAddOpen(true)}
       />
 
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-            {total} customer{total === 1 ? "" : "s"}
-        </p>
+      {/*info subheading */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-[15px] font-heading font-semibold text-foreground">
+          Customer Profile List
+        </h2>
+        <span className="text-xs font-mono text-muted-foreground tabular-nums">
+          Total records: {total}
+        </span>
       </div>
 
       {successMsg && (

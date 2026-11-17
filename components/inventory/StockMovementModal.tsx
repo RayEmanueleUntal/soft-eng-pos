@@ -388,7 +388,7 @@ export function StockMovementModal({
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1.5">
               <Label htmlFor="quantity" className="text-xs">
-                Quantity ({isStockIn ? "to add" : "to remove"})
+                Quantity ({isStockIn ? "to add" : "to remove"}) <span className="text-destructive">*</span> 
               </Label>
               <Input
                 id="quantity"

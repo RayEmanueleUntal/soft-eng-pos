@@ -11,6 +11,7 @@ import {
   Layers,
   AlertCircle,
   CheckCircle2,
+  ToothbrushSparkles,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import {
 } from "@/lib/bin-locations/bin-locations";
 import { PageHeader } from "@/components/ui/pageheader";
 import { Label } from "@/components/ui/label";
+import { totalmem } from "os";
 
 export default function BinLocationsPage() {
   const [bins, setBins] = useState<BinLocation[]>([]);
@@ -206,6 +208,16 @@ export default function BinLocationsPage() {
             </Button>
           </div>
         )}
+
+        {/*info subheading */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-[15px] font-heading font-semibold text-foreground">
+            Bin Location List
+          </h2>
+          <span className="text-xs font-mono text-muted-foreground tabular-nums">
+            Total records: 
+          </span>
+        </div>
 
         {/* Data Table */}
         <div className="bg-white border border-[#CBD5E1] rounded-sm overflow-hidden">

@@ -35,6 +35,17 @@ export function DeliveryHistoryTable({
 }: DeliveryHistoryTableProps) {
   return (
     <div className="space-y-4">
+      {/*info subheading */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-[15px] font-heading font-semibold text-foreground">
+          Received Deliveries History
+        </h2>
+        <span className="text-xs font-mono text-muted-foreground tabular-nums">
+          Total records: {total}
+        </span>
+      </div>
+
+      {/*actual table  */}
       <div className="rounded-md border border-border overflow-hidden">
         <Table>
           <TableHeader className="bg-muted/50">

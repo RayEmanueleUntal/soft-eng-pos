@@ -144,6 +144,17 @@ export function PurchaseOrderTable({
         )}
       </div>
 
+      {/*info subheading */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-[15px] font-heading font-semibold text-foreground">
+            Purchase Order History
+        </h2>
+        <span className="text-xs font-mono text-muted-foreground tabular-nums">
+          Total records: {total}
+        </span>
+      </div>
+
+      {/*actual table */}
       <div className="overflow-hidden rounded-md border border-border">
         <Table>
           <TableHeader className="bg-muted/50">

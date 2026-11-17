@@ -69,6 +69,17 @@ export function InventoryTable({
 
   return (
     <>
+      {/*info subheading*/}
+      <div className="flex items-center justify-between">
+        <h2 className="text-[15px] font-heading font-semibold text-foreground">
+          Product Profile List
+        </h2>
+        <span className="text-xs font-mono text-muted-foreground tabular-nums">
+          Total records:
+        </span>
+      </div>
+
+      {/*actual table*/}
       <div className="overflow-hidden rounded-[4px] border border-border bg-card">
         <Table>
           <TableHeader>
@@ -158,13 +169,6 @@ export function InventoryTable({
                                 onClick={() => setActive({ type: "out", item })}
                               >
                                 Stock Out
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  setActive({ type: "adjust", item })
-                                }
-                              >
-                                Adjust Stock
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => setActive({ type: "bin", item })}

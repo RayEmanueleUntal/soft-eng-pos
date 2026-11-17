@@ -127,7 +127,7 @@ export function InventoryFilterBar({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label>Status</Label>
+          <Label>Stock Status</Label>
           <Select
             value={status}
             onValueChange={(value) => setStatus(value as StatusTab)}
@@ -135,7 +135,7 @@ export function InventoryFilterBar({
             <SelectTrigger className="w-full !h-9 text-sm rounded-[2px]">
               <SelectValue placeholder="Filter by Status">
                 {{
-                  all: "All Stocks",
+                  all: "All Stock Levels",
                   low: "Low Stock",
                   adequate: "Adequate Stock",
                 }[status]}
