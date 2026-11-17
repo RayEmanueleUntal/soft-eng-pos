@@ -42,3 +42,6 @@ next-env.d.ts
 
 .antigravityignore
 1
+
+/playwright-report
+/test-results
