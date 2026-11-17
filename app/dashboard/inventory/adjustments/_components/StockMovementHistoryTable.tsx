@@ -178,7 +178,7 @@ export function StockMovementHistoryTable({
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search product, SKU, or reason..."
+              placeholder="Search by name or SKU..."
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               className="h-8 pl-8 w-[220px] text-xs rounded-[2px]"

@@ -25,16 +25,18 @@ import {
   CheckIcon,
 } from "lucide-react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { StaffRow } from "./StaffRow";
 import { AddStaffModal } from "./AddStaffModal";
 import { Staff, AssignedRole } from "@/lib/staff/types";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { Label } from "@/components/ui/label";
 
 const PAGE_SIZE = 15;
 type StatusFilter = "ALL" | "ACTIVE" | "INACTIVE";
@@ -275,155 +277,96 @@ export function StaffTable() {
   return (
     <div className="space-y-4">
       {/* Toolbar: Filter Tabs & Actions */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-[4px] border border-border">
-          {filterTabs.map(({ key, label, count }) => {
-            const isActive = statusFilter === key;
-            return (
-              <Button
-                key={key}
-                size="sm"
-                variant={isActive ? "default" : "ghost"}
-                onClick={() => {
-                  setStatusFilter(key);
+      <div className="space-y-4">
+        <div className="grid items-end gap-3 md:grid-cols-2 lg:grid-cols-5">
+          {/* Search */}
+          <div className="space-y-2 lg:col-span-2">
+            <Label>Search</Label>
+            <div className="relative">
+              <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search staff..."
+                className="pl-8 h-9"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
                 }}
-                className={`h-8 px-3 text-xs font-sans rounded-[2px] transition-colors ${
-                  isActive
-                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                    : "text-muted-foreground hover:text-foreground hover:bg-background/80"
-                }`}
-              >
-                {label} <span className="font-mono ml-1">({count})</span>
-              </Button>
-            );
-          })}
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative">
-            <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Search staff..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-              }}
-              className="pl-8 h-8 w-60 rounded-[2px] text-xs font-sans border-border bg-card placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary"
-            />
+              />
+            </div>
           </div>
 
-          {/* Role Filter Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={`gap-1.5 h-8 text-xs rounded-[2px] font-sans transition-colors ${
-                    roleFilter === "ALL"
-                      ? "border-border text-foreground hover:bg-muted"
-                      : "bg-primary/10 text-primary border-primary/40 hover:bg-primary/20 font-semibold"
-                  }`}
-                >
-                  <FilterIcon className="size-3.5" />
-                  <span>
-                    {roleFilter === "ALL"
-                      ? "Filter"
-                      : `Role: ${formatRole(roleFilter)}`}
-                  </span>
-                </Button>
-              }
-            />
-            <DropdownMenuContent
-              align="end"
-              className="w-52 bg-card border border-border rounded-[4px] p-1 shadow-md z-50"
-            >
-              <div className="text-[11px] font-mono uppercase text-muted-foreground px-2 py-1.5 font-medium select-none">
-                Filter by Role
-              </div>
-              <DropdownMenuItem
-                onClick={() => {
-                  setRoleFilter("ALL");
+          {/* Role + Account Status Dropdowns */}
+          <div className="flex flex-wrap items-end gap-2 lg:col-span-2">
+            {/* Role Dropdown */}
+            <div className="flex flex-col gap-2">
+              <Label>Role</Label>
+              <Select<RoleFilter>
+                value={roleFilter}
+                onValueChange={(val) => {
+                  setRoleFilter(val ?? "ALL");
+                  setPage(1);
                 }}
-                className="flex items-center justify-between text-xs font-sans cursor-pointer py-1.5 px-2 rounded-[2px]"
               >
-                <span
-                  className={
-                    roleFilter === "ALL"
-                      ? "font-semibold text-primary"
-                      : "text-foreground"
-                  }
-                >
-                  All Roles
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-mono text-[10px] text-muted-foreground">
-                    ({staffList.length})
-                  </span>
-                  {roleFilter === "ALL" && (
-                    <CheckIcon className="size-3.5 text-primary" />
-                  )}
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="my-1 border-t border-border" />
-              {Object.values(AssignedRole).map((role) => {
-                const count = staffList.filter(
-                  (s) => s.assigned_role === role,
-                ).length;
-                const isSelected = roleFilter === role;
-                return (
-                  <DropdownMenuItem
-                    key={role}
-                    onClick={() => {
-                      setRoleFilter(role);
-                    }}
-                    className="flex items-center justify-between text-xs font-sans cursor-pointer py-1.5 px-2 rounded-[2px]"
-                  >
-                    <span
-                      className={
-                        isSelected
-                          ? "font-semibold text-primary"
-                          : "text-foreground"
-                      }
-                    >
+                <SelectTrigger className="w-full sm:w-[160px] !h-9">
+                  <SelectValue placeholder="All Roles">
+                    {roleFilter === "ALL" ? "All Roles" : formatRole(roleFilter)}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false}>
+                  <SelectItem value="ALL">All Roles</SelectItem>
+                  {Object.values(AssignedRole).map((role) => (
+                    <SelectItem key={role} value={role}>
                       {formatRole(role)}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono text-[10px] text-muted-foreground">
-                        ({count})
-                      </span>
-                      {isSelected && (
-                        <CheckIcon className="size-3.5 text-primary" />
-                      )}
-                    </div>
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          {roleFilter !== "ALL" && (
+            {/* Account Status Dropdown */}
+            <div className="flex flex-col gap-2">
+              <Label>Account Status</Label>
+              <Select
+                value={statusFilter}
+                onValueChange={(val) => {
+                  if (val) setStatusFilter(val);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[175px] !h-9">
+                  <SelectValue placeholder="All Status">
+                    {(() => {
+                      const activeTab = filterTabs.find(
+                        (t) => t.key === statusFilter,
+                      );
+                      if (!activeTab || activeTab.label === "All") {
+                        return "All Status";
+                      }
+                      return activeTab.label;
+                    })()}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false}>
+                  {filterTabs.map(({ key, label }) => (
+                    <SelectItem key={key} value={key}>
+                      {label === "All" ? "All Status" : label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Big Blue Button */}
+          <div className="lg:col-start-5 flex lg:justify-end">
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setRoleFilter("ALL");
-              }}
-              title="Reset role filter"
-              className="h-8 px-2 text-xs font-sans rounded-[2px] text-muted-foreground hover:text-foreground"
+              onClick={handleAddStaff}
+              className="h-9 px-4 font-semibold text-xs tracking-wider bg-[#0060B2] hover:bg-[#004888] text-white rounded-md shadow-none"
             >
-              Reset
+              <PlusIcon className="mr-1.5 h-4 w-4" /> New Staff
             </Button>
-          )}
-
-          <Button
-            onClick={handleAddStaff}
-            size="sm"
-            className="gap-1.5 h-8 text-xs rounded-[2px] bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-xs font-sans"
-          >
-            <PlusIcon className="size-3.5" />
-            New Staff
-          </Button>
+          </div>
         </div>
       </div>
 
@@ -460,6 +403,15 @@ export function StaffTable() {
           </button>
         </div>
       )}
+
+      <div className="flex items-center justify-between">
+        <h2 className="text-[15px] font-heading font-semibold text-foreground">
+          Staff Profile List
+        </h2>
+        <span className="text-xs font-mono text-muted-foreground tabular-nums">
+          Total records: 
+        </span>
+      </div>
 
       {/* Table */}
       <div className="rounded-[4px] border border-border bg-card shadow-2xs overflow-hidden">
