@@ -272,6 +272,7 @@ export interface ReceiptItem {
   pricing_uom?: string;
   type?: TransactionType;
   unit_of_measure?: UnitOfMeasure | string;
+  base_uom?: UnitOfMeasure | string;
   already_returned_qty?: number;
 }
 
@@ -353,15 +354,32 @@ export enum ItemCondition {
   CHANGE_OF_MIND = "CHANGE_OF_MIND",
 }
 
-export interface RefundRequest {
+export interface CreateRefundItemDto {
+  productId: number;
+  quantity: number;
+  condition: ItemCondition;
+  reason: string;
+  uom?: string;
+}
+export interface CreateRefundDto {
+  transactionId: number;
+  items: CreateRefundItemDto[];
+  productId?: number;
+  quantity?: number;
+  condition?: ItemCondition;
+  reason?: string;
+  uom?: string;
+}
+
+export type RefundRequest = CreateRefundDto;
+
+export interface ExchangeRequest {
   transactionId: number;
   productId: number;
   quantity: number;
   condition: ItemCondition;
   reason: string;
-}
-
-export interface ExchangeRequest extends RefundRequest {
+  uom?: string;
   newProductId: number;
   newQuantity: number;
   allowStockOverride?: boolean;

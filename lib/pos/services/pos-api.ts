@@ -21,6 +21,8 @@ import type {
   PaymentTabDetails,
   PaymentMethod,
   RefundRequest,
+  CreateRefundDto,
+  CreateRefundItemDto,
   ExchangeRequest,
   ReturnResponse,
   ProductCategoryItem,
@@ -600,7 +602,7 @@ export async function fetchReceiptApi(id: string | number): Promise<Receipt> {
  * Process a refund request via backend API (POST /returns/refund).
  */
 export async function processRefund(
-  request: RefundRequest,
+  request: CreateRefundDto,
 ): Promise<ReturnResponse> {
   try {
     const response = await apiClient.post<ReturnResponse>(
