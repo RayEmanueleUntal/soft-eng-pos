@@ -15,6 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AddBinModal } from "@/app/dashboard/inventory/bins/_components/AddBinModal";
+import { canCreateBin } from "@/lib/auth/permissions";
+import { useCurrentRole } from "@/lib/auth/use-current-role";
 import { BinDetailsModal } from "@/app/dashboard/inventory/bins/_components/BinDetailsModal";
 import {
   getBinLocations,
@@ -26,6 +28,7 @@ import { PageHeader } from "@/components/ui/pageheader";
 import { Label } from "@/components/ui/label";
 
 export default function BinLocationsPage() {
+  const role = useCurrentRole();
   const [bins, setBins] = useState<BinLocation[]>([]);
   const [meta, setMeta] = useState<BinLocationMeta>({
     total: 0,
@@ -160,6 +163,7 @@ export default function BinLocationsPage() {
               </div>
           </div>
 
+          {canCreateBin(role) && (
           <AddBinModal
             onSuccess={(newBin) => {
               setSuccessMsg(
@@ -169,6 +173,7 @@ export default function BinLocationsPage() {
               fetchBins(1);
             }}
           />
+        )}
         </div>
       </div>
         {/* Success Banner */}
