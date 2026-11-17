@@ -368,40 +368,43 @@ Findings grouped by the app's main sidebar tab so each owner can see their bugs.
 ---
 
 
-## TAB: Admin (6)
+## TAB: Admin (6 — all SOLVED via PR #86)
 
 ### Expenses
 
-## BUG-166 — Expenses list fetch has no out-of-order response guard **[code-verified]**
+## BUG-166 — Expenses list fetch has no out-of-order response guard **[SOLVED]**
 - `admin/expenses/page.tsx:70-107` — `loadExpenses` refires on every filter/page change with no sequence counter/AbortController/stale check (contrast shipments `requestId` guard, `useInventory` abort).
 - **Scenario:** Admin changes the category filter then quickly the date range — the older request resolves last, leaving the table and pagination showing the stale filter while the UI shows the new one; wrong expense rows until manual refresh.
+- **Fix:** `requestIdRef` sequence guard added (increments before every load incl. invalid-range skip); stale responses can't overwrite rows/totals/loading. PR #86 (`fix/frontend-high-bugs`).
 
 | ID | Location | Issue | Scenario |
 |---|---|---|---|
-| BUG-168 |`EditExpenseModal.tsx:64-66`|Edit Expense cannot clear an existing date — falsy check skips the change| An expense saved with a date is opened in Edit, the date field cleared (marked optional), saved — `values.date === ""` is falsy so the PATCH never includes `date`; the stored date silently remains while the UI implies it was cleared. |
+| BUG-168 |`EditExpenseModal.tsx:64-66`|Edit Expense cannot clear an existing date — falsy check skips the change **[SOLVED]**| An expense saved with a date is opened in Edit, the date field cleared (marked optional), saved — `values.date === ""` is falsy so the PATCH never includes `date`; the stored date silently remains while the UI implies it was cleared. **Fix:** backend `Expense.date` is non-nullable — modal now validates "Date is required" instead of silently skipping (PR #86). |
 
 ### System Settings
 
-## BUG-121 — Modal state-init fragility in `SettingFormDialog` / `AddStaffModal`
+## BUG-121 — Modal state-init fragility in `SettingFormDialog` / `AddStaffModal` **[SOLVED — verified safe]**
 - **Severity:** Low
 - `useState` initialized once from props; currently safe only because parents key-remount (`key={formSession}`, `key={edit-${id}}`). Any future caller that doesn't will show stale values when switching records. Document or reset-on-open.
 - **Scenario:** A future developer reuses SettingFormDialog/AddStaffModal without the key-remount pattern. Switching between records shows the previous record's values — an admin edits and saves stale data onto the wrong entity.
+- **Resolution:** Verified `SystemSettingsTable` bumps `formSession` (dialog `key`) on every open path → guaranteed remount with fresh state; a redundant reset effect was added then removed per PR review. `AddStaffModal` remains under Staff scope (key-remount `key={edit-${id}}` verified same pattern).
 
 ### Approval Requests
 
-## BUG-066 — Approval Requests page swallows load failures; uses `alert()`
+## BUG-066 — Approval Requests page swallows load failures; uses `alert()` **[SOLVED]**
 - `approval-requests/page.tsx:65-79,131,152` — API failure renders "No approval requests found"; approve/reject failures via blocking `alert()`.
 - **Scenario:** The approvals API fails. The page renders 'No approval requests found' — pending refunds look nonexistent, so approvers never act and customers wait indefinitely. Failures surface via blocking alert() dialogs.
+- **Fix:** `loadError`/`actionError` state; failed loads show an error row, action failures render inside the open confirm dialog (visible above overlay) plus a dismissible page banner; stale errors cleared on retry. PR #86 (`fix/frontend-high-bugs`).
 
 | ID | Location | Issue | Scenario |
 |---|---|---|---|
-| BUG-091 |`approval-api.ts:22-25`|Unpaginated `/approval` fetch per receipt view| Every receipt view fetches the entire unpaginated /approval list. As approval volume grows, opening a receipt gets progressively slower — an N+1-style perf leak on a hot path. |
+| BUG-091 |`approval-api.ts:22-25`|Unpaginated `/approval` fetch per receipt view **[SOLVED — scoped]**| Every receipt view fetches the entire unpaginated /approval list. As approval volume grows, opening a receipt gets progressively slower — an N+1-style perf leak on a hot path. **Fix:** backend supports `?status`/`?type` filters (no pagination exists — backend-side gap); receipt page now fetches only `REFUND_TRANSACTION`+`EXCHANGE_TRANSACTION` in parallel (PR #86). Full pagination remains a backend request for the team lead. |
 
 ### Admin (other)
 
 | ID | Location | Issue | Scenario |
 |---|---|---|---|
-| BUG-106 |`app/dashboard/admin/`|No index `page.tsx` → direct `/dashboard/admin` 404s| A manager navigates to /dashboard/admin expecting an admin landing page — 404. Dead end; there's no index route. |
+| BUG-106 |`app/dashboard/admin/`|No index `page.tsx` → direct `/dashboard/admin` 404s **[SOLVED]**| A manager navigates to /dashboard/admin expecting an admin landing page — 404. Dead end; there's no index route. **Fix:** added `app/dashboard/admin/page.tsx` redirecting to `/dashboard/admin/analytics` (PR #86). |
 
 ---
 
