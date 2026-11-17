@@ -85,7 +85,7 @@ export default function CashPaymentForm({ amountDue, onPaymentChange }: CashPaym
           <Label htmlFor="cash-amount" className="font-sans text-xs font-semibold text-foreground">
             Cash Amount to Apply (₱)
           </Label>
-          <span className="text-[11px] font-mono text-muted-foreground">
+          <span className="text-[11px] text-muted-foreground">
             Max: ₱{amountDue.toFixed(2)}
           </span>
         </div>
@@ -141,7 +141,7 @@ export default function CashPaymentForm({ amountDue, onPaymentChange }: CashPaym
                 key={preset}
                 type="button"
                 onClick={() => setPresetCash(preset)}
-                className={`text-xs px-2.5 py-1.5 rounded-[4px] border transition-colors font-mono tabular-nums ${
+                className={`text-xs px-2.5 py-1.5 rounded-[4px] border transition-colors tabular-nums ${
                   cashTendered === preset
                     ? "bg-accent border-primary text-primary font-bold shadow-sm"
                     : "bg-card border-border text-foreground hover:bg-muted hover:border-input"
@@ -157,7 +157,7 @@ export default function CashPaymentForm({ amountDue, onPaymentChange }: CashPaym
       {/* Change Due Display */}
       <div className="flex justify-between items-center rounded-[4px] bg-muted/60 p-3 border border-border">
         <span className="font-heading font-semibold text-sm text-foreground">Change Due:</span>
-        <span className="text-xl font-bold font-mono text-emerald-600 tabular-nums">
+        <span className="text-xl font-bold text-emerald-600 tabular-nums">
           ₱{changeDue.toFixed(2)}
         </span>
       </div>
