@@ -67,8 +67,16 @@ export default function ReceiptPage() {
           const p = parsePayload(req.payload);
           const reqTxId = p?.transactionId ?? p?.transaction_id;
           const reqInv = p?.invoice_number ?? p?.invoiceNumber;
-          const matchesTx = reqTxId !== undefined && (reqTxId === txId || String(reqTxId) === String(txId) || Number(reqTxId) === Number(txId));
-          const matchesInv = invNum && reqInv && (reqInv === invNum || String(reqInv).trim() === String(invNum).trim());
+          const matchesTx =
+            reqTxId !== undefined &&
+            (reqTxId === txId ||
+              String(reqTxId) === String(txId) ||
+              Number(reqTxId) === Number(txId));
+          const matchesInv =
+            invNum &&
+            reqInv &&
+            (reqInv === invNum ||
+              String(reqInv).trim() === String(invNum).trim());
           return matchesTx || matchesInv;
         });
 
@@ -103,10 +111,16 @@ export default function ReceiptPage() {
             const item = receiptData.items.find(
               (it) => it.productId === (p.productId ?? p.product_id),
             );
-            const qty = p.quantity || 1;
+            const qty =
+              (p.quantity ??
+                (Array.isArray(p.items) && p.items[0]?.quantity)) ||
+              1;
             const unitPrice = item ? item.applied_price : 0;
             const refundAmount =
-              p.refundAmount ?? p.refund_amount ?? unitPrice * qty;
+              p.refundAmount ??
+              p.refund_amount ??
+              (Array.isArray(p.items) && p.items[0]?.refundAmount) ??
+              unitPrice * qty;
 
             return {
               id: typeof req.id === "number" ? req.id : idx + 1,
@@ -130,9 +144,7 @@ export default function ReceiptPage() {
           approvedRefunds.forEach((req) => {
             const p = parsePayload(req.payload);
             const pId = p.productId ?? p.product_id;
-            const it = receiptData.items.find(
-              (item) => item.productId === pId,
-            );
+            const it = receiptData.items.find((item) => item.productId === pId);
             if (it) {
               it.already_returned_qty =
                 (it.already_returned_qty || 0) + (p.quantity || 1);
@@ -151,9 +163,17 @@ export default function ReceiptPage() {
             );
             return {
               id: typeof req.id === "number" ? req.id : idx + 1,
-              productId: p.newProductId ?? p.new_product_id ?? p.productId ?? p.product_id ?? 0,
+              productId:
+                p.newProductId ??
+                p.new_product_id ??
+                p.productId ??
+                p.product_id ??
+                0,
               product_name:
-                p.newProductName || p.new_product_name || item?.product_name || "Exchanged Item",
+                p.newProductName ||
+                p.new_product_name ||
+                item?.product_name ||
+                "Exchanged Item",
               quantity: p.newQuantity || p.new_quantity || p.quantity || 1,
               date: req.updatedAt || req.createdAt || new Date().toISOString(),
               price_difference: p.price_difference ?? p.priceDifference ?? 0,
@@ -290,7 +310,16 @@ export default function ReceiptPage() {
                       Credit Debt Cancellation
                     </span>
                     <span className="font-mono text-sm font-bold text-foreground">
-                      ₱{Number(pendingBreakdown.creditDebtCancellation ?? pendingBreakdown.credit_debt_cancellation ?? pendingBreakdown.credit ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₱
+                      {Number(
+                        pendingBreakdown.creditDebtCancellation ??
+                          pendingBreakdown.credit_debt_cancellation ??
+                          pendingBreakdown.credit ??
+                          0,
+                      ).toLocaleString("en-PH", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </span>
                   </div>
                   <div className="rounded border border-amber-200 bg-white/80 p-2.5">
@@ -298,15 +327,35 @@ export default function ReceiptPage() {
                       Cash Payout
                     </span>
                     <span className="font-mono text-sm font-bold text-foreground">
-                      ₱{Number(pendingBreakdown.cashPayout ?? pendingBreakdown.cash_payout ?? pendingBreakdown.cash ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₱
+                      {Number(
+                        pendingBreakdown.cashPayout ??
+                          pendingBreakdown.cash_payout ??
+                          pendingBreakdown.cash ??
+                          0,
+                      ).toLocaleString("en-PH", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </span>
                   </div>
                 </div>
-                {(pendingBreakdown.totalRefund !== undefined || pendingBreakdown.total_refund !== undefined) && (
+                {(pendingBreakdown.totalRefund !== undefined ||
+                  pendingBreakdown.total_refund !== undefined) && (
                   <div className="flex justify-between pt-1 border-t border-amber-200 font-medium">
-                    <span className="text-muted-foreground">Total Refund Amount</span>
+                    <span className="text-muted-foreground">
+                      Total Refund Amount
+                    </span>
                     <span className="font-mono font-bold text-foreground">
-                      ₱{Number(pendingBreakdown.totalRefund ?? pendingBreakdown.total_refund ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₱
+                      {Number(
+                        pendingBreakdown.totalRefund ??
+                          pendingBreakdown.total_refund ??
+                          0,
+                      ).toLocaleString("en-PH", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </span>
                   </div>
                 )}

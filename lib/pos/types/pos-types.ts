@@ -375,11 +375,7 @@ export type RefundRequest = CreateRefundDto;
 
 export interface ExchangeRequest {
   transactionId: number;
-  productId: number;
-  quantity: number;
-  condition: ItemCondition;
-  reason: string;
-  uom?: string;
+  items: CreateRefundItemDto[];
   newProductId: number;
   newQuantity: number;
   allowStockOverride?: boolean;

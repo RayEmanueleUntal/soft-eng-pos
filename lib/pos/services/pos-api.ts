@@ -514,8 +514,6 @@ export async function fetchTransactionsApi(): Promise<TransactionSummary[]> {
     >("/transactions", {
       params: {
         limit: 100,
-        includeReturns: true,
-        includeExchanges: true,
       },
     });
     const payload = response.data;
@@ -594,7 +592,13 @@ export async function fetchReceiptApi(id: string | number): Promise<Receipt> {
     ? `/transactions/receipt/${id}`
     : `/transactions/receipt/${numericId}`;
 
-  const response = await apiClient.get<Receipt>(endpoint);
+  const response = await apiClient.get<Receipt>(endpoint, {
+  params: {
+    includeReturns: true,
+    includeExchanges: true,
+    includeShipments: true,
+  },
+});
   return response.data;
 }
 
