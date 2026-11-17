@@ -92,8 +92,11 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const { categories, loading: categoriesLoading, error: categoriesError } =
-    useProductCategories();
+  const {
+    categories,
+    loading: categoriesLoading,
+    error: categoriesError,
+  } = useProductCategories();
 
   const isEdit = Boolean(product);
 
@@ -250,7 +253,11 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
 
   const updateUomText = (
     key: string,
-    field: "conversion_factor" | "cost_price" | "retail_price" | "wholesale_price",
+    field:
+      | "conversion_factor"
+      | "cost_price"
+      | "retail_price"
+      | "wholesale_price",
     value: string,
   ) => {
     setIsDirty(true);
@@ -310,7 +317,9 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
       ] as const) {
         const parsed = toNumberOrNull(raw);
         if (raw.trim() !== "" && (parsed === null || parsed < 0)) {
-          setError(`${label} price override for ${row.uom} must be 0 or greater.`);
+          setError(
+            `${label} price override for ${row.uom} must be 0 or greater.`,
+          );
           return null;
         }
       }
@@ -335,7 +344,7 @@ export function ProductForm({ product, onSaved }: ProductFormProps) {
     return payload;
   };
 
-const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     setError("");
@@ -472,8 +481,7 @@ const handleSubmit = async (event: React.FormEvent) => {
       onSaved?.(savedProduct);
     } catch (err: any) {
       if (
-        err?.response?.data?.details?.code ===
-        "PRODUCT_HAS_TRANSACTION_HISTORY"
+        err?.response?.data?.details?.code === "PRODUCT_HAS_TRANSACTION_HISTORY"
       ) {
         setError(
           "Base UOM cannot be changed after stock history exists. Revert the Base UOM or adjust stock instead.",
@@ -500,7 +508,8 @@ const handleSubmit = async (event: React.FormEvent) => {
 
   const baseCostNum = Number.isFinite(baseCost) ? baseCost : 0;
   const baseRetailNum = Number.isFinite(baseRetail) ? baseRetail : null;
-  const baseWholesaleNum = baseWholesale !== null && baseWholesale >= 0 ? baseWholesale : null;
+  const baseWholesaleNum =
+    baseWholesale !== null && baseWholesale >= 0 ? baseWholesale : null;
 
   if (isEdit && !editDetail) {
     return (
@@ -521,10 +530,13 @@ const handleSubmit = async (event: React.FormEvent) => {
       {detailError && (
         <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
           <div className="flex items-center justify-between gap-3">
-            <span>
-              {detailError} Showing list data, which may be outdated.
-            </span>
-            <Button type="button" variant="outline" size="sm" onClick={retryDetail}>
+            <span>{detailError} Showing list data, which may be outdated.</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={retryDetail}
+            >
               Retry
             </Button>
           </div>
@@ -533,7 +545,9 @@ const handleSubmit = async (event: React.FormEvent) => {
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="name">Product Name <span className="text-destructive">*</span></Label>
+          <Label htmlFor="name">
+            Product Name <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="name"
             value={formData.name}
@@ -557,7 +571,9 @@ const handleSubmit = async (event: React.FormEvent) => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="categoryId">Category <span className="text-destructive">*</span></Label>
+          <Label htmlFor="categoryId">
+            Category <span className="text-destructive">*</span>
+          </Label>
           <select
             id="categoryId"
             value={formData.categoryId}
@@ -617,8 +633,8 @@ const handleSubmit = async (event: React.FormEvent) => {
       <div className="rounded-lg border p-3">
         <h3 className="mb-1 font-semibold">Inventory</h3>
         <p className="mb-4 text-xs text-muted-foreground">
-          Stock quantity and reorder point are always configured in the Base
-          UoM ({formData.base_uom}).
+          Stock quantity and reorder point are always configured in the Base UoM
+          ({formData.base_uom}).
         </p>
 
         <div className="grid gap-3 md:grid-cols-3">
@@ -645,7 +661,9 @@ const handleSubmit = async (event: React.FormEvent) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="current_quantity">Initial Quantity <span className="text-destructive">*</span></Label>
+            <Label htmlFor="current_quantity">
+              Initial Quantity <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="current_quantity"
               type="number"
@@ -664,7 +682,9 @@ const handleSubmit = async (event: React.FormEvent) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="reorder_point_ROP">Reorder Point <span className="text-destructive">*</span></Label>
+            <Label htmlFor="reorder_point_ROP">
+              Reorder Point <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="reorder_point_ROP"
               type="number"
@@ -705,7 +725,7 @@ const handleSubmit = async (event: React.FormEvent) => {
               id="cost_price"
               type="number"
               min="0"
-              step="1"
+              step="any"
               placeholder="0"
               className="font-mono"
               value={formData.cost_price}
@@ -714,12 +734,14 @@ const handleSubmit = async (event: React.FormEvent) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="retail_price">Retail Price <span className="text-destructive">*</span></Label>
+            <Label htmlFor="retail_price">
+              Retail Price <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="retail_price"
               type="number"
               min="0"
-              step="1"
+              step="any"
               className="font-mono"
               placeholder="0"
               value={formData.retail_price}
@@ -734,7 +756,7 @@ const handleSubmit = async (event: React.FormEvent) => {
               id="wholesale_price"
               type="number"
               min="0"
-              step="1"
+              step="any"
               placeholder="Optional"
               className="font-mono"
               value={formData.wholesale_price}
@@ -806,7 +828,10 @@ const handleSubmit = async (event: React.FormEvent) => {
                       <select
                         value={row.uom}
                         onChange={(e) =>
-                          updateUomUnit(row.key, e.target.value as UnitOfMeasure | "")
+                          updateUomUnit(
+                            row.key,
+                            e.target.value as UnitOfMeasure | "",
+                          )
                         }
                         className={uomSelectClass}
                       >
@@ -833,7 +858,11 @@ const handleSubmit = async (event: React.FormEvent) => {
                         placeholder="e.g. 100"
                         value={row.conversion_factor}
                         onChange={(e) =>
-                          updateUomText(row.key, "conversion_factor", e.target.value)
+                          updateUomText(
+                            row.key,
+                            "conversion_factor",
+                            e.target.value,
+                          )
                         }
                       />
                     </div>
@@ -843,7 +872,7 @@ const handleSubmit = async (event: React.FormEvent) => {
                       <Input
                         type="number"
                         min="0"
-                        step="1"
+                        step="any"
                         className="font-mono"
                         value={row.cost_price}
                         onChange={(e) =>
@@ -857,7 +886,7 @@ const handleSubmit = async (event: React.FormEvent) => {
                       <Input
                         type="number"
                         min="0"
-                        step="1"
+                        step="any"
                         className="font-mono"
                         value={row.retail_price}
                         onChange={(e) =>
@@ -871,18 +900,22 @@ const handleSubmit = async (event: React.FormEvent) => {
                       <Input
                         type="number"
                         min="0"
-                        step="1"
+                        step="any"
                         className="font-mono"
                         value={row.wholesale_price}
                         onChange={(e) =>
-                          updateUomText(row.key, "wholesale_price", e.target.value)
+                          updateUomText(
+                            row.key,
+                            "wholesale_price",
+                            e.target.value,
+                          )
                         }
                       />
                     </div>
                   </div>
 
                   <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 pr-8 text-xs">
-                    <label className="flex items-center gap-1.5">
+                    {/* <label className="flex items-center gap-1.5">
                       <input
                         type="checkbox"
                         checked={row.is_default_purchase}
@@ -902,12 +935,16 @@ const handleSubmit = async (event: React.FormEvent) => {
                         type="checkbox"
                         checked={row.is_default_sales}
                         onChange={(e) =>
-                          handleUomFlag(row.key, "is_default_sales", e.target.checked)
+                          handleUomFlag(
+                            row.key,
+                            "is_default_sales",
+                            e.target.checked,
+                          )
                         }
                         className="h-3.5 w-3.5"
                       />
                       Default sales
-                    </label>
+                    </label> */}
                     <span className="font-mono text-muted-foreground">
                       Effective: cost {formatEffective(effectiveCost)} · retail{" "}
                       {formatEffective(effectiveRetail)} · wholesale{" "}
