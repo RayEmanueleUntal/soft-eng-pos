@@ -1,6 +1,6 @@
 // Role definitions and per-route access rules for the POS system.
-// proxy.ts uses ROLE_PERMISSIONS to redirect users away from pages their role may not open.
 // The longest matching path wins, so sub-pages can be stricter than their parent module.
+// proxy.ts uses ROLE_PERMISSIONS to redirect users away from pages their role may not open.
 export const ROLES = {
   ADMIN: "ADMIN",
   MANAGER: "MANAGER",
@@ -24,27 +24,33 @@ export const ROLE_PERMISSIONS: Record<string, Role[]> = {
 
   "/dashboard/pos": [ROLES.ADMIN, ROLES.MANAGER, ROLES.CASHIER],
 
+  "/dashboard/products": [ROLES.ADMIN, ROLES.MANAGER, ROLES.SECRETARY],
+
   "/dashboard/inventory": [
     ROLES.ADMIN,
     ROLES.MANAGER,
     ROLES.STOCK_MANAGEMENT,
-    ROLES.CASHIER,
     ROLES.SECRETARY,
-    ROLES.SALES_CLERK,
   ],
 
-  "/dashboard/inventory/rop": [
+  "/dashboard/forwarders": [
     ROLES.ADMIN,
     ROLES.MANAGER,
-    ROLES.STOCK_MANAGEMENT,
-    ROLES.CASHIER,
     ROLES.SECRETARY,
-    ROLES.SALES_CLERK,
+    ROLES.CASHIER,
   ],
 
-  "/dashboard/inventory/adjustments": [
+  "/dashboard/inventory/shipments": [
     ROLES.ADMIN,
     ROLES.MANAGER,
+    ROLES.SECRETARY,
+    ROLES.CASHIER,
+  ],
+
+  "/dashboard/suppliers": [
+    ROLES.ADMIN,
+    ROLES.MANAGER,
+    ROLES.SECRETARY,
     ROLES.STOCK_MANAGEMENT,
   ],
 
@@ -55,30 +61,9 @@ export const ROLE_PERMISSIONS: Record<string, Role[]> = {
     ROLES.SECRETARY,
   ],
 
-  "/dashboard/inventory/purchase-orders": [
-    ROLES.ADMIN,
-    ROLES.MANAGER,
-    ROLES.STOCK_MANAGEMENT,
-    ROLES.SECRETARY,
-  ],
-
-  "/dashboard/products": [
-    ROLES.ADMIN,
-    ROLES.MANAGER,
-    ROLES.STOCK_MANAGEMENT,
-    ROLES.CASHIER,
-    ROLES.SECRETARY,
-    ROLES.SALES_CLERK,
-  ],
-
-  "/dashboard/customers": [
-    ROLES.ADMIN,
-    ROLES.MANAGER,
-    ROLES.SECRETARY,
-    ROLES.CASHIER,
-  ],
+  "/dashboard/customers": [ROLES.ADMIN, ROLES.MANAGER, ROLES.SECRETARY],
 
   "/dashboard/staff": [ROLES.ADMIN, ROLES.MANAGER],
 
-  "/dashboard/admin": [ROLES.ADMIN, ROLES.MANAGER],
+  "/dashboard/admin": [ROLES.ADMIN, ROLES.MANAGER, ROLES.SECRETARY],
 };
