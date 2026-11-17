@@ -29,11 +29,11 @@ import {
 import { formatPeso, getErrorMessage } from "@/lib/utils";
 
 import { CustomerFilterBar } from "./CustomerFilterBar";
-import { CustomerPagination } from "./CustomerPagination";
 import { CustomerPaymentModal } from "./CustomerPaymentModal";
 import { AddCustomerModal } from "@/components/customers/AddCustomerModal";
+import { TablePagination } from "@/components/ui/table-pagination";
 
-const CUSTOMER_PAGE_LIMIT = 10;
+const CUSTOMER_PAGE_LIMIT = 15;
 
 interface PaymentNotice {
   customerName: string;
@@ -354,9 +354,12 @@ export function CustomerTable() {
         </Table>
       </div>
 
-      <CustomerPagination
+      <TablePagination
         page={page}
         totalPages={totalPages}
+        totalItems={total}
+        pageSize={CUSTOMER_PAGE_LIMIT}
+        itemLabel="customers"
         loading={loading}
         onPageChange={setPage}
       />

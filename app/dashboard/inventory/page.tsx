@@ -14,9 +14,13 @@ import { Button } from "@/components/ui/button";
 import { canEditROP, canManageStock } from "@/lib/auth/permissions";
 import { useCurrentRole } from "@/lib/auth/use-current-role";
 import { getStockStatus } from "@/lib/inventory/stock-status";
-import { useInventory } from "@/lib/inventory/useInventory";
+import {
+  INVENTORY_PAGE_LIMIT,
+  useInventory,
+} from "@/lib/inventory/useInventory";
 import { PageHeader } from "@/components/ui/pageheader";
 import { useState } from "react";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 // Lists inventory with filters, status tabs, pagination and role-aware row actions.
 export default function InventoryPage() {
@@ -50,30 +54,13 @@ export default function InventoryPage() {
 
   // Low-stock tabs and alphabetical sort apply to the rows on the current page.
   const visibleInventory = React.useMemo(() => {
-    const filtered =
-      statusTab === "all"
-        ? inventory
-        : inventory.filter(
-            (item) =>
-              getStockStatus(item) ===
-              (statusTab === "low" ? "low-stock" : "adequate-stock"),
-          );
+    if (statusTab === "all") {
+      return inventory;
+    }
 
-    if (sort === "default") return filtered;
-
-    return [...filtered].sort((a, b) => {
-      if (sort === "az") return a.name.localeCompare(b.name);
-      return b.name.localeCompare(a.name);
-    });
-  }, [inventory, statusTab, sort]);
-
-  const handlePreviousPage = () => {
-    setPage((current) => Math.max(current - 1, 1));
-  };
-
-  const handleNextPage = () => {
-    setPage((current) => Math.min(current + 1, totalPages));
-  };
+    const wanted = statusTab === "low" ? "low-stock" : "adequate-stock";
+    return inventory.filter((item) => getStockStatus(item) === wanted);
+  }, [inventory, statusTab]);
 
   return (
     <div className="flex-1 space-y-6">
@@ -131,33 +118,15 @@ export default function InventoryPage() {
               canEditROP={canEditROP(role)}
             />
 
-            <div className="flex items-center justify-between">
-              <p className="font-mono text-xs text-muted-foreground">
-                Page {page} of {totalPages}
-              </p>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePreviousPage}
-                  disabled={page === 1}
-                  className="rounded-md"
-                >
-                  Previous
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleNextPage}
-                  disabled={page === totalPages}
-                  className="rounded-md"
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
+            <TablePagination
+              page={page}
+              totalPages={totalPages}
+              totalItems={totalRecords}
+              pageSize={INVENTORY_PAGE_LIMIT}
+              itemLabel="items"
+              loading={loading}
+              onPageChange={setPage}
+            />
           </>
         )}
       </div>

@@ -1,3 +1,6 @@
+// Delivery history table for received purchase-order intakes.
+// Shows receipt date, PO reference and status with a detail-view action.
+// Pagination footer uses shared TablePagination.
 "use client";
 
 import * as React from "react";
@@ -13,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DeliveryRecord } from "@/lib/inventory/delivery-types";
 import { Eye, FileText, Calendar, Hash, ArrowUpDown } from "lucide-react";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 interface DeliveryHistoryTableProps {
   deliveries: DeliveryRecord[];
@@ -21,6 +25,7 @@ interface DeliveryHistoryTableProps {
   page: number;
   totalPages: number;
   total: number;
+  pageSize: number;
   onPageChange: (newPage: number) => void;
 }
 
@@ -31,6 +36,7 @@ export function DeliveryHistoryTable({
   page,
   totalPages,
   total,
+  pageSize,
   onPageChange,
 }: DeliveryHistoryTableProps) {
   return (
@@ -164,34 +170,15 @@ export function DeliveryHistoryTable({
         </Table>
       </div>
 
-      {/* Pagination Controls */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground font-mono">
-        <div>
-          Showing {deliveries.length} of {total} records (Page {page} of{" "}
-          {Math.max(totalPages, 1)})
-        </div>
-
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onPageChange(page - 1)}
-            disabled={page <= 1 || loading}
-            className="rounded-md h-8 text-xs font-sans"
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onPageChange(page + 1)}
-            disabled={page >= totalPages || loading}
-            className="rounded-md h-8 text-xs font-sans"
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        totalItems={total}
+        pageSize={pageSize}
+        itemLabel="deliveries"
+        loading={loading}
+        onPageChange={onPageChange}
+      />
     </div>
   );
 }

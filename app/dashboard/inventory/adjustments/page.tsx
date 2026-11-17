@@ -22,6 +22,7 @@ import { CheckCircle2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { getErrorMessage } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/pageheader";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 function includesText(value: unknown, query: string): boolean {
   return String(value ?? "")
@@ -64,7 +65,7 @@ function movementMatchesProductFilters(
   return true;
 }
 
-const PAGE_LIMIT = 20;
+const PAGE_LIMIT = 15;
 const PRODUCT_FILTER_LIMIT = 100;
 
 async function fetchMatchingProductIds(params: {
@@ -423,34 +424,15 @@ export default function InventoryAdjustmentsPage() {
           />
         )}
 
-        {/* Pagination controls */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between pt-2 border-t border-border/60">
-            <p className="font-mono text-xs text-muted-foreground">
-              Page {page} of {totalPages}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                disabled={page <= 1 || loading}
-                className="rounded-[2px] text-xs h-8"
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-                disabled={page >= totalPages || loading}
-                className="rounded-[2px] text-xs h-8"
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        )}
+        <TablePagination
+          page={page}
+          totalPages={totalPages}
+          totalItems={totalCount}
+          pageSize={PAGE_LIMIT}
+          itemLabel="movements"
+          loading={loading}
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );

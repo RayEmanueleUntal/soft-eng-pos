@@ -28,7 +28,7 @@ import {
 } from "./_components/ExpenseFilterBar";
 import { ExpenseTable } from "./_components/ExpenseTable";
 
-const PAGE_LIMIT = 10;
+const PAGE_LIMIT = 15;
 
 // Renders the expenses list with filters and the create, edit and delete flows.
 export default function ExpensesPage() {
@@ -237,6 +237,7 @@ export default function ExpensesPage() {
           page={page}
           totalPages={totalPages}
           total={total}
+          pageSize={PAGE_LIMIT}
           fetchingId={fetchingId}
           onPageChange={setPage}
           onEdit={handleEditRequest}

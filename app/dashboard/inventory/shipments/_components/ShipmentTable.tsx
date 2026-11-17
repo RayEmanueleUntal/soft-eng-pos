@@ -17,6 +17,7 @@ import {
 import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
 import { Shipment } from "@/lib/inventory/shipment-types";
 import { formatDateTime, getNextStatus } from "@/lib/inventory/shipment-utils";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 interface ShipmentTableProps {
   shipments: Shipment[];
@@ -28,6 +29,7 @@ interface ShipmentTableProps {
   page: number;
   totalPages: number;
   total: number;
+  pageSize: number;
   onPageChange: (page: number) => void;
 }
 
@@ -43,6 +45,7 @@ export function ShipmentTable({
   page,
   totalPages,
   total,
+  pageSize,
   onPageChange,
 }: ShipmentTableProps) {
   return (
@@ -191,34 +194,15 @@ export function ShipmentTable({
         </Table>
       </div>
 
-      {/* Pagination Controls */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-xs text-muted-foreground font-mono">
-        <div>
-          Showing {shipments.length} of {total} records (Page {page} of{" "}
-          {Math.max(totalPages, 1)})
-        </div>
-
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onPageChange(page - 1)}
-            disabled={page <= 1 || loading}
-            className="rounded-md h-8 text-xs font-sans"
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onPageChange(page + 1)}
-            disabled={page >= totalPages || loading}
-            className="rounded-md h-8 text-xs font-sans"
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        totalItems={total}
+        pageSize={pageSize}
+        itemLabel="shipments"
+        loading={loading}
+        onPageChange={onPageChange}
+      />
     </div>
   );
 }

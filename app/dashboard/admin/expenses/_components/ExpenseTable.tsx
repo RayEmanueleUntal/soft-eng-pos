@@ -19,6 +19,7 @@ import {
   ExpenseDto,
 } from "@/lib/admin/expense-types";
 import { formatPeso } from "@/lib/utils";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 const COLUMN_COUNT = 7;
 
@@ -31,6 +32,7 @@ interface ExpenseTableProps {
   page: number;
   totalPages: number;
   total: number;
+  pageSize: number;
   fetchingId: number | null;
   onPageChange: (page: number) => void;
   onEdit: (expense: ExpenseDto) => void;
@@ -62,6 +64,7 @@ export function ExpenseTable({
   page,
   totalPages,
   total,
+  pageSize,
   fetchingId,
   onPageChange,
   onEdit,
@@ -164,32 +167,15 @@ export function ExpenseTable({
         </Table>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground font-mono">
-        <div>
-          Showing {expenses.length} of {total} records (Page {page} of{" "}
-          {Math.max(totalPages, 1)})
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onPageChange(page - 1)}
-            disabled={page <= 1 || loading}
-            className="font-sans"
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onPageChange(page + 1)}
-            disabled={page >= totalPages || loading}
-            className="font-sans"
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        totalItems={total}
+        pageSize={pageSize}
+        itemLabel="expenses"
+        loading={loading}
+        onPageChange={onPageChange}
+      />
     </div>
   );
 }
