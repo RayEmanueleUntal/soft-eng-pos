@@ -25,7 +25,7 @@ export function PaymentTotalBanner({
           <p className="text-[11px] text-muted-foreground/80 uppercase tracking-wider font-semibold font-mono">
             {hasSplit ? "Grand Total" : "Total Amount Due"}
           </p>
-          <p className="text-2xl font-extrabold text-white font-mono tabular-nums">
+          <p className="text-2xl font-extrabold text-white tabular-nums">
             {formatPeso(cartTotal)}
           </p>
           {customer ? (
@@ -46,7 +46,7 @@ export function PaymentTotalBanner({
               <span className="block text-[10px] text-muted-foreground/90 uppercase font-mono">
                 Paid so far
               </span>
-              <span className="font-mono text-sm font-bold text-white tabular-nums">
+              <span className=" text-sm font-bold text-white tabular-nums">
                 {formatPeso(paidAmount)}
               </span>
             </div>
@@ -56,7 +56,7 @@ export function PaymentTotalBanner({
                 Remaining Due
               </span>
               <span
-                className={`font-mono text-base font-extrabold tabular-nums ${
+                className={` text-base font-extrabold tabular-nums ${
                   currentRemaining <= 0 ? "text-emerald-400" : "text-amber-400"
                 }`}
               >

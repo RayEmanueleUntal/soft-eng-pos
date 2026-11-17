@@ -21,6 +21,8 @@ import type {
   PaymentTabDetails,
   PaymentMethod,
   RefundRequest,
+  CreateRefundDto,
+  CreateRefundItemDto,
   ExchangeRequest,
   ReturnResponse,
   ProductCategoryItem,
@@ -567,7 +569,11 @@ export async function fetchTransactionsApi(options?: {
 
     const response = await apiClient.get<
       BackendTransactionsListResponse | BackendTransactionItem[]
-    >("/transactions", { params });
+    >("/transactions", {
+      params: {
+        limit: 100,
+      },
+    });
     const payload = response.data;
     const rawList: BackendTransactionItem[] = Array.isArray(payload)
       ? payload
@@ -625,7 +631,13 @@ export async function fetchReceiptApi(id: string | number): Promise<Receipt> {
     ? `/transactions/receipt/${id}`
     : `/transactions/receipt/${numericId}`;
 
-  const response = await apiClient.get<Receipt>(endpoint);
+  const response = await apiClient.get<Receipt>(endpoint, {
+  params: {
+    includeReturns: true,
+    includeExchanges: true,
+    includeShipments: true,
+  },
+});
   return response.data;
 }
 
@@ -633,7 +645,7 @@ export async function fetchReceiptApi(id: string | number): Promise<Receipt> {
  * Process a refund request via backend API (POST /returns/refund).
  */
 export async function processRefund(
-  request: RefundRequest,
+  request: CreateRefundDto,
 ): Promise<ReturnResponse> {
   try {
     const response = await apiClient.post<ReturnResponse>(

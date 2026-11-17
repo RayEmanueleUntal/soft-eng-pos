@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import axios from "axios";
 import {
   Dialog,
   DialogContent,
@@ -21,11 +20,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertCircle, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { Receipt, ReceiptItem, ItemCondition, ExchangeRequest, ReturnResponse, CatalogProduct } from "@/lib/pos";
-import { processExchange } from "@/lib/pos";
-import { usePosCatalog } from "@/lib/pos";
+import { AlertCircle, Loader2, Info } from "lucide-react";
+import { cn, getErrorMessage } from "@/lib/utils";
+import type {
+  Receipt,
+  ExchangeRequest,
+  ReturnResponse,
+  ItemCondition,
+} from "@/lib/pos";
+import { processExchange, usePosCatalog } from "@/lib/pos";
 
 interface ExchangeModalProps {
   open: boolean;
@@ -34,54 +37,101 @@ interface ExchangeModalProps {
   onSuccess: (approvalRequestId: number) => void;
 }
 
-export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: ExchangeModalProps) {
+export function ExchangeModal({
+  open,
+  onOpenChange,
+  receipt,
+  onSuccess,
+}: ExchangeModalProps) {
   const { products } = usePosCatalog();
   const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
   const [quantity, setQuantity] = useState<string>("1");
+  const [selectedUom, setSelectedUom] = useState<string>("");
   const [condition, setCondition] = useState<ItemCondition | null>(null);
   const [reason, setReason] = useState("");
-  const [newProductId, setNewProductId] = useState<string>("");
-  const [newQuantity, setNewQuantity] = useState<string>("1");
   const [allowStockOverride, setAllowStockOverride] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedItem = selectedItemIndex !== null ? receipt.items[selectedItemIndex] : null;
-  const alreadyReturned = selectedItem?.already_returned_qty ?? 0;
-  const maxQuantity = Math.max(0, (selectedItem?.quantity ?? 1) - alreadyReturned);
+  const selectedItem =
+    selectedItemIndex !== null ? receipt.items[selectedItemIndex] : null;
 
-  // Debounced search for products
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  // Calculate already returned / exchanged quantity
+  const alreadyReturned = useMemo(() => {
+    if (!selectedItem) return 0;
+    const fromItem = selectedItem.already_returned_qty ?? 0;
+    const fromReceiptReturns =
+      receipt.returns
+        ?.filter((r) => r.productId === selectedItem.productId)
+        .reduce((sum, r) => sum + (r.quantity || 0), 0) ?? 0;
+    const fromReceiptExchanges =
+      receipt.exchanges
+        ?.filter((e) => e.productId === selectedItem.productId)
+        .reduce((sum, e) => sum + (e.quantity || 0), 0) ?? 0;
+    return Math.max(fromItem, fromReceiptReturns + fromReceiptExchanges);
+  }, [selectedItem, receipt.returns, receipt.exchanges]);
+
+  const maxQuantity = Math.max(
+    0,
+    (selectedItem?.quantity ?? 0) - alreadyReturned,
+  );
+
+  // Look up catalog product for base UoM & inventory stock
+  const catalogProduct = useMemo(() => {
+    if (!selectedItem) return null;
+    return (
+      products.find(
+        (p) => Number(p.id) === Number(selectedItem.productId),
+      ) ?? null
+    );
+  }, [selectedItem, products]);
+
+  // Restrict UoM strictly to purchased UoM and base UoM
+  const allowedUoms = useMemo(() => {
+    if (!selectedItem) return [];
+    const purchasedUom = (
+      selectedItem.unit_of_measure ||
+      selectedItem.pricing_uom ||
+      "PCS"
+    ).toString().toUpperCase();
+
+    const baseUom = (
+      selectedItem.base_uom ||
+      catalogProduct?.base_uom ||
+      purchasedUom
+    ).toString().toUpperCase();
+
+    return Array.from(new Set([purchasedUom, baseUom])).filter(Boolean);
+  }, [selectedItem, catalogProduct]);
+
+  // Auto-initialize UoM and Quantity when selected item changes
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    if (selectedItem) {
+      const defaultUom =
+        selectedItem.unit_of_measure ||
+        selectedItem.pricing_uom ||
+        allowedUoms[0] ||
+        "PCS";
+      setSelectedUom(defaultUom.toString().toUpperCase());
+      setQuantity(maxQuantity > 0 ? "1" : "0");
+    }
+  }, [selectedItemIndex]);
 
-  // Filter products based on search query
-  const filteredProducts = useMemo(() => {
-    if (!debouncedSearchQuery) return products.slice(0, 50); // Limit to 50 for performance
-    const query = debouncedSearchQuery.toLowerCase();
-    return products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(query) ||
-        p.sku.toLowerCase().includes(query)
-    ).slice(0, 50);
-  }, [products, debouncedSearchQuery]);
-
-  const selectedNewProduct = products.find((p) => String(p.id) === newProductId);
+  // Stock sufficiency check for replacement
+  const replacementStock =
+    catalogProduct?.current_quantity !== undefined
+      ? Number(catalogProduct.current_quantity)
+      : null;
+  const isStockInsufficient =
+    replacementStock !== null && replacementStock < Number(quantity);
 
   const resetForm = () => {
     setSelectedItemIndex(null);
     setQuantity("1");
+    setSelectedUom("");
     setCondition(null);
     setReason("");
-    setNewProductId("");
-    setNewQuantity("1");
     setAllowStockOverride(false);
-    setSearchQuery("");
     setError(null);
   };
 
@@ -89,22 +139,6 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
     if (isSubmitting) return;
     resetForm();
     onOpenChange(false);
-  };
-
-  const getErrorMessage = (error: unknown): string => {
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      const message = error.response?.data?.message || error.message;
-
-      if (status === 400) {
-        return message || "Invalid request. Please check your inputs.";
-      }
-      if (status === 404) {
-        return "Transaction or product not found.";
-      }
-      return message || "An error occurred. Please try again.";
-    }
-    return "An unexpected error occurred.";
   };
 
   const handleSubmit = async () => {
@@ -129,8 +163,13 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
       return;
     }
 
+    if (!selectedUom) {
+      setError("Please select a Unit of Measure (UoM).");
+      return;
+    }
+
     if (!condition) {
-      setError("Please select a condition for the exchange.");
+      setError("Please select an item condition.");
       return;
     }
 
@@ -139,14 +178,11 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
       return;
     }
 
-    if (!newProductId) {
-      setError("Please select the new product for exchange.");
-      return;
-    }
-
-    const newQty = Number(newQuantity);
-    if (isNaN(newQty) || newQty <= 0) {
-      setError("New quantity must be greater than 0.");
+    // Require override toggle if stock is known and insufficient
+    if (isStockInsufficient && !allowStockOverride) {
+      setError(
+        `Replacement inventory is insufficient (Current stock: ${replacementStock}). Check "Manager Stock Override" to proceed.`,
+      );
       return;
     }
 
@@ -154,36 +190,54 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
     setError(null);
 
     try {
+      const formattedReason = selectedUom
+        ? `${reason.trim()} (UoM: ${selectedUom})`
+        : reason.trim();
+
       const request: ExchangeRequest = {
-        transactionId: receipt.transactionId,
-        productId: selectedItem.productId,
-        quantity: qty,
-        condition,
-        reason: reason.trim(),
-        newProductId: Number(newProductId),
-        newQuantity: newQty,
-        allowStockOverride,
+        transactionId: Number(receipt.transactionId),
+        items: [
+          {
+            productId: Number(selectedItem.productId),
+            quantity: qty,
+            condition,
+            reason: formattedReason,
+          },
+        ],
+        newProductId: Number(selectedItem.productId),
+        newQuantity: qty,
+        allowStockOverride: Boolean(allowStockOverride),
       };
 
       const response: ReturnResponse = await processExchange(request);
       onSuccess(response.approvalRequestId);
       handleClose();
     } catch (err: unknown) {
-      setError(getErrorMessage(err));
+      setError(getErrorMessage(err, "Failed to submit exchange request."));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(open) => !open && handleClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto rounded-[4px] border border-input shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold font-heading text-center">Process Exchange</DialogTitle>
+          <DialogTitle className="text-xl font-bold font-heading text-center">
+            Process Exchange
+          </DialogTitle>
           <DialogDescription className="text-center text-xs text-muted-foreground font-sans">
-            Select items to exchange and choose replacement product
+            1-to-1 same-product replacement for transaction #{receipt.transactionId}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Informational Callout for Cashier */}
+        <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 p-2.5 rounded-[4px] text-xs leading-relaxed">
+          <Info className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" />
+          <div>
+            <strong>1-to-1 Same-Product Replacement Only:</strong> Exchanges are strictly for replacing defective items with the same product SKU. For swapping different items or multiple SKUs, please cancel and process a <strong>Refund</strong> + <strong>New POS Sale</strong>.
+          </div>
+        </div>
 
         {/* Error Alert */}
         {error && (
@@ -193,21 +247,24 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
           </div>
         )}
 
-        <div className="space-y-4">
-          {/* Original Item Selection */}
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Original Item to Exchange</Label>
+        <div className="space-y-3.5">
+          {/* Item Selection */}
+          <div className="space-y-1.5">
+            <Label htmlFor="item-select" className="text-xs font-medium">
+              Select Item to Exchange <span className="text-destructive">*</span>
+            </Label>
             <Select
               value={selectedItemIndex !== null ? String(selectedItemIndex) : ""}
               onValueChange={(value) => {
                 setSelectedItemIndex(Number(value));
-                setQuantity("1");
               }}
             >
-              <SelectTrigger className="w-full rounded-[4px] text-xs h-8">
+              <SelectTrigger id="item-select" className="w-full rounded-[4px] text-xs h-8">
                 <SelectValue placeholder="Choose an item from receipt">
                   {(val: string | null) => {
-                    if (val === null || val === "" || val === undefined) return "Choose an item from receipt";
+                    if (val === null || val === "" || val === undefined) {
+                      return "Choose an item from receipt";
+                    }
                     const idx = Number(val);
                     const it = receipt.items[idx];
                     return it ? `${it.product_name} (Qty: ${it.quantity})` : "Choose an item from receipt";
@@ -215,53 +272,112 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {receipt.items.map((item, index) => (
-                  <SelectItem key={index} value={String(index)} className="text-xs">
-                    {item.product_name} (Qty: {item.quantity})
-                  </SelectItem>
-                ))}
+                {receipt.items.map((item, index) => {
+                  const itemReturned =
+                    (item.already_returned_qty ?? 0) +
+                    (receipt.returns
+                      ?.filter((r) => r.productId === item.productId)
+                      .reduce((sum, r) => sum + (r.quantity || 0), 0) ?? 0) +
+                    (receipt.exchanges
+                      ?.filter((e) => e.productId === item.productId)
+                      .reduce((sum, e) => sum + (e.quantity || 0), 0) ?? 0);
+                  const remaining = Math.max(0, item.quantity - itemReturned);
+
+                  return (
+                    <SelectItem
+                      key={index}
+                      value={String(index)}
+                      className="text-xs"
+                      disabled={remaining <= 0}
+                    >
+                      {item.product_name} (Purchased: {item.quantity}
+                      {item.pricing_uom ? ` ${item.pricing_uom}` : ""})
+                      {remaining <= 0
+                        ? " - Fully Returned/Exchanged"
+                        : ` [Available: ${remaining}]`}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Original Quantity */}
-          <div className="space-y-2">
-            <Label htmlFor="quantity" className="text-xs font-medium">
-              Quantity to Exchange
-            </Label>
-            <Input
-              id="quantity"
-              type="number"
-              min="1"
-              step="1"
-              max={maxQuantity}
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              disabled={!selectedItem}
-              className="rounded-[4px] text-xs h-8"
-            />
-            <p className="text-[10px] text-muted-foreground">
-              Max: {maxQuantity}
-            </p>
+          {/* Quantity and UoM Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Quantity */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="quantity" className="text-xs font-medium">
+                  Quantity <span className="text-destructive">*</span>
+                </Label>
+                <span className="text-[10px] text-muted-foreground font-mono">
+                  Max: {maxQuantity}
+                </span>
+              </div>
+              <Input
+                id="quantity"
+                type="number"
+                min="1"
+                step="1"
+                max={maxQuantity}
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                disabled={!selectedItem || maxQuantity === 0}
+                className="rounded-[4px] text-xs h-8"
+              />
+            </div>
+
+            {/* UoM Dropdown */}
+            <div className="space-y-1.5">
+              <Label htmlFor="uom-select" className="text-xs font-medium">
+                Unit of Measure (UoM) <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={selectedUom}
+                onValueChange={(val) => setSelectedUom(val ?? "")}
+                disabled={!selectedItem || allowedUoms.length === 0}
+              >
+                <SelectTrigger id="uom-select" className="w-full rounded-[4px] text-xs h-8">
+                  <SelectValue placeholder="Select UoM">
+                    {selectedUom || "Select UoM"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {allowedUoms.map((uom) => {
+                    const purchasedUom = (
+                      selectedItem?.unit_of_measure ||
+                      selectedItem?.pricing_uom ||
+                      ""
+                    ).toUpperCase();
+                    const isPurchased = uom === purchasedUom;
+                    return (
+                      <SelectItem key={uom} value={uom} className="text-xs">
+                        {uom} {isPurchased ? "(Purchased)" : "(Base)"}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          {/* Condition */}
-          <div className="space-y-2">
-            <Label htmlFor="condition" className="text-xs font-medium">
-              Condition
+          {/* Item Condition */}
+          <div className="space-y-1.5">
+            <Label htmlFor="condition-select" className="text-xs font-medium">
+              Item Condition <span className="text-destructive">*</span>
             </Label>
             <Select
               value={condition || ""}
               onValueChange={(value) => setCondition(value as ItemCondition)}
               disabled={!selectedItem}
             >
-              <SelectTrigger id="condition" className="w-full rounded-[4px] text-xs h-8">
+              <SelectTrigger id="condition-select" className="w-full rounded-[4px] text-xs h-8">
                 <SelectValue placeholder="Select condition">
-                  {(val: string | null) => {
-                    if (val === "DEFECTIVE") return "Defective";
-                    if (val === "CHANGE_OF_MIND") return "Change of Mind";
-                    return "Select condition";
-                  }}
+                  {condition === "DEFECTIVE"
+                    ? "Defective"
+                    : condition === "CHANGE_OF_MIND"
+                    ? "Change of Mind"
+                    : "Select condition"}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -275,114 +391,72 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
             </Select>
           </div>
 
-          {/* Reason */}
-          <div className="space-y-2">
+          {/* Reason for Exchange */}
+          <div className="space-y-1.5">
             <Label htmlFor="reason" className="text-xs font-medium">
-              Reason for Exchange
+              Reason for Exchange <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id="reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Describe why the item is being exchanged..."
+              placeholder="Describe the defect or reason for same-product replacement..."
               disabled={!selectedItem}
-              className="rounded-[4px] text-xs min-h-[80px]"
+              className="rounded-[4px] text-xs min-h-[70px] resize-none"
               maxLength={500}
             />
-            <p className="text-[10px] text-muted-foreground text-right">
+            <p className="text-[10px] text-muted-foreground text-right font-mono">
               {reason.length}/500
             </p>
           </div>
 
-          {/* Divider */}
-          <div className="border-t border-border pt-4">
-            <Label className="text-xs font-medium mb-2 block">New Product Selection</Label>
-          </div>
-
-          {/* New Product Search */}
-          <div className="space-y-2">
-            <Label htmlFor="new-product-search" className="text-xs font-medium">
-              Search for New Product
-            </Label>
-            <Input
-              id="new-product-search"
-              type="text"
-              placeholder="Search by name or SKU..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              disabled={!selectedItem}
-              className="rounded-[4px] text-xs h-8"
-            />
-            <Select
-              value={newProductId}
-              onValueChange={(value) => setNewProductId(value || "")}
-              disabled={!selectedItem}
-            >
-              <SelectTrigger className="w-full rounded-[4px] text-xs h-8">
-                <SelectValue placeholder="Select new product">
-                  {(val: string | null) => {
-                    if (!val) return "Select new product";
-                    const prod = products.find((p) => String(p.id) === val);
-                    return prod ? `${prod.name} - ${prod.sku} (${prod.price})` : "Select new product";
-                  }}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {filteredProducts.map((product) => (
-                  <SelectItem key={product.id} value={String(product.id)} className="text-xs">
-                    {product.name} - {product.sku} ({product.price})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* New Quantity */}
-          <div className="space-y-2">
-            <Label htmlFor="new-quantity" className="text-xs font-medium">
-              New Quantity
-            </Label>
-            <Input
-              id="new-quantity"
-              type="number"
-              min="1"
-              step="1"
-              value={newQuantity}
-              onChange={(e) => setNewQuantity(e.target.value)}
-              disabled={!selectedItem}
-              className="rounded-[4px] text-xs h-8"
-            />
-          </div>
-
-          {/* Stock Override Checkbox */}
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="stock-override"
-              checked={allowStockOverride}
-              onChange={(e) => setAllowStockOverride(e.target.checked)}
-              disabled={!selectedItem}
-              className="rounded-[2px] border-input disabled:cursor-not-allowed disabled:opacity-50"
-            />
-            <Label
-              htmlFor="stock-override"
-              className={cn("text-xs font-medium", !selectedItem ? "cursor-not-allowed opacity-50" : "cursor-pointer")}
-            >
-              Allow stock override (if new item is out of stock)
-            </Label>
-          </div>
-
-          {/* Selected New Product Info */}
-          {selectedNewProduct && (
-            <div className="bg-muted/50 p-2 rounded-[4px] text-xs">
-              <p className="font-medium">{selectedNewProduct.name}</p>
-              <p className="text-muted-foreground">SKU: {selectedNewProduct.sku}</p>
-              <p className="text-muted-foreground">Price: {selectedNewProduct.price}</p>
+          {/* Replacement Stock & Stock Override Toggle */}
+          <div className="p-3 rounded-[4px] border border-border bg-muted/40 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground font-medium">
+                Replacement Inventory Stock:
+              </span>
+              <span
+                className={cn(
+                  "font-mono font-bold",
+                  isStockInsufficient
+                    ? "text-destructive"
+                    : "text-foreground",
+                )}
+              >
+                {replacementStock !== null ? `${replacementStock} in stock` : "N/A"}
+              </span>
             </div>
-          )}
+
+            {isStockInsufficient && (
+              <p className="text-[11px] text-destructive font-medium">
+                ⚠️ Replacement stock is insufficient for this exchange quantity.
+              </p>
+            )}
+
+            <div className="flex items-start space-x-2 pt-1 border-t border-border/50">
+              <input
+                type="checkbox"
+                id="stock-override"
+                checked={allowStockOverride}
+                onChange={(e) => setAllowStockOverride(e.target.checked)}
+                disabled={!selectedItem}
+                className="mt-0.5 rounded-[2px] border-input"
+              />
+              <Label
+                htmlFor="stock-override"
+                className="text-xs cursor-pointer leading-tight text-foreground"
+              >
+                <span className="font-semibold block">Manager Stock Override</span>
+                <span className="text-[10px] text-muted-foreground">
+                  Allow exchange approval even if replacement inventory is low or zero.
+                </span>
+              </Label>
+            </div>
+          </div>
         </div>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="gap-2 pt-2">
           <Button
             type="button"
             variant="outline"
@@ -395,7 +469,7 @@ export function ExchangeModal({ open, onOpenChange, receipt, onSuccess }: Exchan
           <Button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !selectedItem || maxQuantity <= 0}
             className="bg-primary hover:bg-primary/80 text-white rounded-[4px] text-xs font-bold uppercase tracking-wider"
           >
             {isSubmitting ? (

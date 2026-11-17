@@ -268,7 +268,7 @@ export default function CreditPaymentForm({
               <p className="text-xs text-muted-foreground font-sans">
                 Credit Limit
               </p>
-              <p className="font-semibold text-foreground font-mono">
+              <p className="font-semibold text-foreground">
                 {formatPeso(creditLimit)}
               </p>
             </div>
@@ -276,7 +276,7 @@ export default function CreditPaymentForm({
               <p className="text-xs text-muted-foreground font-sans">
                 Outstanding Balance
               </p>
-              <p className="font-semibold text-amber-700 font-mono">
+              <p className="font-semibold text-amber-700">
                 {formatPeso(outstandingBalance)}
               </p>
             </div>
@@ -285,7 +285,7 @@ export default function CreditPaymentForm({
                 Available Credit
               </p>
               <p
-                className={`font-bold font-mono ${availableCredit >= amountDue ? "text-emerald-600" : "text-destructive"}`}
+                className={`font-bold ${availableCredit >= amountDue ? "text-emerald-600" : "text-destructive"}`}
               >
                 {formatPeso(availableCredit)}
               </p>
@@ -295,7 +295,7 @@ export default function CreditPaymentForm({
                 Remaining After Sale
               </p>
               <p
-                className={`font-semibold font-mono ${remainingCreditAfterPurchase >= 0 ? "text-foreground" : "text-destructive"}`}
+                className={`font-semibold  ${remainingCreditAfterPurchase >= 0 ? "text-foreground" : "text-destructive"}`}
               >
                 {formatPeso(remainingCreditAfterPurchase)}
               </p>

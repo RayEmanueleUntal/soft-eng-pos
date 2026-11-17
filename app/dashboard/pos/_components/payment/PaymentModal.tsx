@@ -415,7 +415,7 @@ export default function PaymentModal({
               <span className="text-xs font-bold uppercase tracking-wider text-foreground">
                 Applied Payments ({appliedPayments.length})
               </span>
-              <span className="font-mono text-xs font-semibold text-muted-foreground">
+              <span className=" text-xs font-semibold text-muted-foreground">
                 Allocated:{" "}
                 <strong className="text-foreground">
                   {formatPeso(totalPaid)}
@@ -436,7 +436,7 @@ export default function PaymentModal({
                       {p.method}
                     </Badge>
                     <div className="truncate">
-                      <span className="font-mono font-bold text-foreground">
+                      <span className=" font-bold text-foreground">
                         {formatPeso(p.amount)}
                       </span>
                       <span className="ml-2 text-[11px] text-muted-foreground truncate">
