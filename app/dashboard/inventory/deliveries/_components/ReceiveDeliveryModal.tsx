@@ -19,6 +19,7 @@ import {
 } from "@/lib/inventory/delivery-types";
 import {
   createDelivery,
+  fetchDeliveries,
   fetchPurchaseOrderById,
 } from "@/lib/inventory/delivery-api";
 import { formatPeso, getErrorMessage } from "@/lib/utils";
@@ -27,7 +28,6 @@ import {
   PackagePlus,
   CheckCircle2,
   Loader2,
-  ArrowLeft,
   AlertCircle,
   AlertTriangle,
   Pencil,
@@ -67,6 +67,10 @@ interface LineInput {
 const labelClass =
   "text-[11px] font-medium text-muted-foreground uppercase tracking-wider";
 
+const round3 = (n: number) => Math.round(n * 1000) / 1000;
+const formatQty = (n: number) =>
+  round3(n).toLocaleString(undefined, { maximumFractionDigits: 3 });
+
 export function ReceiveDeliveryModal({
   onSuccess,
   trigger,
@@ -75,6 +79,10 @@ export function ReceiveDeliveryModal({
   const [selectedPO, setSelectedPO] = React.useState<PurchaseOrder | null>(
     null,
   );
+  // Maps productId -> total actual_base_quantity already accepted in prior deliveries
+  const [receivedBaseMap, setReceivedBaseMap] = React.useState<
+    Record<number, number>
+  >({});
   const [loadingPO, setLoadingPO] = React.useState(false);
   const [lines, setLines] = React.useState<Record<number, LineInput>>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -88,11 +96,35 @@ export function ReceiveDeliveryModal({
     setLoadingPO(true);
     setError(null);
     try {
-      const full = await fetchPurchaseOrderById(po.id);
+      const [full, deliveriesRes] = await Promise.all([
+        fetchPurchaseOrderById(po.id),
+        fetchDeliveries({ poId: po.id, limit: 100 }),
+      ]);
+
+      // Sum previously accepted base quantities per productId across all prior deliveries for this PO
+      const priorBaseByProduct: Record<number, number> = {};
+      for (const record of deliveriesRes.data ?? []) {
+        for (const dItem of record.deliveryItems ?? []) {
+          priorBaseByProduct[dItem.productId] = round3(
+            (priorBaseByProduct[dItem.productId] ?? 0) +
+              Number(dItem.actual_base_quantity || 0),
+          );
+        }
+      }
+
       const initial: Record<number, LineInput> = {};
       (full.items ?? []).forEach((item) => {
+        const alreadyBase = priorBaseByProduct[item.productId] ?? 0;
+        const remainingBase = Math.max(
+          0,
+          round3(item.expected_base_quantity - alreadyBase),
+        );
+        const factor = item.uom_conversion_factor || 1;
+        const remainingOrderedQty =
+          remainingBase > 0 ? round3(remainingBase / factor) : 0;
+
         initial[item.productId] = {
-          qty: String(item.requested_quantity),
+          qty: remainingOrderedQty > 0 ? String(remainingOrderedQty) : "0",
           uom: item.ordered_uom,
           factor: String(item.uom_conversion_factor),
           base: null,
@@ -100,6 +132,8 @@ export function ReceiveDeliveryModal({
           unlocked: false,
         };
       });
+
+      setReceivedBaseMap(priorBaseByProduct);
       setLines(initial);
       setSelectedPO(full);
     } catch (err) {
@@ -132,6 +166,7 @@ export function ReceiveDeliveryModal({
 
   const handleReset = () => {
     setSelectedPO(null);
+    setReceivedBaseMap({});
     setLines({});
     setError(null);
     setSuccessInfo(null);
@@ -145,6 +180,13 @@ export function ReceiveDeliveryModal({
   const rows = React.useMemo(() => {
     if (!selectedPO) return [];
     return (selectedPO.items ?? []).map((item) => {
+      const alreadyReceivedBase = receivedBaseMap[item.productId] ?? 0;
+      const remainingBase = Math.max(
+        0,
+        round3(item.expected_base_quantity - alreadyReceivedBase),
+      );
+      const isFulfilled = remainingBase <= 0;
+
       const line: LineInput = lines[item.productId] ?? {
         qty: "",
         uom: item.ordered_uom,
@@ -158,28 +200,51 @@ export function ReceiveDeliveryModal({
       const qty = Number(line.qty);
       const factor = Number(line.factor);
 
-      const qtyInvalid = qtyEmpty || !(Number.isFinite(qty) && qty > 0);
-      const factorInvalid = !(Number.isFinite(factor) && factor > 0);
-      const uomInvalid = line.uom.trim() === "";
+      // Allow 0 on unfulfilled rows so partial deliveries can skip items not present in this shipment
+      const qtyInvalid =
+        !isFulfilled && (qtyEmpty || !(Number.isFinite(qty) && qty >= 0));
+      const isSkippedThisDelivery = !isFulfilled && !qtyInvalid && qty === 0;
+
+      const factorInvalid =
+        !isFulfilled &&
+        !isSkippedThisDelivery &&
+        !(Number.isFinite(factor) && factor > 0);
+      const uomInvalid =
+        !isFulfilled && !isSkippedThisDelivery && line.uom.trim() === "";
+
+      const activeFactor =
+        Number.isFinite(factor) && factor > 0
+          ? factor
+          : item.uom_conversion_factor || 1;
+      const remainingInSelectedUom = round3(remainingBase / activeFactor);
 
       const computed =
-        !qtyInvalid && !factorInvalid
-          ? Math.round(qty * factor * 1000) / 1000
-          : null;
+        !qtyInvalid && !factorInvalid ? round3(qty * factor) : null;
 
       let base = computed;
       let baseInvalid = false;
-      if (line.base !== null) {
+      if (!isFulfilled && !isSkippedThisDelivery && line.base !== null) {
         const b = Number(line.base);
-        baseInvalid = line.base.trim() === "" || !(Number.isFinite(b) && b > 0);
+        baseInvalid =
+          line.base.trim() === "" || !(Number.isFinite(b) && b > 0);
         base = baseInvalid ? null : b;
       }
 
-      const exceeds = base !== null && base > item.expected_base_quantity;
+      // Compare incoming base qty against the REMAINING base qty (no cap limit)
+      const exceeds =
+        !isFulfilled &&
+        !isSkippedThisDelivery &&
+        base !== null &&
+        base > remainingBase;
 
       return {
         item,
         line,
+        alreadyReceivedBase,
+        remainingBase,
+        remainingInSelectedUom,
+        isFulfilled,
+        isSkippedThisDelivery,
         qty,
         factor,
         base,
@@ -190,27 +255,40 @@ export function ReceiveDeliveryModal({
         uomInvalid,
         baseInvalid,
         exceeds,
-        // Removed `|| exceeds` so over-delivery is allowed to submit
-        invalid: qtyInvalid || factorInvalid || uomInvalid || baseInvalid,
+        invalid:
+          !isFulfilled &&
+          (qtyInvalid || factorInvalid || uomInvalid || baseInvalid),
       };
     });
-  }, [selectedPO, lines]);
+  }, [selectedPO, lines, receivedBaseMap]);
 
-  const hasInvalid = rows.some((r) => r.invalid);
-  const readyCount = rows.filter((r) => !r.invalid).length;
+  const activeRows = rows.filter((r) => !r.isFulfilled);
+  const submittableRows = activeRows.filter((r) => !r.isSkippedThisDelivery);
+  const allFulfilled = rows.length > 0 && activeRows.length === 0;
+  const hasInvalid = activeRows.some((r) => r.invalid);
+  const hasNothingToSubmit = !allFulfilled && submittableRows.length === 0;
+  const readyCount = submittableRows.filter((r) => !r.invalid).length;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPO) return;
+    if (!selectedPO || allFulfilled) return;
 
     if (hasInvalid) {
       setError("Please fix the highlighted fields before confirming.");
       return;
     }
 
+    if (submittableRows.length === 0) {
+      setError(
+        "Enter a received quantity greater than 0 for at least one item.",
+      );
+      return;
+    }
+
+    // Only submit unfulfilled items with qty > 0
     const payload: CreateDeliveryPayload = {
       poId: selectedPO.id,
-      items: rows.map((r) =>
+      items: submittableRows.map((r) =>
         r.line.unlocked
           ? {
               productId: r.item.productId,
@@ -230,7 +308,7 @@ export function ReceiveDeliveryModal({
     setIsSubmitting(true);
     setError(null);
 
-try {
+    try {
       const res = await createDelivery(payload);
       const message =
         res.message || "Delivery recorded successfully and stock updated.";
@@ -281,7 +359,7 @@ try {
           </div>
           <DialogDescription className="text-sm text-muted-foreground">
             {selectedPO
-              ? "Only the received quantity is required. UoM, conversion factor and base quantity are pre-filled from the Purchase Order."
+              ? "Remaining quantities are pre-filled based on prior deliveries. Set an item to 0 if it wasn't included in this shipment."
               : "Choose the Purchase Order this delivery belongs to. Use the date range to narrow the list."}
           </DialogDescription>
         </DialogHeader>
@@ -361,33 +439,76 @@ try {
                   </Button>
                 </div>
 
+                {allFulfilled && (
+                  <div className="p-3.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 flex items-center gap-2 text-sm font-medium">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    <span>
+                      All line items on this Purchase Order have already been
+                      fully received.
+                    </span>
+                  </div>
+                )}
+
                 {rows.map((r) => {
                   const id = r.item.productId;
-                  const locked = !r.line.unlocked;
+                  const locked =
+                    r.isFulfilled ||
+                    r.isSkippedThisDelivery ||
+                    !r.line.unlocked;
                   const uomOptions = UOM_OPTIONS.includes(r.line.uom)
                     ? UOM_OPTIONS
                     : [r.line.uom, ...UOM_OPTIONS];
+                  const activeUomLabel = r.line.uom.trim() || r.item.ordered_uom;
 
                   return (
                     <div
                       key={r.item.id ?? id}
-                      className="rounded-lg border border-border bg-card p-4 space-y-4"
+                      className={`rounded-lg border p-4 space-y-4 transition-opacity ${
+                        r.isFulfilled
+                          ? "border-border/60 bg-muted/30 opacity-75"
+                          : r.isSkippedThisDelivery
+                            ? "border-dashed border-border bg-muted/20"
+                            : "border-border bg-card"
+                      }`}
                     >
                       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold break-words">
-                            {r.item.productName}
-                          </p>
-                          <p className="font-mono text-xs text-muted-foreground mt-0.5">
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-semibold break-words">
+                              {r.item.productName}
+                            </p>
+                            {r.isFulfilled ? (
+                              <Badge className="rounded-sm bg-emerald-600/15 text-emerald-700 dark:text-emerald-400 border border-emerald-600/30 hover:bg-emerald-600/15 font-mono text-[10px] uppercase tracking-wider">
+                                Fulfilled
+                              </Badge>
+                            ) : r.alreadyReceivedBase > 0 ? (
+                              <Badge
+                                variant="outline"
+                                className="rounded-sm border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 font-mono text-[10px] uppercase tracking-wider"
+                              >
+                                Partial • {formatQty(r.remainingBase)}{" "}
+                                {r.item.base_uom} left
+                              </Badge>
+                            ) : null}
+                            {r.isSkippedThisDelivery && (
+                              <Badge
+                                variant="secondary"
+                                className="rounded-sm font-mono text-[10px] uppercase tracking-wider"
+                              >
+                                Not in this delivery
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="font-mono text-xs text-muted-foreground">
                             {r.item.sku || "—"}
                           </p>
                         </div>
 
-                        <dl className="grid grid-cols-3 gap-x-6 gap-y-1 shrink-0 text-right">
+                        <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-5 gap-y-2 shrink-0 text-right">
                           <div>
                             <dt className={labelClass}>Ordered</dt>
                             <dd className="font-mono text-sm tabular-nums whitespace-nowrap">
-                              {r.item.requested_quantity.toLocaleString()}{" "}
+                              {formatQty(r.item.requested_quantity)}{" "}
                               {r.item.ordered_uom}
                             </dd>
                           </div>
@@ -398,62 +519,81 @@ try {
                             </dd>
                           </div>
                           <div>
-                            <dt className={labelClass}>
-                              Expected in base unit
-                            </dt>
-                            <dd className="font-mono text-sm tabular-nums whitespace-nowrap">
-                              {r.item.expected_base_quantity.toLocaleString()}{" "}
+                            <dt className={labelClass}>Accepted</dt>
+                            <dd
+                              className={`font-mono text-sm tabular-nums whitespace-nowrap font-medium ${
+                                r.isFulfilled
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : r.alreadyReceivedBase > 0
+                                    ? "text-amber-600 dark:text-amber-400"
+                                    : "text-muted-foreground"
+                              }`}
+                            >
+                              {formatQty(r.alreadyReceivedBase)} /{" "}
+                              {formatQty(r.item.expected_base_quantity)}{" "}
                               {r.item.base_uom}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className={labelClass}>Remaining</dt>
+                            <dd className="font-mono text-sm tabular-nums whitespace-nowrap font-semibold">
+                              {formatQty(r.remainingBase)} {r.item.base_uom}
                             </dd>
                           </div>
                         </dl>
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {/* Received qty: the only required input */}
+                        {/* Received qty */}
                         <div className="space-y-1.5">
                           <label htmlFor={`qty-${id}`} className={labelClass}>
                             Received qty{" "}
-                            <span className="text-destructive">*</span>
+                            {!r.isFulfilled && (
+                              <span className="text-destructive">*</span>
+                            )}
                           </label>
                           <Input
                             id={`qty-${id}`}
                             type="number"
                             min="0"
                             step="any"
-                            value={r.line.qty}
-                            disabled={isSubmitting}
+                            value={r.isFulfilled ? "0" : r.line.qty}
+                            disabled={isSubmitting || r.isFulfilled}
                             onChange={(e) =>
                               updateLine(id, {
                                 qty: e.target.value,
                                 base: null,
                               })
                             }
-                            className={inputClass(r.qtyInvalid)}
+                            className={inputClass(r.qtyInvalid, r.isFulfilled)}
                           />
                           <p
                             className={`text-[11px] ${
-                              r.qtyInvalid
-                                ? "text-destructive"
-                                : r.exceeds
-                                  ? "text-amber-600 dark:text-amber-400 font-medium"
-                                  : "text-muted-foreground"
+                              r.isFulfilled
+                                ? "text-emerald-600 dark:text-emerald-400 font-medium"
+                                : r.qtyInvalid
+                                  ? "text-destructive"
+                                  : r.exceeds
+                                    ? "text-amber-600 dark:text-amber-400 font-medium"
+                                    : "text-muted-foreground"
                             }`}
                           >
-                            {r.qtyEmpty ? (
-                              "Please enter a number. This cannot be empty."
+                            {r.isFulfilled ? (
+                              `All ${formatQty(r.item.expected_base_quantity)} ${r.item.base_uom} received`
+                            ) : r.qtyEmpty ? (
+                              "Please enter a number (0 to skip)."
                             ) : r.qtyInvalid ? (
-                              "Must be greater than 0"
+                              "Must be 0 or greater"
+                            ) : r.isSkippedThisDelivery ? (
+                              `Skipped (${formatQty(r.remainingInSelectedUom)} ${activeUomLabel} still pending)`
                             ) : r.exceeds && r.base !== null ? (
                               <span>
-                                Exceeded by{" "}
-                                {(
-                                  Math.round((r.base - r.item.expected_base_quantity) * 1000) / 1000
-                                ).toLocaleString()}{" "}
+                                Exceeded remaining by{" "}
+                                {formatQty(r.base - r.remainingBase)}{" "}
                                 {r.item.base_uom}
                               </span>
                             ) : (
-                              `Expected ${r.item.requested_quantity.toLocaleString()} ${r.item.ordered_uom}`
+                              `Remaining ${formatQty(r.remainingInSelectedUom)} ${activeUomLabel}`
                             )}
                           </p>
                         </div>
@@ -513,10 +653,12 @@ try {
                             Actual base qty
                           </label>
                           {locked ? (
-                            <div className="h-9 flex items-center rounded-md border border-dashed border-border bg-muted/40 px-3 font-mono tabular-nums text-sm font-semibold">
-                              {r.base !== null
-                                ? `${r.base.toLocaleString()} ${r.item.base_uom}`
-                                : "—"}
+                            <div className="h-9 flex items-center rounded-md border border-dashed border-border bg-muted/40 px-3 font-mono tabular-nums text-sm font-semibold text-muted-foreground">
+                              {r.isFulfilled || r.isSkippedThisDelivery
+                                ? `0 ${r.item.base_uom}`
+                                : r.base !== null
+                                  ? `${formatQty(r.base)} ${r.item.base_uom}`
+                                  : "—"}
                             </div>
                           ) : (
                             <>
@@ -547,61 +689,67 @@ try {
                         </div>
                       </div>
 
-                      {/* Edit prompt for the locked fields */}
-                      {locked && !r.line.confirming && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={isSubmitting}
-                          onClick={() => updateLine(id, { confirming: true })}
-                          className="h-8 text-xs gap-1.5 text-muted-foreground"
-                        >
-                          <Pencil className="h-3.5 w-3.5" /> Edit UoM,
-                          Conversion Factor, or Expected Base Qty.
-                        </Button>
-                      )}
+                      {/* Edit prompt for unfulfilled, non-skipped locked fields */}
+                      {!r.isFulfilled &&
+                        !r.isSkippedThisDelivery &&
+                        locked &&
+                        !r.line.confirming && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={isSubmitting}
+                            onClick={() => updateLine(id, { confirming: true })}
+                            className="h-8 text-xs gap-1.5 text-muted-foreground"
+                          >
+                            <Pencil className="h-3.5 w-3.5" /> Edit UoM,
+                            Conversion Factor, or Expected Base Qty.
+                          </Button>
+                        )}
 
-                      {locked && r.line.confirming && (
-                        <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div className="flex items-start gap-2">
-                            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                            <span>
-                              These values come from the Purchase Order. Editing
-                              them can make stock data inaccurate. Edit only if
-                              the delivery really differs.
-                            </span>
+                      {!r.isFulfilled &&
+                        !r.isSkippedThisDelivery &&
+                        locked &&
+                        r.line.confirming && (
+                          <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-start gap-2">
+                              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                              <span>
+                                These values come from the Purchase Order.
+                                Editing them can make stock data inaccurate.
+                                Edit only if the delivery really differs.
+                              </span>
+                            </div>
+                            <div className="flex gap-2 shrink-0">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs"
+                                onClick={() =>
+                                  updateLine(id, { confirming: false })
+                                }
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="h-8 text-xs"
+                                onClick={() =>
+                                  updateLine(id, {
+                                    confirming: false,
+                                    unlocked: true,
+                                  })
+                                }
+                              >
+                                Yes, edit
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex gap-2 shrink-0">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-8 text-xs"
-                              onClick={() =>
-                                updateLine(id, { confirming: false })
-                              }
-                            >
-                              Cancel
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              className="h-8 text-xs"
-                              onClick={() =>
-                                updateLine(id, {
-                                  confirming: false,
-                                  unlocked: true,
-                                })
-                              }
-                            >
-                              Yes, edit
-                            </Button>
-                          </div>
-                        </div>
-                      )}
+                        )}
 
-                      {!locked && (
+                      {!r.isFulfilled && !r.isSkippedThisDelivery && !locked && (
                         <div className="flex items-center justify-between gap-3 text-xs">
                           <span className="text-amber-700 flex items-center gap-1.5">
                             <AlertTriangle className="h-3.5 w-3.5" /> Custom
@@ -642,12 +790,21 @@ try {
             {selectedPO && (
               <div className="flex items-center gap-4">
                 <span className="text-xs text-muted-foreground font-mono tabular-nums hidden sm:inline">
-                  {readyCount} of {rows.length} items ready
+                  {allFulfilled
+                    ? "All items fulfilled"
+                    : hasNothingToSubmit
+                      ? "At least 1 item must have qty > 0"
+                      : `${readyCount} of ${activeRows.length} remaining item${activeRows.length === 1 ? "" : "s"} in this delivery`}
                 </span>
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={isSubmitting || hasInvalid}
+                  disabled={
+                    isSubmitting ||
+                    hasInvalid ||
+                    allFulfilled ||
+                    hasNothingToSubmit
+                  }
                   className="rounded-md text-xs font-semibold uppercase tracking-wider gap-2 h-9"
                 >
                   {isSubmitting ? (

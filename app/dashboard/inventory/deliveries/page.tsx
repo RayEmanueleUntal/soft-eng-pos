@@ -25,7 +25,7 @@ export default function DeliveriesPage() {
 
   // Pagination
   const [page, setPage] = React.useState(1);
-  const [limit] = React.useState(10);
+  const [limit] = React.useState(15);
   const [totalPages, setTotalPages] = React.useState(1);
   const [total, setTotal] = React.useState(0);
 
@@ -171,6 +171,7 @@ export default function DeliveriesPage() {
           page={page}
           totalPages={totalPages}
           total={total}
+          pageSize={limit}
           onPageChange={(newPage) => setPage(newPage)}
         />
       </div>

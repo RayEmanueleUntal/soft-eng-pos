@@ -1,3 +1,6 @@
+// Admin approval-request queue for return/exchange and similar pending actions.
+// Loads the full list, then filters by search/status and pages the filtered rows in the browser.
+// TablePagination stays visible even when the filtered list fits on one page.
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -43,12 +46,16 @@ import {
   User,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/pageheader";
+import { TablePagination } from "@/components/ui/table-pagination";
+
+const PAGE_SIZE = 15;
 
 export default function ApprovalRequestsPage() {
   const [requests, setRequests] = useState<ApprovalRequestResponseDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [page, setPage] = useState(1);
 
   // Modal States
   const [selectedRequest, setSelectedRequest] =
@@ -114,6 +121,17 @@ export default function ApprovalRequestsPage() {
 
     return matchesStatus && matchesSearch;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredRequests.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedRequests = filteredRequests.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, statusFilter]);
 
   // Action Handlers
   const handleConfirmApprove = async () => {
@@ -307,7 +325,7 @@ export default function ApprovalRequestsPage() {
                     Loading approval requests...
                   </TableCell>
                 </TableRow>
-              ) : filteredRequests.length === 0 ? (
+              ) : paginatedRequests.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={6}
@@ -317,7 +335,7 @@ export default function ApprovalRequestsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredRequests.map((req) => (
+                paginatedRequests.map((req) => (
                   <TableRow key={req.id} className="hover:bg-muted/50">
                     {/* ID Cell */}
                     <TableCell
@@ -402,6 +420,18 @@ export default function ApprovalRequestsPage() {
             </TableBody>
           </Table>
         </CardContent>
+        <div className="border-t px-4 py-3">
+          <TablePagination
+            className="w-full px-0"
+            page={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredRequests.length}
+            pageSize={PAGE_SIZE}
+            itemLabel="requests"
+            loading={loading}
+            onPageChange={setPage}
+          />
+        </div>
       </Card>
 
       {/* Details & Payload Dialog */}

@@ -277,7 +277,7 @@ export function CustomerPaymentModal({
             {isGcash && (
               <div className="grid gap-1.5">
                 <Label htmlFor="settlement-reference">
-                  GCash Reference Number *
+                  GCash Reference Number <span className="text-destructive">*</span> 
                 </Label>
                 <Input
                   id="settlement-reference"

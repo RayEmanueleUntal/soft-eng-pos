@@ -1,3 +1,6 @@
+// Forwarders dashboard page for courier and logistics vendor master data.
+// Loads paginated forwarder profiles with search/status filters and create/edit/delete modals.
+// Page size is 15; the table footer uses shared TablePagination.
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -24,7 +27,7 @@ export default function ForwardersPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const limit = 10;
+  const limit = 15;
 
   // Modal State
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -139,6 +142,7 @@ export default function ForwardersPage() {
           loading={loading}
           currentPage={page}
           totalPages={totalPages}
+          pageSize={limit}
           onPageChange={setPage}
           onEdit={(forwarder) => setEditTarget(forwarder)}
           onDelete={(forwarder) => setDeleteTarget(forwarder)}
