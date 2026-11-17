@@ -55,7 +55,7 @@ export function ReceiptModal({
               Sale Completed
             </DialogTitle>
             <DialogDescription className="text-muted-foreground font-sans text-xs">
-              Transaction details. You can print the receipt or start a new
+              Transaction details. You can print the invoice or start a new
               sale.
             </DialogDescription>
           </DialogHeader>
@@ -89,7 +89,7 @@ export function ReceiptModal({
               onClick={handlePrint}
               className="rounded-[4px] text-xs"
             >
-              Print Receipt
+              Print Invoice
             </Button>
             <Button
               type="button"

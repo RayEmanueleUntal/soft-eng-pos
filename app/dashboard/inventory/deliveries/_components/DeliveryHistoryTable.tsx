@@ -112,11 +112,13 @@ export function DeliveryHistoryTable({
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className="font-mono font-medium rounded-sm border-primary/30 text-primary bg-primary/5"
+                        className="inline-flex items-center rounded-md bg-muted border border-border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground"
                       >
                         PO #{delivery.poId}
                       </Badge>
                     </TableCell>
+
+
 
                     <TableCell className="text-muted-foreground font-sans">
                       {new Date(delivery.delivery_date).toLocaleString([], {

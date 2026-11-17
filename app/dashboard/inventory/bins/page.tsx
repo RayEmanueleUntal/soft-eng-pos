@@ -7,7 +7,7 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
-  Info,
+  Eye,
   Layers,
   AlertCircle,
   CheckCircle2,
@@ -234,7 +234,7 @@ export default function BinLocationsPage() {
                   <th className="px-3 py-1">Aisle Number</th>
                   <th className="px-3 py-1">Shelf Location</th>
                   <th className="px-3 py-1">Barcode Tag</th>
-                  <th className="px-3 py-1 text-right w-24">Actions</th>
+                  <th className="px-3 py-1 text-right w-24"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8F0] font-['Inter'] text-xs">
@@ -279,16 +279,17 @@ export default function BinLocationsPage() {
                       </td>
                       <td className="px-3 py-1 text-right">
                         <Button
-                          variant="ghost"
+                          type="button"
+                          variant="outline"
                           size="sm"
                           onClick={() => {
                             setSelectedBin(bin);
                             setDetailsOpen(true);
                           }}
-                          className="h-6 px-2 text-[11px] font-medium text-[#0060B2] hover:bg-[#C8DCFF] rounded-xs flex items-center gap-1 ml-auto"
+                          className="h-7 gap-1.5 rounded-[4px] text-xs border-input hover:bg-muted font-sans"
                         >
-                          <Info className="h-3 w-3" />
-                          <span>View</span>
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>View Products</span>
                         </Button>
                       </td>
                     </tr>

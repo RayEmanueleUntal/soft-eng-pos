@@ -59,7 +59,7 @@ const navigation: NavItem[] = [
     allowedRoles: ROLE_PERMISSIONS["/dashboard/pos"],
     children: [
       {
-        name: "Receipts",
+        name: "Invoices",
         href: "/dashboard/pos/receipt",
       },
     ],
@@ -77,7 +77,7 @@ const navigation: NavItem[] = [
     allowedRoles: ROLE_PERMISSIONS["/dashboard/inventory"],
     children: [
       {
-        name: "Adjustments",
+        name: "Movement History",
         href: "/dashboard/inventory/adjustments",
         requiresStockRole: true,
       },
