@@ -66,6 +66,13 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 
 # PART I — FRONTEND BUGS (`soft-eng-pos`)
 
+## Fix scope — Admin tab (assigned to us)
+
+We only fix bugs under **Analytics**, **Expenses**, **System Settings**, and **Approval Requests**. All other findings are documented for the team lead / other owners.
+
+**In-scope (4):** BUG-066, BUG-121, BUG-166, BUG-168
+
+
 ## HIGH SEVERITY
 
 ## BUG-001 — ROP page scans only the first page of products instead of using `/inventory/rop`
@@ -73,6 +80,7 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - `GET /products?limit=100` + client-side `current_quantity <= reorder_point_ROP` filter. Only first 100 products evaluated; backend `GET /inventory/rop` → `{items, totalAlerts}` exists and works (verified live).
 - **Fix:** Call `/inventory/rop`.
 - **Scenario:** Store manager opens the ROP page during reorder planning. A product at position 250 in the catalog is below its reorder point, but only the first 100 products are scanned — it never appears. The item stockouts and sales are lost before anyone notices.
+- **Scope:** Inventory
 
 
 ## BUG-002 — POS catalog truncated to first 100 products **[partially mitigated]**
@@ -80,6 +88,7 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - Catalog search/filter is now server-side (PR #72), so searches reach beyond the first 100 — **but** every response is still capped at `limit:100`: unfiltered browse shows only the first 100 SKUs, and any search/category returning >100 results silently truncates. ~7,900 of 8,076 SKUs remain unreachable without a narrowing query; `ExchangeModal` picker unaffected by the new params (still bare `limit:100`).
 - **Scale proof:** catalog holds **8,076 products** — browse view exposes ~1.2%; a broad search like "bolt" can return >100 matches and drop the rest.
 - **Scenario:** A cashier browses the catalog without typing — only ~100 of 8,076 SKUs appear. Even searching "bolt" truncates at 100 results with no "refine your search" hint — items beyond the cap are unfindable and wrongly treated as out of stock.
+- **Scope:** POS
 
 
 ## BUG-003 — POS customer picker truncated to first 100 customers
@@ -87,28 +96,33 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - Wholesale customers past page 1 can't be attached to CREDIT checkouts. Live `GET /customers?limit=1` → `totalPages:6`.
 - The customers *admin* table uses server-side pagination (`CustomerTable.tsx`), but the POS picker path is unchanged.
 - **Scenario:** A wholesale account is customer #150. At checkout the cashier can't find them in the picker, so they either lose the credit sale or the transaction is forced to retail/cash pricing.
+- **Scope:** POS
 
 
 ## BUG-004 — Transaction history truncated and fails silently
 - **Location:** `lib/pos/services/pos-api.ts:490-545`
 - `limit=100` once; `catch` returns `[]` → API failure looks like "no transactions".
 - **Scenario:** After a busy day (>100 transactions), a cashier opens receipt history to process a return. Old receipts are missing, and if the API hiccups the page shows 'no transactions' — staff can't tell empty from failed, so legitimate returns get disputed.
+- **Scope:** POS
 
 
 ## BUG-005 — Staff list truncated to first 100
 - **Location:** `app/dashboard/staff/_components/StaffTable.tsx:92-96`
 - **Scenario:** The business grows past 100 staff accounts. New hires beyond the cap never appear in the staff table — managers can't see, edit, or deactivate them.
+- **Scope:** Staff
 
 
 ## BUG-006 — StaffTable error handling bypasses `getErrorMessage`; maps non-existent `password_hash`
 - **Location:** `StaffTable.tsx:98-127`; `lib/staff/types.ts:17`
 - Live `GET /staff-users?limit=1` item keys: `id, username, first_name, last_name, assigned_role, is_active` — no `password_hash`.
 - **Scenario:** An admin creates a staff account with a duplicate username. The backend returns a clear 409, but the UI shows 'Failed to save staff member' — the admin retries blindly instead of fixing the username. The password_hash mapping is dead code that will silently break if a hash is ever needed.
+- **Scope:** Staff
 
 
 ## BUG-007 — Duplicate `setError` calls in POS catalog hook **[still present after catalog rework]**
 - **Location:** `lib/pos/hooks/use-pos-catalog.ts` — the rewritten hook still calls `setError(message)` then `setError(getErrorMessage(...))` in both the `refetch` catch and the effect catch.
 - **Scenario:** No user-facing scenario — the second setError overwrites the first, so behavior is correct. Pure code hygiene; the risk is a future edit 'fixing' the wrong line.
+- **Scope:** POS
 
 
 ## BUG-008 — Idempotency-Key is per-URL, not per-payload → stale cached responses on retry **[LIVE-CONFIRMED]**
@@ -117,18 +131,21 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - **Impact:** `POST /pos/checkout` (10s timeout) — committed-but-lost response → next checkout with a different cart returns the old receipt, clears the new cart. Same for customer/staff/supplier mutations.
 - **Fix:** Key by body hash or fresh UUID per attempt.
 - **Scenario:** A checkout commits server-side but the response times out. The cashier retries with a different cart; the backend returns the cached first receipt. The new cart is cleared and the customer is charged/receipted for the wrong sale. Proven live: two different customer creates with one key returned the same entity.
+- **Scope:** Cross-cutting (lib)
 
 
 ## BUG-009 — Cross-tab / multi-register refresh-token race forces logout
 - **Locations:** `lib/api.ts:109-161`; backend `auth.service.ts:81-98` (single-use rotated refresh tokens)
 - Per-tab mutex only; two tabs fire `/auth/refresh` concurrently → loser 401s → `handleLogoutRedirect()` clears shared `localStorage` → both sessions dead.
 - **Scenario:** A cashier keeps the POS open in two tabs (or two registers share a browser profile). Both fire /auth/refresh at the same time; the loser's single-use token is rejected, the shared localStorage is wiped, and both terminals are logged out mid-shift — carts lost.
+- **Scope:** Cross-cutting (lib)
 
 
 ## BUG-010 — Auth cookie never refreshed → daily forced re-login + stale role + half-logout **[contract-verified]**
 - **Locations:** `proxy.ts:39-51`, `app/api/auth/session/route.ts:18-26`, `lib/api.ts:143-146`
 - Proxy authorizes on httpOnly cookie (`maxAge:24h`); refresh flow updates only `localStorage`. After 24h all `/dashboard` routes bounce to login despite valid 7-day refresh token; `/api/auth/me` reads stale cookie role; logout clears localStorage but not cookie → half-logged-in state.
 - **Scenario:** A night-shift supervisor stays logged in past 24h. The proxy cookie expires at 24h while the refresh token lives 7 days — every page bounces to login despite a valid session. After a role change, /api/auth/me still reports the stale role from the cookie. On logout, localStorage clears but the cookie remains, leaving a half-logged-in state.
+- **Scope:** Auth/RBAC
 
 
 ## BUG-011 — Checkout response payment shape mismatch → post-checkout receipt loses tender/change/GCash ref **[BROWSER-CONFIRMED]**
@@ -137,12 +154,14 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - **Blast radius refined:** the persisted receipt page (`/dashboard/pos/receipt/9`, via `/transactions/receipt/:id` which flattens correctly) **does** show "Cash tendered ₱600.00 / Change ₱50.00" — only the immediate post-sale modal is affected.
 - **Fix:** Map from `p.details` (with `Number()` coercion — values arrive as strings), or re-fetch the receipt endpoint after checkout.
 - **Scenario:** A customer tenders ₱600 cash for a ₱550 sale. The receipt modal shows only 'Amount paid ₱550' — no tendered amount, no ₱50 change, no GCash reference. The cashier can't verify change was given correctly, and there's no audit trail of the actual tender.
+- **Scope:** POS
 
 
 ## BUG-012 — Refund/exchange quantity in sold-UoM; backend expects BASE UoM
 - **Locations:** `RefundModal.tsx:114-120`, `ExchangeModal.tsx:157-166`; backend `create-refund.dto.ts:27-33`, `returns.service.ts:93-96`
 - Refund of 1 BOX (factor 100) computes ~1/100 correct amount; restock equally wrong. `maxQuantity` cap disagrees with backend units.
 - **Scenario:** A customer returns 1 BOX (factor 100) of screws. The refund modal sends quantity in sold-UoM but the backend treats it as base units — the refund computes ~1/100 of the correct amount and restocks ~1/100 of the goods. Customer is under-refunded and inventory drifts.
+- **Scope:** Cross-cutting
 
 
 ## BUG-013 — Overdue-status field names mismatch → warning never displays **[LIVE-CONFIRMED]**
@@ -150,6 +169,7 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - Frontend reads `isOverdue`/`overdue`; backend returns `{hasOverdue, overdueCount, totalOverdueAmount}`. Live response confirmed. `CreditPaymentForm` never warns; cashier hits surprise block at checkout.
 - `CustomerPaymentModal.tsx` (customer mgmt settlement) uses the correct `hasOverdue` shape — only the POS `CreditPaymentForm` path remains broken.
 - **Scenario:** A cashier attaches a wholesale customer with overdue invoices. The overdue check returns hasOverdue but the frontend reads isOverdue — no warning shows. The cashier is surprised by a hard block at payment, causing a queue delay and a customer dispute at the counter.
+- **Scope:** Customers
 
 
 ## BUG-165 — Delivery "Print Receipt" prints a completely blank page **[code-verified]**
@@ -157,6 +177,7 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - **Locations:** `DeliveryDetailViewModal.tsx:85-87,213-224` (`window.print()` only); `globals.css:153-190` (`@media print` hides `body *` except `.print-only`/`#printable-receipt`); no print markup exists on the deliveries route — the only `PrintableInvoice` usages are under `app/dashboard/pos/receipt/`
 - **Scenario:** Staff opens a delivery and clicks "Print Receipt" — the print dialog produces a blank page. Receiving clerks can't produce the goods-received document the business needs for disputes and audits; the button is 100% nonfunctional.
 - **Fix:** Add print-only delivery receipt markup or a scoped `@media print` rule for the modal.
+- **Scope:** Procurement (PO/Delivery)
 
 
 ## MEDIUM SEVERITY
@@ -164,62 +185,74 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 ## BUG-024 — Pending refund/exchange breakdown field names don't match backend payload
 - `receipt/[id]/page.tsx:293-309` reads `creditDebtCancellation`/`cashPayout`/`totalRefund`; backend stores `{totalRefundAmount, creditDebtReduction, cashPayoutAmount, originalPayments}` → pending card always ₱0.00.
 - **Scenario:** A manager opens a pending refund on the receipt page to review amounts before approving. The breakdown card shows ₱0.00 because the field names don't match — the manager approves a refund blind, potentially paying out the wrong amount.
+- **Scope:** POS
 
 
 ## BUG-025 — Backend error messages swallowed: components read `data.message`, backend sends `data.details.message` **[LIVE-CONFIRMED shape]**
 - **Locations:** `SupplierTable.tsx:96,121,142`; `StaffTable.tsx:123-127,209-212`; `AddStaffModal.tsx:104-111`; `RefundModal.tsx:62-76`; `ExchangeModal.tsx` ~95; `bins/page.tsx:70`; `bins/_components/AddBinModal.tsx:91`; `products/_components/DeleteProductDialog.tsx:54-55`
 - **Live proof:** error body keys are `{statusCode, timestamp, path, details}` — no top-level `message`. Every backend error in these components shows a generic string (e.g., duplicate-username 409 → "Failed to save staff member.").
 - **Scenario:** An admin tries to create a staff account with a taken username. Backend returns a descriptive 409, but every listed component reads data.message (absent) and shows a generic failure — users can't tell duplicate-username from server-down and retry pointlessly.
+- **Scope:** Cross-cutting
 
 
 ## BUG-026 — Stock movement history filters apply only to current page of 20
 - `adjustments/page.tsx:177-249` — client-side filter on one page; `GetStockMovementsDto` lacks search/size/thread/material/categoryId (sending → 400). `fetchMatchingProductIds` loops all `/products` (~80 requests at 8k SKUs) per filter change.
 - **Scenario:** An auditor filters stock movements by size M8 to investigate shrinkage. Only the current page of 20 records is filtered client-side — matching movements on other pages are invisible, so the investigation misses most of the data. Each filter change also fires ~80 paginated product requests.
+- **Scope:** Inventory
 
 
 ## BUG-027 — Receive Delivery blocks backend-accepted deliveries; mis-measures partial POs
 - `ReceiveDeliveryModal.tsx:178,193-195,445-446` — caps at full `expected_base_quantity`, not remaining; over-shipments can't be recorded; partial-PO second deliveries can silently over-receive.
 - **Scenario:** A supplier ships 120 units against an expected 100. The receive modal caps input at the full expected quantity, so the overage can't be recorded. On a second partial delivery, cumulative received isn't tracked — the UI can silently allow receiving more than was ever shipped.
+- **Scope:** Procurement (PO/Delivery)
 
 
 ## BUG-028 — PO selector truncates at 50 POs, page 1 only
 - `POSelectList.tsx:37-45`; `delivery-api.ts:66-86` — client-side filters FULFILLED/CANCELLED; backend `status` param unused.
 - **Scenario:** The business accumulates >50 purchase orders. An open PO from last month sorts past the first page — it never appears in the delivery selector, so its delivery can't be recorded and the three-stage intake stalls.
+- **Scope:** Procurement (PO/Delivery)
 
 
 ## BUG-029 — `fetchReceivedBaseByProduct` truncates at 100 deliveries
 - `purchase-order-api.ts:70-84` — PO with >100 deliveries → wrong received totals/badges.
 - **Scenario:** A high-volume PO accumulates >100 deliveries. fetchReceivedBaseByProduct only reads the first 100 — received totals and PO badges understate reality, triggering premature reorders or false 'complete' states.
+- **Scope:** Products
 
 
 ## BUG-030 — `fetchEligibleTransactions` lists only 10 recent completed orders
 - `shipment-api.ts:97-112` — older unshipped orders unreachable without guessing invoice/customer.
 - **Scenario:** An order from three weeks ago was never shipped. In the shipment modal only the 10 most recent completed orders are listed — staff must guess invoice numbers to find it, and unshipped orders silently age.
+- **Scope:** Cross-cutting
 
 
 ## BUG-031 — Supplier dropdown in PO form truncates at 100
 - `CreatePurchaseOrderForm.tsx:67`
 - **Scenario:** The supplier master grows past 100. A supplier missing from the PO form's dropdown can't receive purchase orders — procurement for them is blocked with no explanation.
+- **Scope:** Cross-cutting
 
 
 ## BUG-032 — Supplier delete of PO-linked supplier: backend deactivates + 409; UI shows error, never reloads
 - `SupplierTable.tsx:127-147`; backend `suppliers.service.ts:185-198` — row stays ACTIVE-looking until manual refresh.
 - **Scenario:** A manager deletes a supplier who has PO history. Backend deactivates them and returns 409; the UI shows an error but never reloads — the row still looks active, so the manager retries and files a bug instead of understanding the supplier was soft-deleted.
+- **Scope:** Suppliers
 
 
 ## BUG-033 — Inactive suppliers can never be reactivated via UI
 - `SupplierModal.tsx` has no status control; `status`→`is_active` mapping exists but unreachable.
 - **Scenario:** A supplier is deactivated (manually or via BUG-032). There is no status control in the edit modal — the supplier can never be reactivated through the UI; only an API call or DB edit revives them.
+- **Scope:** Suppliers
 
 
 ## BUG-034 — Cashier editing WHOLESALE customer always 403s
 - `AddCustomerModal.tsx:93-110` sends `type` unconditionally; backend treats wholesale-field PATCH as ADMIN/MANAGER/SECRETARY (compounded by BUG-051's generic 403 text).
 - **Scenario:** A cashier needs to fix a typo in a wholesale customer's phone number. The edit modal always submits type=WHOLESALE, the backend treats wholesale-field edits as manager-only, and the save 403s — cashiers can't maintain customer records at all.
+- **Scope:** Customers
 
 
 ## BUG-035 — Duplicate-contact 409 has no recovery path
 - `AddCustomerModal.tsx:115-120`; backend `allowDuplicate` + structured `DUPLICATE_CUSTOMER_CONTACT` payload unused.
 - **Scenario:** A customer shares a phone number with a spouse's account. The create fails with a 409 but the UI offers no path — the backend supports allowDuplicate and returns a structured payload the frontend ignores, so staff can't resolve it without admin intervention.
+- **Scope:** Customers
 
 
 ## BUG-044 — Role/permission mismatches both directions
@@ -229,94 +262,112 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
   - `layout.tsx` nav children for Suppliers/Forwarders/Staff/Products/Deliveries/Shipments/ROP/Bins still have **no** `allowedRoles`; `roles.ts` still lacks entries for `/dashboard/suppliers`, `/dashboard/forwarders`, `/dashboard/inventory/bins`, `/dashboard/inventory/shipments` → all roles pass those routes while APIs 403. `lib/auth/permissions.ts` matches `shipments.controller.ts` `@Roles` exactly — extend this pattern to the other modules.
 - **Fix:** Single source of truth mapping routes ↔ `@Roles`.
 - **Scenario:** A cashier clicks Suppliers in the nav — the page loads but every API call 403s (proven live), a dead-end with no explanation. Meanwhile a secretary is blocked from the expenses UI even though the backend allows them. Both directions of the role map drift until a single source of truth exists.
+- **Scope:** Auth/RBAC
 
 
 ## BUG-045 — `fetchReceiptApi` never requests returns/exchanges; `already_returned_qty` never populated
 - `pos-api.ts:573-578`; backend defaults `includeReturns/Exchanges`=false; `transactions.service.ts:100-102` never passes it. Receipt reconstructs from `/approval` only → misses other channels; return modals can't cap prior returns.
 - **Scenario:** A customer returns part of a previous purchase. The receipt page can't show accurate 'already returned' quantities because includeReturns was never requested — the return modal's cap is wrong, enabling over-returns beyond what was sold.
+- **Scope:** POS
 
 
 ## BUG-046 — Adjustments date filters use UTC-midnight parsing
 - `adjustments/page.tsx:190-195` — `new Date("YYYY-MM-DD")` = UTC midnight → PH end-date excludes everything after 08:00 local; inconsistent with expenses page's correct local-time handling. The same midnight `endDate` boundary bug also exists in `POSelectList.tsx` (delivery PO selector).
 - **Scenario:** A staff member in Manila filters stock adjustments for Nov 14. The endDate parses as UTC midnight — everything after 8:00 AM local is excluded, so the day's variances look clean when they're not. The PO selector has the same bug.
+- **Scope:** Inventory
 
 
 ## BUG-047 — `formatDateToInput` uses `toISOString()` → off-by-one-day in PH mornings
 - `CreditPaymentForm.tsx:37-39` — 00:00–08:00 PHT yields yesterday for due-date default/`min`.
 - **Scenario:** At 7:00 AM Philippine time, a cashier opens the credit form. formatDateToInput converts via toISOString — the due-date default and min show yesterday, so credit terms start a day early.
+- **Scope:** Cross-cutting (lib)
 
 
 ## BUG-048 — Customer switch to walk-in/retail after WHOLESALE items → guaranteed 403
 - `pos/page.tsx:169-176`, `PosCart.tsx`, `pos-api.ts:198-216` — no reprice/warning; `transaction_type:WHOLESALE` + non-wholesale customer → `ForbiddenException`.
 - **Scenario:** A cashier builds a cart with wholesale-priced items, then switches the customer to walk-in to finish the sale. The cart still emits transaction_type:WHOLESALE — checkout 403s at the last step, forcing the cashier to rebuild the cart at the counter.
+- **Scope:** POS
 
 
 ## BUG-049 — Line discount not capped; frontend/backend total math diverges
 - `use-pos-cart.ts:13-25,219-242`, `CartItemRow.tsx:102-112`; backend `pos.service.ts:274-295` — backend subtracts Σ discounts from order total, no cap → discount > line gross eats other lines / negative grand_total; displayed ≠ charged.
 - The cart was rewritten — `calcLineSubtotal` now clamps `subtotal`/`line_discount` ≥ 0, but `line_discount` is still **not capped at line gross** → divergence persists for over-discounted lines.
 - **Scenario:** A cashier applies a line discount larger than the item's price (e.g., promo error). The subtotal clamps at 0 but the discount itself isn't capped — the backend subtracts the full discount from the order total, so the charged amount diverges from what the screen showed.
+- **Scope:** POS
 
 
 ## BUG-050 — UoM wholesale price priority differs from backend
 - `use-pos-cart.ts:57-75`, `ProductCard.tsx:63-88`; backend `pos.service.ts:244-254` — UoM explicit `retail_price` (no wholesale) + product `wholesale_price` → frontend shows `wholesale×factor`, backend charges `uom.retail_price`.
 - `resolveUomPrice` prefers backend `calculated_*` fields, but the priority order still doesn't match backend (`uom.retail_price` must outrank base-wholesale×factor for wholesale transactions).
 - **Scenario:** A wholesale customer buys an item sold by the BOX where the BOX UoM has an explicit retail price but no wholesale price. The POS displays wholesale_price×factor, but the backend charges the UoM's retail price — customer disputes the invoice and the receipt doesn't match the shelf quote.
+- **Scope:** POS
 
 
 ## BUG-051 — `getErrorMessage` discards backend message on 403
 - `lib/utils.ts:33-35` — hardcoded "Access denied" ignores `details.message` for all modules.
 - **Scenario:** Any user hits a 403 — e.g., a cashier trying a manager action. Instead of the backend's explanation ('wholesale fields require manager role'), every module shows a flat 'Access denied', so nobody can tell a permissions issue from a bug.
+- **Scope:** Cross-cutting (lib)
 
 
 ## BUG-052 — Silent error swallowing in POS fetchers
 - `pos-api.ts`: `fetchTransactionsApi`→`[]`; overdue catch→false; categories `.catch(()=>({data:[]}))`→names degrade to "General"; receipt invoice-search fallback swallows.
 - **Scenario:** The transactions API fails during a busy period. fetchTransactionsApi returns [] — the POS receipt list shows 'no transactions' and staff assume sales weren't recorded, potentially re-ringing sales or escalating a false incident.
+- **Scope:** POS
 
 
 ## BUG-061 — Movement "Qty Changed" labels base units with transaction UoM
 - `StockMovementHistoryTable.tsx:127-134`; backend stores base units — 2 BOX (factor 12) shows "+24 BOX".
 - **Scenario:** A stock audit shows '+24 BOX' for a movement that was actually 2 BOX (factor 12) — the base-unit quantity is labeled with the transaction UoM. Staff investigating shrinkage chase phantom quantities.
+- **Scope:** Inventory
 
 
 ## BUG-062 — Staff-name resolution 403s for SECRETARY/STOCK_MANAGEMENT
 - `adjustments/page.tsx:270-292`; `GET /staff-users/:id` is ADMIN/MANAGER only → names permanently `Staff #id` for those roles.
 - **Scenario:** A secretary reviews stock adjustments and sees 'Staff #7' instead of a name — GET /staff-users/:id is admin/manager-only. The audit trail is unusable for the roles that most need it.
+- **Scope:** Inventory
 
 
 ## BUG-063 — Receipt page merges approval quantities in mixed UoM units
 - `receipt/[id]/page.tsx:130-140` — base-UoM approval qty added onto sold-UoM display qty.
 - **Scenario:** On a receipt for a BOX sale, the refund card adds base-UoM approval quantities onto sold-UoM display quantities — 'returned: 24' when only 2 BOX were involved. Refund validation math is off by the conversion factor.
+- **Scope:** POS
 
 
 ## BUG-064 — PO line editor rejects fractional qty/factors backend accepts
 - `PoLineItemsEditor.tsx:93-108` — integers only; backend allows decimals and factors like 0.001 (G→KG).
 - **Scenario:** A buyer needs to order 0.5 BOX or a product measured in KG→G (factor 0.001). The PO line editor's integer-only validation rejects valid decimal quantities the backend accepts — legitimate orders can't be entered.
+- **Scope:** Procurement (PO/Delivery)
 
 
 ## BUG-065 — Forwarders search fires per keystroke, no debounce/race guard
 - `forwarders/page.tsx:31-74` + `ForwarderFilterBar.tsx:39` — stale out-of-order responses possible (contrast `ProductPicker` 300ms debounce).
 - **Scenario:** A user types 'fast' in the forwarder search; responses arrive out of order and a stale result overwrites the fresh one. The table shows forwarders that don't match the query — users pick from wrong data.
+- **Scope:** Forwarders
 
 
 ## BUG-066 — Approval Requests page swallows load failures; uses `alert()`
 - `approval-requests/page.tsx:65-79,131,152` — API failure renders "No approval requests found"; approve/reject failures via blocking `alert()`.
 - **Scenario:** The approvals API fails. The page renders 'No approval requests found' — pending refunds look nonexistent, so approvers never act and customers wait indefinitely. Failures surface via blocking alert() dialogs.
+- **Scope:** Approval Requests
 
 
 ## BUG-067 — LoginForm half-authenticated state on session-cookie failure
 - `LoginForm.tsx:42-60` — `localStorage` tokens written before `POST /api/auth/session`; cookie failure leaves tokens in localStorage (API works) while proxy bounces all `/dashboard` nav → split-brain auth, no cleanup.
 - **Scenario:** The session-cookie POST fails (network blip). localStorage tokens were already written — API calls work, but the proxy bounces every /dashboard navigation to login. The user appears logged out while their session is actually alive — split-brain auth with no cleanup.
+- **Scope:** POS
 
 
 ## BUG-166 — Expenses list fetch has no out-of-order response guard **[code-verified]**
 - `admin/expenses/page.tsx:70-107` — `loadExpenses` refires on every filter/page change with no sequence counter/AbortController/stale check (contrast shipments `requestId` guard, `useInventory` abort).
 - **Scenario:** Admin changes the category filter then quickly the date range — the older request resolves last, leaving the table and pagination showing the stale filter while the UI shows the new one; wrong expense rows until manual refresh.
+- **Scope:** Expenses
 
 
 ## BUG-177 — Post-checkout receipt rebuilds line items from the *request* payload, ignoring backend `transaction_items` **[code-verified]**
 - `pos-api.ts:383-402` — checkout request sends no price fields; response includes authoritative `transaction_items`, but `receipt.items` is built entirely from the stale cart snapshot (`payload.items`); only totals are read from the response.
 - **Scenario:** Another register changes a product's price mid-shift; a cashier completes a sale — `grand_total` charges the server price but every printed line item shows the stale client-side price/name, and lines can fail to sum to the charged total. The printed receipt disagrees with the persisted `TransactionItem` rows and with the same receipt re-fetched later.
 - **Fix:** Map `receipt.items` from `tx.transaction_items` (fallback to payload only when absent).
+- **Scope:** Cross-cutting
 
 
 ## BUG-192 — POS catalog double-fetches after first completed sale **[code-verified, introduced by catalog rework]**
@@ -325,16 +376,19 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - Every search keystroke (debounced) or category click after the first sale fires **two** `GET /products` requests (the hook's effect + the `refreshTrigger` effect calling `refetch`), plus a redundant `/product-categories` fetch inside `fetchProductsApi` on every call.
 - **Scenario:** After ringing up one sale, a cashier types in the catalog search — each debounced keystroke fires duplicate product requests against the API. Under multi-register load this doubles catalog traffic for no benefit and can produce flicker/race between the two in-flight responses.
 - **Fix:** Gate the refresh effect on a counter that increments per sale (not a sticky truthy value), or fold refresh into the hook's fetch effect.
+- **Scope:** POS
 
 ## BUG-180 — No error boundary / not-found / loading / global-error files anywhere in `app/` **[code-verified]**
 - Glob for `**/{error,global-error,not-found,loading,default}.tsx` → zero matches.
 - **Scenario:** Any render exception — e.g., a malformed API payload reaching `.toFixed()` on `undefined` — unmounts the whole route to Next.js's bare production error screen with no recovery or sign-out path. For non-technical POS staff, one bad payload bricks the till UI until manual reload. Unmatched URLs also get the default 404.
 - **Fix:** Add `app/dashboard/error.tsx` (reset + sign-out) and `app/not-found.tsx`.
+- **Scope:** Cross-cutting
 
 
 ## BUG-181 — Deliveries and Purchase-Orders list pages fetch with no out-of-order response guard **[code-verified]**
 - `deliveries/page.tsx:38-64`, `purchase-orders/page.tsx:50-72` — same unguarded pattern as BUG-166 (expenses); shipments page shows the correct `requestId` guard to copy.
 - **Scenario:** User clicks page 2 then quickly page 3 — whichever request resolves last wins; the table can show page-2 rows under a "page 3" indicator until manual refresh. Wrong receiving/PO data shown to staff.
+- **Scope:** Procurement (PO/Delivery)
 
 
 ## LOW SEVERITY (sections)
@@ -346,6 +400,7 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - **Impact:** Three of six roles cannot use the application at all via normal navigation (direct URLs to permitted pages like `/dashboard/inventory` still work, but login lands in the loop).
 - **Fix:** Make `/dashboard` role-aware (redirect to first permitted route per role) or remove the hard redirect.
 - **Scenario:** A secretary logs in — lands on /dashboard, which redirects to /dashboard/pos, which the proxy bounces back. Infinite redirect: the app is completely unusable for STOCK_MANAGEMENT, SECRETARY, and SALES_CLERK — proven live for all three roles.
+- **Scope:** Cross-cutting
 
 
 ## BUG-114 — ROP page's `/products` fetch accidentally masks the `/inventory/rop` 403 for CASHIER/SALES_CLERK
@@ -354,48 +409,49 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 
 ---
 - **Scenario:** Fixing BUG-001 properly (calling /inventory/rop) exposes that CASHIER/SALES_CLERK get 403 from that endpoint — the ROP page breaks for them the moment the real fix ships. The two bugs must be fixed together.
+- **Scope:** Inventory
 
 
 ## LOW SEVERITY (table)
 
-| ID | Location | Issue | Scenario |
-|---|---|---|---|
-| BUG-078 |`ShipmentTable.tsx:140-142` + `shipments.service.ts:133-142`|"Dispatched" column shows creation timestamp; `dispatch_date` never set on create/update| Ops reviews shipment dispatch times. The 'Dispatched' column shows the record's creation timestamp because dispatch_date is never set — SLA and carrier-performance reports are wrong. |
-| BUG-079 |`SupplierTable.tsx:81-105`|Supplier search no debounce + no race guard| A user types in the supplier search; out-of-order responses leave stale rows. They edit or order from the wrong supplier record. |
-| BUG-080 |`SupplierTable.tsx:127-147`|Delete on last page → empty page, no clamp| A manager deletes the last supplier on page 3. The table reloads the same page — now empty — with no step-back, looking like a bug. |
-| BUG-081 |`AddStaffModal.tsx:252-274`|"Account Status" toggle in create mode; `is_active` silently dropped| An admin creates a staff account with 'Account Status' toggled off, believing the account is inactive. is_active is never sent on create — the account is active anyway. A 'disabled' employee can still log in. |
-| BUG-082 |`EditROPModal.tsx:40-43`|ROP integers only; backend allows 3-decimal| A planner wants reorder point 10.5 units. The ROP editor only accepts integers though the backend allows 3 decimals — precise reorder points can't be configured. |
-| BUG-083 |`inventory/page.tsx:47-55`|Low-stock tabs filter current page only; counts misleading| A staff member clicks the 'Low Stock' tab and sees 3 items — assumes stock is fine. Items below ROP on other pages never appear; the store stockouts on products the tab claimed were healthy. |
-| BUG-084 |`BinAssignmentModal.tsx:80-107`|Bin picker page-1-only (20 bins); search mitigates| With >20 bins, the assignment picker's first page misses the correct bin. Products get assigned to wrong bins 'because it was the only option visible' — pickers degrade over time. |
-| BUG-085 |`bins/page.tsx:79-87`|Page change can apply unsubmitted search text| A user types a bin search but doesn't press enter, then clicks page 2. The fetch uses the unsubmitted text — results are filtered by something the user can't see in the UI. |
-| BUG-086 |`use-pos-cart.ts:245-276`|`updateItemUom` never wired — can't change UoM in cart| A wholesale customer wants to buy by the BOX but the cart can't switch UoM — updateItemUom exists but is never wired to the UI. Cashiers do manual quantity math, producing wrong totals and disputes. |
-| BUG-087 |`pos-api.ts:60-65`|First non-base UoM picked as `pricing_uom`; `is_default_sales` ignored; extra UoMs unreachable. `BackendProductUom` (`pos-types.ts:47-57`) also missing `cost_price`, `calculated_cost_price`, `is_default_purchase`, `is_default_sales` the backend returns — cost-side data invisible to POS pricing| A product's designated default sales UoM is ignored — the first non-base UoM is picked instead, and cost-side UoM fields aren't even typed. POS prices can quote the wrong unit entirely. |
-| BUG-088 |`CreditPaymentForm.tsx` ~153|Credit always full balance — no partial splits; `poNumber` collected but dropped. `submitCheckout` emits only `{date}` for CREDIT `details`; `po_number`/`credit_due_date` in `CheckoutPaymentEntry` silently discarded (backend `CreditDetailsDto` accepts only `date` anyway)| A wholesale customer gives a PO number at checkout. It's collected in the form but dropped before submit — AR records lack the reference needed to reconcile against the customer's own PO system. |
-| BUG-089 |`pos-api.ts:229-238`|Dummy fallback `product_id:1` if checkout with empty cart (unreachable but fragile)| If checkout is ever invoked with an empty cart (keyboard shortcut, race), the payload emits product_id:1 — a phantom line item for an unrelated product could be committed. |
-| BUG-090 |`pos-types.ts:10-19`|`UnitOfMeasure` missing `SACK`; `PaymentMethod` missing `CHECK`/`BANK_TRANSFER` (spec includes Bank Transfer)| A product uses SACK as base UoM — the POS UnitOfMeasure type doesn't include it, and PaymentMethod lacks CHECK/BANK_TRANSFER though the spec requires bank transfer. Type-level drift means those flows can't be built without fixes. |
-| BUG-091 |`approval-api.ts:22-25`|Unpaginated `/approval` fetch per receipt view| Every receipt view fetches the entire unpaginated /approval list. As approval volume grows, opening a receipt gets progressively slower — an N+1-style perf leak on a hot path. |
-| BUG-092 |`pos-api.ts:556-561`|Receipt invoice lookup uses default `limit=10`| A customer returns an older invoice. The receipt lookup uses the default limit=10 — matches beyond the first page are missed and the receipt shows 'not found' for a real transaction. |
-| BUG-093 |`AddCustomerModal.tsx:82-87,44-58`|`credit_limit` unbounded (Decimal(10,2) overflow) + `NaN` passes `<1` check; add-mode modal never resets state between opens| An admin enters credit_limit 99999999999 — exceeds Decimal(10,2), the save 500s. Entering 'abc' passes the <1 check as NaN. And because the add-mode modal never resets, the next customer opened inherits the previous customer's credit limit — wrong limits saved silently. |
-| BUG-094 |`use-pos-catalog.ts`, `pos-api.ts` `fetchProductsApi`|Category fetch failure still degrades silently — `categoriesRes` catch returns `{data:[]}` and `fetchCategoriesApi` failure only `console.error`s| The categories endpoint fails during a busy period. Products still render (with fallback names) but the category pills disappear and category filters can't be used — with no error shown to the cashier. |
-| BUG-095 |`pos/page.tsx:19-79`|`MOCK_SWAGGER_RECEIPT` 60-line dead mock| MOCK_SWAGGER_RECEIPT — 60 lines of dead mock receipt data sit in pos/page.tsx. Devs copy-paste from it or wonder if it's live; it's bundle noise and a maintenance trap. |
-| BUG-096 |`lib/api.ts:155-158`|Refresh failure rejects with refresh error, not original| A request fails AND the refresh fails. The user sees the refresh error instead of the real error — debugging and support get misleading information. |
-| BUG-097 |`LoginForm.tsx:17,60`|Open redirect via `?redirect=` (external URL not validated); proxy drops attempted path| An attacker sends a cashier a link /auth/login?redirect=https://evil.example. After login the app navigates to the external site — credential-phishing-adjacent open redirect. The proxy also drops the originally attempted path. |
-| BUG-098 |`use-current-role.ts:26-28`|Dev fallback grants ADMIN UI on `/api/auth/me` failure — masks gating gaps| In dev/staging, /api/auth/me fails transiently. The role hook falls back to ADMIN — the UI shows every admin button; every click 403s. Masking real gating gaps makes permission bugs harder to spot. |
-| BUG-099 |Currency formatting|`formatPeso` vs `` `₱${toFixed(2)}` `` (ungrouped, `₱NaN`) vs `toLocaleString` mixes| A receipt shows ₱1,234.00 in one place and ₱1234.00 in another; a bad value renders ₱NaN. Customers and auditors see inconsistent, unprofessional amounts across the app. |
-| BUG-100 |`lib/api.ts:5`|Missing `NEXT_PUBLIC_API_BASE_URL` → relative URLs → confusing 404s| A deployment forgets NEXT_PUBLIC_API_BASE_URL. All API calls resolve relative to the frontend origin — every request 404s and the failure mode ('cannot GET /products' on :3000) is confusing to diagnose. |
-| BUG-101 |`app/api/auth/session/route.ts`, `me/route.ts`|Session route stores any posted token unvalidated; cookie `secure` flag opt-in; `maxAge` hardcoded 24h; proxy/me decode JWT without verification (UI-gating only, real authz still Bearer)| On plain-HTTP LAN deployments (COOKIE_SECURE unset), the access_token cookie travels without Secure. Any script can also POST an arbitrary token into the session cookie — it 401s downstream, but the unvalidated write is a footgun if backend validation ever weakens. |
-| BUG-102 |`forwarders/types.ts:2`|`Forwarder.id: string` but API returns `number`| Forwarder.id is typed string but the API returns number. Code doing === comparisons, sorting, or Math operations on ids behaves subtly wrong — a latent correctness trap. |
-| BUG-103 |`forwarders/page.tsx:127-132`|Delete last item on page >1 → empty page, no step-back| A user deletes the last forwarder on page 2. The list reloads the same now-empty page — same dead-end confusion as BUG-080. |
-| BUG-104 |`EditROPModal.tsx:28`|State initialized once; stale if `item` prop changes without remount (currently safe via conditional mount — fragile contract)| EditROPModal initializes state once from props. Today the parent remounts it correctly, but any future caller that reuses the component without a key will show the previous item's ROP — an editor saves the wrong reorder point. |
-| BUG-105 |`StockMovementModal.tsx:184-186`|Stock-out check doesn't round converted qty — epsilon disagreement with preview| A product with a fractional UoM factor (KG↔G): the negative-stock preview rounds the converted qty but the submit guard doesn't — the UI can block a sale the preview allowed (or warn while the guard passes). Cashiers hit unexplained validation walls at the counter. |
-| BUG-106 |`app/dashboard/admin/`|No index `page.tsx` → direct `/dashboard/admin` 404s| A manager navigates to /dashboard/admin expecting an admin landing page — 404. Dead end; there's no index route. |
-| BUG-107 |`app/page.tsx`, `dashboard/page.tsx:43-174`|create-next-app boilerplate + ~130 lines commented-out dashboard UI| create-next-app boilerplate and ~130 lines of commented-out dashboard code ship in production bundles — maintenance noise and confusion about what's actually live. |
-| BUG-167 |`receipt/[id]/page.tsx:324,356-358`, `ReceiptModal.tsx:105-107`, `PrintableInvoice.tsx:131`|Up to three elements share `id="printable-receipt"` on the receipt page| Three DOM nodes carry the same print ID — invalid HTML, and `@media print` positions all of them at identical coordinates. Today content coincides so output looks right, but any divergence (modal showing a different receipt, returns variant) prints overlapping garbage. |
-| BUG-168 |`EditExpenseModal.tsx:64-66`|Edit Expense cannot clear an existing date — falsy check skips the change| An expense saved with a date is opened in Edit, the date field cleared (marked optional), saved — `values.date === ""` is falsy so the PATCH never includes `date`; the stored date silently remains while the UI implies it was cleared. |
-| BUG-169 |`GCashPaymentForm.tsx:41,132-139`|`+639…` format unreachable — input strips `+` and `maxLength=11` truncates `639XXXXXXXXX`| Customer reads their GCash number as "+639 17 123 4567"; cashier types it — `+` stripped, truncated to 11 digits, fails `mobileRegex` forever. The `+639` branch is dead code; users only learn the real format from a failed submit. |
-| BUG-170 |`StaffTable.tsx:162,518-550`|Client-side pagination never clamps `page` when `filteredStaff` shrinks on refetch| On page 2+ with an active filter, enough rows leave the set after a refetch that the page empties — pagination hides entirely (≤LIMIT) and the table shows 'No staff members match' with no Previous button. Dead end until the user guesses to change a filter. |
-| BUG-190 |`lib/inventory/useROPItems.ts:48-69`|ROP hook refetches from 3 concurrent sources (mount, window focus, 30s interval) with no sequencing or unmount guard| An older slower `/products?limit=100` response resolves after a newer one and overwrites fresher ROP rows; `setResult` can also fire after unmount. Compounds BUG-001's truncated data with staleness. |
-| BUG-191 |`lib/inventory/shipment-utils.ts:43-58`|`splitShipmentNotes` reclassifies any user text matching the log-line regex as system log| A note containing a line like `[2026-01-01 Status -> DELIVERED]:` (pasted correspondence, seeded data, format change) causes all subsequent real notes to be hidden inside parsed log entries — the drawer shows truncated user text. |
+| ID | Location | Issue | Scope | Scenario |
+|---|---|---|---|---|
+| BUG-078 |`ShipmentTable.tsx:140-142` + `shipments.service.ts:133-142`|"Dispatched" column shows creation timestamp; `dispatch_date` never set on create/update| Shipments | Ops reviews shipment dispatch times. The 'Dispatched' column shows the record's creation timestamp because dispatch_date is never set — SLA and carrier-performance reports are wrong. |
+| BUG-079 |`SupplierTable.tsx:81-105`|Supplier search no debounce + no race guard| Suppliers | A user types in the supplier search; out-of-order responses leave stale rows. They edit or order from the wrong supplier record. |
+| BUG-080 |`SupplierTable.tsx:127-147`|Delete on last page → empty page, no clamp| Suppliers | A manager deletes the last supplier on page 3. The table reloads the same page — now empty — with no step-back, looking like a bug. |
+| BUG-081 |`AddStaffModal.tsx:252-274`|"Account Status" toggle in create mode; `is_active` silently dropped| Staff | An admin creates a staff account with 'Account Status' toggled off, believing the account is inactive. is_active is never sent on create — the account is active anyway. A 'disabled' employee can still log in. |
+| BUG-082 |`EditROPModal.tsx:40-43`|ROP integers only; backend allows 3-decimal| Inventory | A planner wants reorder point 10.5 units. The ROP editor only accepts integers though the backend allows 3 decimals — precise reorder points can't be configured. |
+| BUG-083 |`inventory/page.tsx:47-55`|Low-stock tabs filter current page only; counts misleading| Inventory | A staff member clicks the 'Low Stock' tab and sees 3 items — assumes stock is fine. Items below ROP on other pages never appear; the store stockouts on products the tab claimed were healthy. |
+| BUG-084 |`BinAssignmentModal.tsx:80-107`|Bin picker page-1-only (20 bins); search mitigates| Bins | With >20 bins, the assignment picker's first page misses the correct bin. Products get assigned to wrong bins 'because it was the only option visible' — pickers degrade over time. |
+| BUG-085 |`bins/page.tsx:79-87`|Page change can apply unsubmitted search text| Bins | A user types a bin search but doesn't press enter, then clicks page 2. The fetch uses the unsubmitted text — results are filtered by something the user can't see in the UI. |
+| BUG-086 |`use-pos-cart.ts:245-276`|`updateItemUom` never wired — can't change UoM in cart| POS | A wholesale customer wants to buy by the BOX but the cart can't switch UoM — updateItemUom exists but is never wired to the UI. Cashiers do manual quantity math, producing wrong totals and disputes. |
+| BUG-087 |`pos-api.ts:60-65`|First non-base UoM picked as `pricing_uom`; `is_default_sales` ignored; extra UoMs unreachable. `BackendProductUom` (`pos-types.ts:47-57`) also missing `cost_price`, `calculated_cost_price`, `is_default_purchase`, `is_default_sales` the backend returns — cost-side data invisible to POS pricing| POS | A product's designated default sales UoM is ignored — the first non-base UoM is picked instead, and cost-side UoM fields aren't even typed. POS prices can quote the wrong unit entirely. |
+| BUG-088 |`CreditPaymentForm.tsx` ~153|Credit always full balance — no partial splits; `poNumber` collected but dropped. `submitCheckout` emits only `{date}` for CREDIT `details`; `po_number`/`credit_due_date` in `CheckoutPaymentEntry` silently discarded (backend `CreditDetailsDto` accepts only `date` anyway)| POS | A wholesale customer gives a PO number at checkout. It's collected in the form but dropped before submit — AR records lack the reference needed to reconcile against the customer's own PO system. |
+| BUG-089 |`pos-api.ts:229-238`|Dummy fallback `product_id:1` if checkout with empty cart (unreachable but fragile)| POS | If checkout is ever invoked with an empty cart (keyboard shortcut, race), the payload emits product_id:1 — a phantom line item for an unrelated product could be committed. |
+| BUG-090 |`pos-types.ts:10-19`|`UnitOfMeasure` missing `SACK`; `PaymentMethod` missing `CHECK`/`BANK_TRANSFER` (spec includes Bank Transfer)| POS | A product uses SACK as base UoM — the POS UnitOfMeasure type doesn't include it, and PaymentMethod lacks CHECK/BANK_TRANSFER though the spec requires bank transfer. Type-level drift means those flows can't be built without fixes. |
+| BUG-091 |`approval-api.ts:22-25`|Unpaginated `/approval` fetch per receipt view| Approval Requests | Every receipt view fetches the entire unpaginated /approval list. As approval volume grows, opening a receipt gets progressively slower — an N+1-style perf leak on a hot path. |
+| BUG-092 |`pos-api.ts:556-561`|Receipt invoice lookup uses default `limit=10`| POS | A customer returns an older invoice. The receipt lookup uses the default limit=10 — matches beyond the first page are missed and the receipt shows 'not found' for a real transaction. |
+| BUG-093 |`AddCustomerModal.tsx:82-87,44-58`|`credit_limit` unbounded (Decimal(10,2) overflow) + `NaN` passes `<1` check; add-mode modal never resets state between opens| Customers | An admin enters credit_limit 99999999999 — exceeds Decimal(10,2), the save 500s. Entering 'abc' passes the <1 check as NaN. And because the add-mode modal never resets, the next customer opened inherits the previous customer's credit limit — wrong limits saved silently. |
+| BUG-094 |`use-pos-catalog.ts`, `pos-api.ts` `fetchProductsApi`|Category fetch failure still degrades silently — `categoriesRes` catch returns `{data:[]}` and `fetchCategoriesApi` failure only `console.error`s| POS | The categories endpoint fails during a busy period. Products still render (with fallback names) but the category pills disappear and category filters can't be used — with no error shown to the cashier. |
+| BUG-095 |`pos/page.tsx:19-79`|`MOCK_SWAGGER_RECEIPT` 60-line dead mock| Procurement (PO/Delivery) | MOCK_SWAGGER_RECEIPT — 60 lines of dead mock receipt data sit in pos/page.tsx. Devs copy-paste from it or wonder if it's live; it's bundle noise and a maintenance trap. |
+| BUG-096 |`lib/api.ts:155-158`|Refresh failure rejects with refresh error, not original| Cross-cutting (lib) | A request fails AND the refresh fails. The user sees the refresh error instead of the real error — debugging and support get misleading information. |
+| BUG-097 |`LoginForm.tsx:17,60`|Open redirect via `?redirect=` (external URL not validated); proxy drops attempted path| POS | An attacker sends a cashier a link /auth/login?redirect=https://evil.example. After login the app navigates to the external site — credential-phishing-adjacent open redirect. The proxy also drops the originally attempted path. |
+| BUG-098 |`use-current-role.ts:26-28`|Dev fallback grants ADMIN UI on `/api/auth/me` failure — masks gating gaps| Auth/RBAC | In dev/staging, /api/auth/me fails transiently. The role hook falls back to ADMIN — the UI shows every admin button; every click 403s. Masking real gating gaps makes permission bugs harder to spot. |
+| BUG-099 |Currency formatting|`formatPeso` vs `` `₱${toFixed(2)}` `` (ungrouped, `₱NaN`) vs `toLocaleString` mixes| Cross-cutting (lib) | A receipt shows ₱1,234.00 in one place and ₱1234.00 in another; a bad value renders ₱NaN. Customers and auditors see inconsistent, unprofessional amounts across the app. |
+| BUG-100 |`lib/api.ts:5`|Missing `NEXT_PUBLIC_API_BASE_URL` → relative URLs → confusing 404s| Cross-cutting (lib) | A deployment forgets NEXT_PUBLIC_API_BASE_URL. All API calls resolve relative to the frontend origin — every request 404s and the failure mode ('cannot GET /products' on :3000) is confusing to diagnose. |
+| BUG-101 |`app/api/auth/session/route.ts`, `me/route.ts`|Session route stores any posted token unvalidated; cookie `secure` flag opt-in; `maxAge` hardcoded 24h; proxy/me decode JWT without verification (UI-gating only, real authz still Bearer)| Auth/RBAC | On plain-HTTP LAN deployments (COOKIE_SECURE unset), the access_token cookie travels without Secure. Any script can also POST an arbitrary token into the session cookie — it 401s downstream, but the unvalidated write is a footgun if backend validation ever weakens. |
+| BUG-102 |`forwarders/types.ts:2`|`Forwarder.id: string` but API returns `number`| Forwarders | Forwarder.id is typed string but the API returns number. Code doing === comparisons, sorting, or Math operations on ids behaves subtly wrong — a latent correctness trap. |
+| BUG-103 |`forwarders/page.tsx:127-132`|Delete last item on page >1 → empty page, no step-back| Forwarders | A user deletes the last forwarder on page 2. The list reloads the same now-empty page — same dead-end confusion as BUG-080. |
+| BUG-104 |`EditROPModal.tsx:28`|State initialized once; stale if `item` prop changes without remount (currently safe via conditional mount — fragile contract)| Inventory | EditROPModal initializes state once from props. Today the parent remounts it correctly, but any future caller that reuses the component without a key will show the previous item's ROP — an editor saves the wrong reorder point. |
+| BUG-105 |`StockMovementModal.tsx:184-186`|Stock-out check doesn't round converted qty — epsilon disagreement with preview| Inventory | A product with a fractional UoM factor (KG↔G): the negative-stock preview rounds the converted qty but the submit guard doesn't — the UI can block a sale the preview allowed (or warn while the guard passes). Cashiers hit unexplained validation walls at the counter. |
+| BUG-106 |`app/dashboard/admin/`|No index `page.tsx` → direct `/dashboard/admin` 404s| Admin (other) | A manager navigates to /dashboard/admin expecting an admin landing page — 404. Dead end; there's no index route. |
+| BUG-107 |`app/page.tsx`, `dashboard/page.tsx:43-174`|create-next-app boilerplate + ~130 lines commented-out dashboard UI| Cross-cutting | create-next-app boilerplate and ~130 lines of commented-out dashboard code ship in production bundles — maintenance noise and confusion about what's actually live. |
+| BUG-167 |`receipt/[id]/page.tsx:324,356-358`, `ReceiptModal.tsx:105-107`, `PrintableInvoice.tsx:131`|Up to three elements share `id="printable-receipt"` on the receipt page| POS | Three DOM nodes carry the same print ID — invalid HTML, and `@media print` positions all of them at identical coordinates. Today content coincides so output looks right, but any divergence (modal showing a different receipt, returns variant) prints overlapping garbage. |
+| BUG-168 |`EditExpenseModal.tsx:64-66`|Edit Expense cannot clear an existing date — falsy check skips the change| Expenses | An expense saved with a date is opened in Edit, the date field cleared (marked optional), saved — `values.date === ""` is falsy so the PATCH never includes `date`; the stored date silently remains while the UI implies it was cleared. |
+| BUG-169 |`GCashPaymentForm.tsx:41,132-139`|`+639…` format unreachable — input strips `+` and `maxLength=11` truncates `639XXXXXXXXX`| POS | Customer reads their GCash number as "+639 17 123 4567"; cashier types it — `+` stripped, truncated to 11 digits, fails `mobileRegex` forever. The `+639` branch is dead code; users only learn the real format from a failed submit. |
+| BUG-170 |`StaffTable.tsx:162,518-550`|Client-side pagination never clamps `page` when `filteredStaff` shrinks on refetch| Staff | On page 2+ with an active filter, enough rows leave the set after a refetch that the page empties — pagination hides entirely (≤LIMIT) and the table shows 'No staff members match' with no Previous button. Dead end until the user guesses to change a filter. |
+| BUG-190 |`lib/inventory/useROPItems.ts:48-69`|ROP hook refetches from 3 concurrent sources (mount, window focus, 30s interval) with no sequencing or unmount guard| Inventory | An older slower `/products?limit=100` response resolves after a newer one and overwrites fresher ROP rows; `setResult` can also fire after unmount. Compounds BUG-001's truncated data with staleness. |
+| BUG-191 |`lib/inventory/shipment-utils.ts:43-58`|`splitShipmentNotes` reclassifies any user text matching the log-line regex as system log| Shipments | A note containing a line like `[2026-01-01 Status -> DELIVERED]:` (pasted correspondence, seeded data, format change) causes all subsequent real notes to be hidden inside parsed log entries — the drawer shows truncated user text. |
 
 ## ADDITIONAL FINDINGS
 
@@ -403,60 +459,70 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 - **Severity:** Medium
 - `ProductTable.tsx` renders Add/Edit/Delete for all roles; backend `products.controller.ts` restricts POST/PATCH to ADMIN/MANAGER/SECRETARY and DELETE to ADMIN/MANAGER. CASHIER/SALES_CLERK see controls that always 403; SECRETARY can edit but not delete with no UI distinction. `roles.ts` grants `/dashboard/products` to all six roles. Companion to BUG-044 — apply the `permissions.ts` pattern.
 - **Scenario:** A cashier opens the Products page and sees Add/Edit/Delete buttons. Every mutation 403s (backend restricts writes to ADMIN/MANAGER/SECRETARY). A secretary can edit but not delete — with no UI distinction, users learn permissions by failure.
+- **Scope:** Products
 
 
 ## BUG-116 — `fetchActiveForwarders` truncates at 100 **[code-verified]**
 - **Severity:** Medium (latent)
 - `shipment-api.ts:89-94` — `GET /forwarders?is_active=true&limit=100` once; >100 active forwarders silently missing from the shipment modal's forwarder picker. Same latent class as BUG-030.
 - **Scenario:** The forwarder master grows past 100 active records. Forwarders beyond the cap never appear in the shipment modal's picker — shipments can't be logged for them and there's no indication why.
+- **Scope:** Forwarders
 
 
 ## BUG-117 — `next.config.ts` `allowedDevOrigins` hardcodes a single LAN IP
 - **Severity:** Low (dev-only)
 - `allowedDevOrigins: ["10.42.0.1"]` — breaks dev access from any other host/IP (other dev machines, Tauri devtools, different LAN). Also a leftover commented duplicate config block. Consider env-driven or omitting.
 - **Scenario:** A teammate pulls the repo on a different machine or accesses the dev server from another LAN IP — allowedDevOrigins only lists 10.42.0.1, so dev requests are blocked. Tauri devtools hit the same wall.
+- **Scope:** Cross-cutting
 
 
 ## BUG-118 — `ProductForm` silently coerces invalid `cost_price` to `0`
 - **Severity:** Low
 - Non-numeric input → `NaN` → sent as `0` instead of a validation error (backend `cost_price` optional). Same NaN-vs-undefined inconsistency between create (omits) and edit (sends `null`).
 - **Scenario:** A staff member types an invalid cost price — NaN is silently sent as 0. The product saves with zero cost, corrupting margin and COGS analytics with no error shown.
+- **Scope:** Products
 
 
 ## BUG-119 — `ProductTable` duplicate `useEffect` resetting page
 - **Severity:** Low (cosmetic)
 - `ProductTable.tsx:93-99` — identical `setPage(1)` effect declared twice on the same deps. Harmless but sloppy.
 - **Scenario:** No user-facing scenario — the duplicate effect just runs setPage(1) twice. Code hygiene only; the risk is confusing future editors.
+- **Scope:** Products
 
 
 ## BUG-120 — `pos/page.tsx` hold-transaction `alert()` placeholders
 - **Severity:** Low
 - `alert("Hold function activated")` stubs remain for hold shortcuts — dead UI affordance presented to cashiers.
 - **Scenario:** A cashier hits the hold-transaction shortcut expecting a real feature — an alert() popup appears instead. Dead UI affordance that looks broken and can't be used.
+- **Scope:** Procurement (PO/Delivery)
 
 
 ## BUG-121 — Modal state-init fragility in `SettingFormDialog` / `AddStaffModal`
 - **Severity:** Low
 - `useState` initialized once from props; currently safe only because parents key-remount (`key={formSession}`, `key={edit-${id}}`). Any future caller that doesn't will show stale values when switching records. Document or reset-on-open.
 - **Scenario:** A future developer reuses SettingFormDialog/AddStaffModal without the key-remount pattern. Switching between records shows the previous record's values — an admin edits and saves stale data onto the wrong entity.
+- **Scope:** System Settings
 
 
 ## BUG-123 — Adjustments page: zero-match attribute filters produce phantom pagination
 - **Severity:** Low-Medium
 - `adjustments/page.tsx:213-267` — when size/thread/material/category filters match **no** products, `fetchMatchingProductIds` returns an empty set; the code still fetches `/inventory/movements` **without** `productId` (only sent when exactly 1 match), so the server returns the unfiltered total. Client then filters the 20-row page to 0 rows → "Total records: N" and page count reflect invisible data; pagination walks an unseen dataset. Companion to BUG-026.
 - **Scenario:** An auditor filters adjustments by a size no product has. The table shows 0 rows but 'Total records: 500' and phantom pages — staff think data is missing or the filter is broken, and pagination walks an invisible dataset.
+- **Scope:** Inventory
 
 
 ## BUG-124 — Dead `AdjustmentForm` inside `StockMovementModal.tsx` contains latent bugs
 - **Severity:** Low (dead code / maintenance trap)
 - `components/inventory/StockMovementModal.tsx:41-141` — an entire unused `AdjustmentForm` component: sets a fake "adjusted successfully" banner on item select (before any save), sends `reason: ""` which violates `AdjustInventoryDto @IsNotEmpty` → guaranteed 400, and lacks the validation the live `StockAdjustmentModal` has. Delete it or fix before reuse.
 - **Scenario:** A developer wires up the dead AdjustmentForm thinking it's the real adjust flow. It shows a fake success banner before saving, sends reason:'' which the backend rejects with 400, and lacks required-field validation — guaranteed-confusing UX if ever shipped.
+- **Scope:** Inventory
 
 
 ## BUG-122 — Bins page keeps stale `searchQuery` **and** stale `page` after exact lookup
 - **Severity:** Low
 - `bins/page.tsx` — after an exact-location lookup replaces results with one row, `searchQuery` retains old text AND `page` state stays >1 while `meta` is overwritten to page 1. A subsequent page change refetches with the stale filter/page → mixed state (filtered list under exact-lookup UI). `AddBinModal` also rendered ungated (backend POST requires ADMIN/MANAGER/SECRETARY → CASHIER/STOCK_MANAGEMENT 403 — part of BUG-044).
 - **Scenario:** A user runs an exact bin lookup from page 3 — one row shows, footer says 'Page 1 of 1', but internal page state stays 3. Clicking Prev silently reloads a filtered list under the exact-lookup UI — mixed state leads to editing the wrong bin.
+- **Scope:** Bins
 
 ---
 
@@ -466,6 +532,7 @@ Live-confirmed bugs are marked **[LIVE-CONFIRMED]**.
 ## OBS-005 — `/api/auth/session` + proxy trust unverified JWT claims for UI gating
 Real API authz uses the Bearer token (unforgeable); cookie role only drives nav visibility. Latent footgun (BUG-101).
 - **Scenario:** The session cookie's role claim is decoded, not verified — fine today because real authz uses the Bearer token, but if backend validation is ever weakened or a route trusts the cookie, the UI gating becomes the only (cosmetic) barrier.
+- **Scope:** Auth/RBAC
 
 
 ## OBS-007 — Minor code hygiene (pass-3 parsing audit)
@@ -473,6 +540,7 @@ Real API authz uses the Bearer token (unforgeable); cookie role only drives nav 
 - `use-pos-catalog.ts:22-24,42-44` — duplicate `setError` calls per failure (first is dead).
 - `pos-api.ts:510-516` — `TransactionSummary.paymentMethod` union omits `CHECK`/`BANK_TRANSFER`; `getBadgeVariant` (`receipt/page.tsx:91-104`) has no case for them — type lies, badge falls through to default.
 - **Scenario:** A CHECK/BANK_TRANSFER payment renders with a generic badge and no dedicated styling — cosmetic today, but the type gap means a future switch on paymentMethod silently misses those methods.
+- **Scope:** Cross-cutting
 
 ---
 
