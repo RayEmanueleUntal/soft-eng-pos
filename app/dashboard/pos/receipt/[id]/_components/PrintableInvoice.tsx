@@ -101,9 +101,9 @@ function ReceiptRow({
   bold?: boolean;
 }) {
   return (
-    <div className={cn("flex justify-between gap-2", bold && "font-semibold")}>
+    <div className={cn("flex justify-between gap-2 tabular-nums", bold && "font-semibold ")}>
       <span>{label}</span>
-      <span className="text-right">{value}</span>
+      <span className="tabular-nums text-right">{value}</span>
     </div>
   );
 }
@@ -143,7 +143,7 @@ export function PrintableInvoice({
     <div
       id={id}
       className={cn(
-        "w-full max-w-[80mm] bg-card text-black font-mono text-xs leading-relaxed p-3",
+        "w-full max-w-[80mm] bg-card text-black text-xs leading-relaxed p-3",
         className,
       )}
     >

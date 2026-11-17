@@ -61,7 +61,6 @@ docker compose up pos-db pos-redis -d
 npx prisma migrate reset
 
 # 5. Seed database with initial master data
-npx prisma db seed
 npx prisma db seed -- --csv
 
 # 6. Run the backend NestJS development server locally

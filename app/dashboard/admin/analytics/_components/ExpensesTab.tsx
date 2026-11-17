@@ -285,7 +285,7 @@ export function ExpensesTab({
                         <TableCell className="whitespace-nowrap text-xs">
                           {expense.payment_method.replace(/_/g, " ")}
                         </TableCell>
-                        <TableCell className="text-right font-mono tabular-nums">
+                        <TableCell className="text-right tabular-nums">
                           {formatPeso(expense.amount)}
                         </TableCell>
                         <TableCell className="max-w-[140px] whitespace-normal break-words text-xs">

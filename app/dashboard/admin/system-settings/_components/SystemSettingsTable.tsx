@@ -235,7 +235,7 @@ export function SystemSettingsTable() {
                   <TableCell className="font-mono text-xs font-medium text-foreground py-2.5">
                     {setting.key}
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-foreground py-2.5 max-w-[240px] whitespace-normal break-words">
+                  <TableCell className=" text-xs text-foreground py-2.5 max-w-[240px] whitespace-normal break-words">
                     {setting.value}
                   </TableCell>
                   <TableCell className="font-sans text-xs text-muted-foreground py-2.5 max-w-[360px] whitespace-normal break-words">
