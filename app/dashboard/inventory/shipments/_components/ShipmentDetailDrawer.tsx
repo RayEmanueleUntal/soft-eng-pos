@@ -247,9 +247,7 @@ export function ShipmentDetailDrawer({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !busy && onOpenChange(next)}>
-      <DialogContent
-        className="fixed inset-y-0 top-0 right-0 left-auto h-dvh max-h-dvh w-full max-w-full translate-x-0 translate-y-0 content-start overflow-y-auto rounded-none border-l border-border p-5 sm:max-w-md data-open:slide-in-from-right-8 data-closed:slide-out-to-right-8"
-      >
+      <DialogContent className="sm:max-w-xl w-full max-h-[85vh] overflow-y-auto font-sans">
         <DialogHeader className="border-b border-border pb-3 pr-8">
           <DialogTitle className="font-heading text-base font-bold tracking-tight">
             Shipment #{shipmentId}
@@ -398,7 +396,7 @@ export function ShipmentDetailDrawer({
                 </div>
               </form>
             ) : (
-              <dl className="space-y-4">
+              <dl className="grid grid-cols-1 gap-4 rounded-lg border border-border bg-muted/40 p-3.5 sm:grid-cols-2">
                 <Field label="Invoice" mono>
                   {shipment.transaction?.invoice_number ??
                     `Order #${shipment.transactionId}`}
@@ -421,11 +419,13 @@ export function ShipmentDetailDrawer({
                 <Field label="Last updated">
                   {formatDateTime(shipment.updatedAt)}
                 </Field>
-                <Field label="Delivery notes">
-                  <span className="whitespace-pre-wrap">
-                    {notesParts.base || "-"}
-                  </span>
-                </Field>
+                <div className="sm:col-span-2">
+                  <Field label="Delivery notes">
+                    <span className="whitespace-pre-wrap">
+                      {notesParts.base || "-"}
+                    </span>
+                  </Field>
+                </div>
               </dl>
             )}
 

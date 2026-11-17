@@ -504,7 +504,7 @@ export function StockMovementModal({
 
           <div className="space-y-1.5">
             <Label htmlFor="reason" className="text-xs">
-              Reason (optional)
+              Reason <span className="text-destructive">*</span> 
             </Label>
             <Textarea
               id="reason"
@@ -513,6 +513,7 @@ export function StockMovementModal({
               onChange={(e) => setReason(e.target.value)}
               rows={2}
               className="text-xs rounded-[2px]"
+              required
             />
           </div>
 
