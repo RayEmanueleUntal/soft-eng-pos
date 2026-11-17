@@ -19,7 +19,7 @@ import { getErrorMessage } from "@/lib/utils";
 import type { Product } from "@/lib/products/types";
 
 import { ProductSearch } from "./ProductSearch";
-import { ProductPagination } from "./ProductPagination";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { ProductForm } from "./ProductForm";
 import { DeleteProductDialog } from "./DeleteProductDialog";
 import { CheckCircle2, AlertCircle } from "lucide-react";
@@ -378,9 +378,12 @@ export function ProductTable() {
         </Table>
       </div>
 
-      <ProductPagination
+      <TablePagination
         page={page}
         totalPages={totalPages}
+        totalItems={total}
+        pageSize={LIMIT}
+        itemLabel="products"
         loading={loading}
         onPageChange={setPage}
       />
