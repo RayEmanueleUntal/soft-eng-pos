@@ -35,12 +35,25 @@ export function formatDateTime(value: string | null | undefined): string {
 
 export interface StatusLogEntry {
   timestamp: string;
-  status: TrackingStatus;
+  action: string; // e.g. "Dispatched", "Delivered", "Details edited"
   note: string;
 }
 
-// The backend appends "[<ISO time> Status -> <STATUS>]: <note>" lines to `notes` on each status update.
-const LOG_LINE = /^\[(\S+) Status -> (PENDING|DISPATCHED|DELIVERED)\]: ?(.*)$/;
+// Matches backend status lines "[<ISO> Status -> <STATUS>]: <note>" AND frontend edit lines "[<ISO> Edited]: <note>"
+const STATUS_LOG_LINE =
+  /^\[(\S+) Status -> (PENDING|DISPATCHED|DELIVERED)\]: ?(.*)$/;
+const EDIT_LOG_LINE = /^\[(\S+) Edited\]: ?(.*)$/;
+
+export function formatEditLogLine(summary: string): string {
+  return `[${new Date().toISOString()} Edited]: ${summary}`;
+}
+
+export function formatStatusLogLine(
+  status: TrackingStatus,
+  note?: string,
+): string {
+  return `[${new Date().toISOString()} Status -> ${status}]: ${(note ?? "").trim()}`;
+}
 
 // Splits notes into the user's own text, the raw log lines, and the parsed log entries.
 export function splitShipmentNotes(notes: string | null | undefined): {
@@ -49,7 +62,9 @@ export function splitShipmentNotes(notes: string | null | undefined): {
   entries: StatusLogEntry[];
 } {
   const lines = (notes ?? "").split("\n");
-  const firstLog = lines.findIndex((line) => LOG_LINE.test(line));
+  const firstLog = lines.findIndex(
+    (line) => STATUS_LOG_LINE.test(line) || EDIT_LOG_LINE.test(line),
+  );
 
   if (firstLog === -1) {
     return { base: (notes ?? "").trim(), rawLogLines: [], entries: [] };
@@ -57,13 +72,25 @@ export function splitShipmentNotes(notes: string | null | undefined): {
 
   const rawLogLines = lines.slice(firstLog);
   const entries: StatusLogEntry[] = [];
+
   for (const line of rawLogLines) {
-    const match = LOG_LINE.exec(line);
-    if (match) {
+    const statusMatch = STATUS_LOG_LINE.exec(line);
+    if (statusMatch) {
+      const rawStatus = statusMatch[2] as TrackingStatus;
       entries.push({
-        timestamp: match[1],
-        status: match[2] as TrackingStatus,
-        note: match[3],
+        timestamp: statusMatch[1],
+        action: STATUS_LABELS[rawStatus] ?? rawStatus,
+        note: statusMatch[3],
+      });
+      continue;
+    }
+
+    const editMatch = EDIT_LOG_LINE.exec(line);
+    if (editMatch) {
+      entries.push({
+        timestamp: editMatch[1],
+        action: "Details edited",
+        note: editMatch[2],
       });
     }
   }

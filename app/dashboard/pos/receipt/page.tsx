@@ -110,7 +110,7 @@ return (
     <div className="shrink-0 mt-4 mb-4">
       <PageHeader
         header="Invoices"
-        subheader="Browse completed sales, search past invoices, and view handle refund/exchanges"
+        subheader="Browse completed sales, search past invoices, and handle refunds or exchanges."
       />
     </div>
 

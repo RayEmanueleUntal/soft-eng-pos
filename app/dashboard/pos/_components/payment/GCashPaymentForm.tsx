@@ -89,7 +89,7 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
       <div className="grid gap-1.5">
         <div className="flex justify-between items-center">
           <Label htmlFor="gcash-ref" className="font-sans text-xs font-semibold text-foreground">
-            GCash Reference Number *
+            GCash Reference Number <span className="text-destructive">*</span> 
           </Label>
           <span className="text-[11px] font-mono text-muted-foreground">From customer receipt</span>
         </div>

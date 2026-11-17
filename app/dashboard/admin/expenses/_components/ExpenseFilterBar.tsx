@@ -25,10 +25,17 @@ import {
   type ExpenseCategory,
   type PaymentMethod,
 } from "@/lib/analytics/types";
+import { Label } from "@/components/ui/label";
+import { RefreshCw } from "lucide-react";
+import { Plus } from "lucide-react";
+
 
 interface ExpenseFilterBarProps {
   filters: ExpenseFilters;
   onFiltersChange: (filters: ExpenseFilters) => void;
+  onCreate: () => void;
+  onRefresh: () => void;
+  loading?: boolean;
 }
 
 // Returns true when both dates are set and the end date is before the start date.
@@ -42,6 +49,9 @@ export function isInvalidDateRange(filters: ExpenseFilters): boolean {
 export function ExpenseFilterBar({
   filters,
   onFiltersChange,
+  onRefresh,
+  onCreate,
+  loading = false,
 }: ExpenseFilterBarProps) {
   const hasActiveFilters = Boolean(
     filters.category ||
@@ -51,99 +61,153 @@ export function ExpenseFilterBar({
   );
   const invalidRange = isInvalidDateRange(filters);
 
-  return (
+  const formatTitleCase = (str: string) =>
+    str
+      .replace(/_/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+
+return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-3">
-        <Select
-          value={filters.category || "ALL"}
-          onValueChange={(value) =>
-            onFiltersChange({
-              ...filters,
-              category: !value || value === "ALL" ? "" : (value as ExpenseCategory),
-            })
-          }
-        >
-          <SelectTrigger className="h-8 w-[180px] text-[13px] rounded-[2px]">
-            <SelectValue placeholder="All categories">
-              {(value: string) =>
-                value === "ALL"
-                  ? "All categories"
-                  : EXPENSE_CATEGORY_LABELS[value as ExpenseCategory]
-              }
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent alignItemWithTrigger={false}>
-            <SelectItem value="ALL">All categories</SelectItem>
-            {EXPENSE_CATEGORIES.map((category) => (
-              <SelectItem key={category} value={category}>
-                {EXPENSE_CATEGORY_LABELS[category]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={filters.payment_method || "ALL"}
-          onValueChange={(value) =>
-            onFiltersChange({
-              ...filters,
-              payment_method:
-                !value || value === "ALL" ? "" : (value as PaymentMethod),
-            })
-          }
-        >
-          <SelectTrigger className="h-8 w-[170px] text-[13px] rounded-[2px]">
-            <SelectValue placeholder="All payment methods">
-              {(value: string) =>
-                value === "ALL" ? "All payment methods" : value.replace(/_/g, " ")
-              }
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent alignItemWithTrigger={false}>
-            <SelectItem value="ALL">All payment methods</SelectItem>
-            {PAYMENT_METHODS.map((method) => (
-              <SelectItem key={method} value={method}>
-                {method.replace(/_/g, " ")}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <label className="flex items-center gap-2 text-xs text-muted-foreground">
-          From
-          <Input
-            type="date"
-            value={filters.startDate}
-            max={filters.endDate || undefined}
-            onChange={(e) =>
-              onFiltersChange({ ...filters, startDate: e.target.value })
+      <div className="flex flex-wrap items-end gap-2.5">
+        <div className="flex flex-col gap-2">
+          <Label>Category</Label>
+          <Select
+            value={filters.category || "ALL"}
+            onValueChange={(value) =>
+              onFiltersChange({
+                ...filters,
+                category:
+                  !value || value === "ALL" ? "" : (value as ExpenseCategory),
+              })
             }
-            className="h-8 w-[150px] font-mono text-[13px] rounded-[2px]"
-          />
-        </label>
+          >
+            <SelectTrigger className="!h-8 w-[180px] text-xs rounded-[2px]">
+              <SelectValue placeholder="All Categories">
+                {(value: string) =>
+                  value === "ALL"
+                    ? "All Categories"
+                    : formatTitleCase(
+                        EXPENSE_CATEGORY_LABELS[value as ExpenseCategory] ??
+                          value,
+                      )
+                }
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent alignItemWithTrigger={false}>
+              <SelectItem value="ALL" className="text-xs">
+                All Categories
+              </SelectItem>
+              {EXPENSE_CATEGORIES.map((category) => (
+                <SelectItem
+                  key={category}
+                  value={category}
+                  className="text-xs"
+                >
+                  {formatTitleCase(
+                    EXPENSE_CATEGORY_LABELS[category] ?? category,
+                  )}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        <label className="flex items-center gap-2 text-xs text-muted-foreground">
-          To
-          <Input
-            type="date"
-            value={filters.endDate}
-            min={filters.startDate || undefined}
-            onChange={(e) =>
-              onFiltersChange({ ...filters, endDate: e.target.value })
+        <div className="flex flex-col gap-2">
+          <Label>Payment Method</Label>
+          <Select
+            value={filters.payment_method || "ALL"}
+            onValueChange={(value) =>
+              onFiltersChange({
+                ...filters,
+                payment_method:
+                  !value || value === "ALL" ? "" : (value as PaymentMethod),
+              })
             }
-            className="h-8 w-[150px] font-mono text-[13px] rounded-[2px]"
-          />
-        </label>
+          >
+            <SelectTrigger className="!h-8 w-[170px] text-xs rounded-[2px]">
+              <SelectValue placeholder="All Payment Methods">
+                {(value: string) =>
+                  value === "ALL"
+                    ? "All Payment Methods"
+                    : formatTitleCase(value)
+                }
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent alignItemWithTrigger={false}>
+              <SelectItem value="ALL" className="text-xs">
+                All Payment Methods
+              </SelectItem>
+              {PAYMENT_METHODS.map((method) => (
+                <SelectItem key={method} value={method} className="text-xs">
+                  {formatTitleCase(method)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label>Date Range</Label>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">From:</span>
+            <Input
+              type="date"
+              value={filters.startDate}
+              max={filters.endDate || undefined}
+              onChange={(e) =>
+                onFiltersChange({ ...filters, startDate: e.target.value })
+              }
+              className="h-8 w-[125px] font-mono text-xs rounded-[2px]"
+            />
+            <span className="text-xs text-muted-foreground">To:</span>
+            <Input
+              type="date"
+              value={filters.endDate}
+              min={filters.startDate || undefined}
+              onChange={(e) =>
+                onFiltersChange({ ...filters, endDate: e.target.value })
+              }
+              className="h-8 w-[125px] font-mono text-xs rounded-[2px]"
+            />
+          </div>
+        </div>
+
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onFiltersChange({ ...EMPTY_EXPENSE_FILTERS })}
+            className="h-8 px-2 text-xs rounded-[2px] text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5 mr-1" />
+            Clear
+          </Button>
+        )}
 
         <Button
-          variant="ghost"
-          onClick={() => onFiltersChange({ ...EMPTY_EXPENSE_FILTERS })}
-          disabled={!hasActiveFilters}
-          className="h-8 px-3 text-[13px] rounded-[2px]"
+          variant="outline"
+          size="icon"
+          onClick={onRefresh}
+          disabled={loading}
+          className="h-8 w-8 rounded-[2px] shrink-0"
+          title="Refresh expenses"
+          aria-label="Refresh expenses"
         >
-          <X className="h-4 w-4 mr-1" />
-          Clear
+          <RefreshCw
+            className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
+          />
         </Button>
+
+        {/* New Expense Button (Furthest Right) */}
+        <div className="ml-auto">
+          <Button
+            onClick={onCreate}
+            className="h-8 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm"
+          >
+            <Plus className="h-4 w-4" /> New Expense
+          </Button>
+        </div>
       </div>
 
       {invalidRange && (

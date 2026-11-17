@@ -168,34 +168,27 @@ export default function ExpensesPage() {
           header="Expenses"
           subheader="Record store operating expenses and review them by category, date range and payment method."
         />
-
-        <Button
-          onClick={() => setCreateOpen(true)}
-          className="h-8 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm"
-        >
-          <Plus className="h-4 w-4" /> New Expense
-        </Button>
       </div>
 
+
       <div className="space-y-6 rounded-lg border border-border bg-card p-6 shadow-sm">
-        <div className="flex flex-col items-stretch justify-between gap-3 lg:flex-row lg:items-start">
+        <div>
           <ExpenseFilterBar
             filters={filters}
             onFiltersChange={handleFiltersChange}
+            onRefresh={loadExpenses}
+            onCreate={() => setCreateOpen(true)}
+            loading={loading}
           />
+        </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadExpenses}
-            disabled={loading}
-            className="h-9 gap-1.5 text-xs"
-          >
-            <RefreshCw
-              className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </Button>
+        <div className="flex items-center justify-between">
+          <h2 className="text-[15px] font-heading font-semibold text-foreground">
+            Expense History
+          </h2>
+          <span className="text-xs font-mono text-muted-foreground tabular-nums">
+            Total records: {total}
+          </span>
         </div>
 
         {notice && (
@@ -250,6 +243,7 @@ export default function ExpensesPage() {
           onDelete={setDeleteTarget}
         />
       </div>
+
 
       {createOpen && (
         <CreateExpenseModal

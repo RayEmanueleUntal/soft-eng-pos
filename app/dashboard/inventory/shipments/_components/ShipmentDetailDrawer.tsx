@@ -45,6 +45,7 @@ import {
 } from "@/lib/inventory/shipment-types";
 import {
   formatDateTime,
+  formatEditLogLine,
   getNextStatus,
   splitShipmentNotes,
 } from "@/lib/inventory/shipment-utils";
@@ -183,9 +184,16 @@ export function ShipmentDetailDrawer({
     if (!shipment) return;
 
     const payload: UpdateShipmentPayload = {};
+    const changes: string[] = [];
+
     if (formForwarderId && Number(formForwarderId) !== shipment.forwarderId) {
       payload.forwarderId = Number(formForwarderId);
+      const nextName =
+        forwarders.find((f) => String(f.id) === formForwarderId)
+          ?.company_name ?? `#${formForwarderId}`;
+      changes.push(`Forwarder -> ${nextName}`);
     }
+
     if (formTracking.trim() !== (shipment.tracking_number ?? "")) {
       if (formTracking.trim().length > TRACKING_MAX) {
         setActionError(
@@ -194,24 +202,38 @@ export function ShipmentDetailDrawer({
         return;
       }
       payload.tracking_number = formTracking.trim();
-    }
-    if (formNotes.trim() !== notesParts.base) {
-      const combined = [formNotes.trim(), ...notesParts.rawLogLines]
-        .filter(Boolean)
-        .join("\n");
-      if (combined.length > NOTES_MAX) {
-        setActionError(
-          `Notes (including the status history) must be ${NOTES_MAX} characters or fewer.`,
-        );
-        return;
-      }
-      payload.notes = combined;
+      changes.push(
+        formTracking.trim()
+          ? `Tracking -> ${formTracking.trim()}`
+          : "Tracking cleared",
+      );
     }
 
-    if (Object.keys(payload).length === 0) {
+    if (formNotes.trim() !== notesParts.base) {
+      changes.push("Delivery notes updated");
+    }
+
+    if (changes.length === 0) {
       setEditing(false);
       return;
     }
+
+    // Append an audit entry for this edit while preserving existing log lines
+    const nextLogLines = [
+      ...notesParts.rawLogLines,
+      formatEditLogLine(changes.join("; ")),
+    ];
+    const combined = [formNotes.trim(), ...nextLogLines]
+      .filter(Boolean)
+      .join("\n");
+
+    if (combined.length > NOTES_MAX) {
+      setActionError(
+        `Notes (including the status history) must be ${NOTES_MAX} characters or fewer.`,
+      );
+      return;
+    }
+    payload.notes = combined;
 
     setSaving(true);
     setActionError(null);
@@ -446,10 +468,7 @@ export function ShipmentDetailDrawer({
                     <span className="font-mono tabular-nums text-muted-foreground">
                       {formatDateTime(entry.timestamp)}
                     </span>
-                    <span className="ml-2 font-medium">
-                      {entry.status.charAt(0) +
-                        entry.status.slice(1).toLowerCase()}
-                    </span>
+                    <span className="ml-2 font-medium">{entry.action}</span>
                     {entry.note && (
                       <p className="break-words text-muted-foreground">
                         {entry.note}
@@ -459,7 +478,7 @@ export function ShipmentDetailDrawer({
                 ))}
               </ol>
               <p className="text-[10px] text-muted-foreground">
-                Entries appear when a status note is added during an update.
+                Entries appear when status updates or detail edits are saved.
               </p>
             </div>
 

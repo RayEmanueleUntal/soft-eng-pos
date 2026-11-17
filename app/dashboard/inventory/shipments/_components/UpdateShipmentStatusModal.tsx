@@ -62,12 +62,18 @@ export function UpdateShipmentStatusModal({
       return;
     }
 
+    // Always send a note string so the backend appends a status history entry even when left blank
+    const fallbackNote =
+      nextStatus === "DISPATCHED"
+        ? "Status updated to Dispatched"
+        : "Status updated to Delivered";
+
     setSubmitting(true);
     setError(null);
     try {
       const updated = await updateShipmentStatus(shipment.id, {
         status: nextStatus,
-        ...(cleanNotes ? { notes: cleanNotes } : {}),
+        notes: cleanNotes || fallbackNote,
       });
       onUpdated(updated);
     } catch (err) {
