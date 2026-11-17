@@ -117,7 +117,7 @@ export function PosCatalog({
       </div>
 
       {/* Product Catalog Grid */}
-      <div className="min-h-0 flex-1 overflow-y-auto pr-1 pb-3">  
+      <div className="min-h-0 flex-1 overflow-y-auto rounded-md border border-input bg-muted/30 p-1"> 
         {loading ? (
           <div className="flex items-center justify-center py-12 text-muted-foreground text-xs gap-2">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
@@ -146,7 +146,7 @@ export function PosCatalog({
               : "No products available in database."}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-1 sm:grid-cols-2 xl:grid-cols-3">
             {[...products]
               .sort((a, b) =>
                 a.name.localeCompare(b.name, undefined, {

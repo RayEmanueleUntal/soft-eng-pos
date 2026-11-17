@@ -171,7 +171,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
               </span>
             )}
 
-            <span className="text-[9px] px-1 py-0.2 rounded-[2px] bg-muted border border-border text-muted-foreground truncate max-w-[70px]">
+            <span className="text-[9px] px-1 py-0.2 rounded-[2px] bg-accent border border-primary/20 text-primary truncate max-w-[70px]">
               {product.category}
             </span>
           </div>
