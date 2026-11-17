@@ -109,8 +109,8 @@ return (
     {/* Header */}
     <div className="shrink-0 mt-4 mb-4">
       <PageHeader
-        header="Historical Transaction Logs"
-        subheader="Browse completed sales, search past receipts, and view detailed printable invoices."
+        header="Invoices"
+        subheader="Browse completed sales, search past invoices, and view handle refund/exchanges"
       />
     </div>
 
@@ -149,7 +149,7 @@ return (
       {/*info subheading*/}
       <div className="flex items-center justify-between">
         <h2 className="text-[15px] font-heading font-semibold text-foreground">
-          Transaction Log History
+          Invoice History
         </h2>
         <span className="text-xs font-mono text-muted-foreground tabular-nums">
           Total records: {filteredTransactions.length}
@@ -171,7 +171,7 @@ return (
           <TableHeader className="bg-muted border-b border-border">
             <TableRow>
               <TableHead className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
-                Receipt / Invoice #
+                Invoice #
               </TableHead>
               <TableHead className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
                 Date & Time
@@ -249,7 +249,7 @@ return (
                         }
                         className="gap-1.5 rounded-[4px] text-xs border-input hover:bg-muted font-sans"
                       >
-                        <Eye className="w-3.5 h-3.5" /> View Receipt
+                        <Eye className="w-3.5 h-3.5" /> View Invoice
                       </Button>
                     </TableCell>
                   </TableRow>

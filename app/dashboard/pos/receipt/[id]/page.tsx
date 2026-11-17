@@ -208,11 +208,11 @@ export default function ReceiptPage() {
             className="text-muted-foreground hover:text-foreground hover:bg-accent rounded-[4px] text-xs"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Receipts
+            Back to Invoices
           </Button>
           <div className="h-6 w-px bg-border" />
           <h1 className="text-[24px] font-bold font-heading tracking-tight text-foreground">
-            Receipt #{id}
+            Invoice #{id}
           </h1>
         </div>
       </div>
@@ -347,7 +347,7 @@ export default function ReceiptPage() {
                 className="bg-primary hover:bg-primary/80 text-white rounded-[4px] text-xs font-bold uppercase tracking-wider"
               >
                 <Printer className="mr-2 h-4 w-4" />
-                Print Receipt
+                Print Invoice
               </Button>
             </div>
           </div>

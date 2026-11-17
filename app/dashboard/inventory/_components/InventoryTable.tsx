@@ -4,7 +4,6 @@
 "use client";
 
 import * as React from "react";
-import { MoreHorizontal } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -27,6 +26,7 @@ import { BinAssignmentModal } from "./BinAssignmentModal";
 import { StockMovementModal } from "../../../../components/inventory/StockMovementModal";
 import { StockAdjustmentModal } from "../../../../components/inventory/StockAdjustmentModal";
 import { EditROPModal } from "../../../../components/inventory/EditROPModal";
+import { Pencil, SlidersHorizontal } from "lucide-react";
 
 interface InventoryTableProps {
   inventory: InventoryItem[];
@@ -67,7 +67,12 @@ export function InventoryTable({
   // Asks the page to refetch after any modal saves successfully.
   const handleSaved = () => {
     onRefresh();
-  };
+
+  // Inside InventoryTable component:
+  const showActions = canManageStock || canEditROP;
+  const columnCount =
+    6 + (canManageStock ? 1 : 0) + (showActions ? 1 : 0);  
+    };
 
   return (
     <>
@@ -94,133 +99,183 @@ export function InventoryTable({
               <TableHead className={`${HEAD_CLASS} text-right`}>ROP</TableHead>
               <TableHead className={HEAD_CLASS}>Status</TableHead>
               <TableHead className={HEAD_CLASS}>Bin Location</TableHead>
+              {canManageStock && (
+                <TableHead className={`${HEAD_CLASS} text-center w-28`}>
+                  Adjust Stock
+                </TableHead>
+              )}
               {showActions && (
-                <TableHead className={`${HEAD_CLASS} w-12`}>Actions</TableHead>
+                <TableHead className={`${HEAD_CLASS} text-center w-16`}>
+                  Edit
+                </TableHead>
               )}
             </TableRow>
           </TableHeader>
 
           <TableBody>
             {inventory.length > 0 ? (
-              inventory.map((item) => (
-                <TableRow key={item.id}>
+              inventory.map((item) => {
+                const stockStatus = getStockStatus(item);
+                const isLowStock = stockStatus === "low-stock";
 
-               
-
-                  {/* unified name */}
-                  <TableCell className="align-top py-3">
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-sm text-foreground">
-                        {item.name}
-                      </span>
-                      <span className="font-mono text-[11px] text-muted-foreground mt-0.5">
-                        {item.sku ?? "-"}
-                      </span>
-                    </div>
-
-                    <div className="mt-2">
-                      <span className="inline-flex items-center rounded-md bg-muted border border-border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground">
-                        {item.category_name ||
-                          categories[item.categoryId] ||
-                          `Category #${item.categoryId}`}
-                      </span>
-                    </div>
-                  </TableCell>
-
-                  <TableCell className="align-top py-3">
-                    <div className="space-y-0.5 text-xs">
-                      <div>
-                        <span className="text-muted-foreground">Size:</span>{" "}
-                        <span className="font-medium text-foreground">
-                          {item.size_dimensions || "-"}
+                return (
+                  <TableRow key={item.id}>
+                    {/* unified name */}
+                    <TableCell className="align-top py-3">
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-sm text-foreground">
+                          {item.name}
+                        </span>
+                        <span className="font-mono text-[11px] text-muted-foreground mt-0.5">
+                          {item.sku ?? "-"}
                         </span>
                       </div>
 
-                      <div>
-                        <span className="text-muted-foreground">Thread:</span>{" "}
-                        <span className="font-medium text-foreground">
-                          {item.thread_type || "-"}
+                      <div className="mt-2">
+                        <span className="inline-flex items-center rounded-md bg-muted border border-border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground">
+                          {item.category_name ||
+                            categories[item.categoryId] ||
+                            `Category #${item.categoryId}`}
                         </span>
                       </div>
+                    </TableCell>
 
-                      <div>
-                        <span className="text-muted-foreground">Material:</span>{" "}
-                        <span className="font-medium text-foreground">
-                          {item.material_grade || "-"}
-                        </span>
+                    {/* specifications */}
+                    <TableCell className="align-top py-3">
+                      <div className="space-y-0.5 text-xs">
+                        <div>
+                          <span className="text-muted-foreground">Size:</span>{" "}
+                          <span className="font-medium text-foreground">
+                            {item.size_dimensions || "-"}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="text-muted-foreground">Thread:</span>{" "}
+                          <span className="font-medium text-foreground">
+                            {item.thread_type || "-"}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="text-muted-foreground">Material:</span>{" "}
+                          <span className="font-medium text-foreground">
+                            {item.material_grade || "-"}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  </TableCell>
+                    </TableCell>
 
-                  <TableCell className="text-right font-mono tabular-nums">
-                    {item.current_quantity}
-                  </TableCell>
+                    {/* highlighted current qty */}
+                    <TableCell className="text-right font-mono tabular-nums">
+                      <span
+                        className={`text-base font-bold tracking-tight ${
+                          isLowStock ? "text-destructive" : "text-foreground"
+                        }`}
+                      >
+                        {Number(item.current_quantity).toLocaleString()}
+                      </span>
+                    </TableCell>
 
-                  <TableCell className="text-right font-mono tabular-nums">
-                    {item.reorder_point_ROP}
-                  </TableCell>
+                    {/* highlighted ROP */}
+                    <TableCell className="text-right font-mono tabular-nums">
+                      <span className="text-base font-bold tracking-tight">
+                        {Number(item.reorder_point_ROP).toLocaleString()}
+                      </span>
+                    </TableCell>
 
-                  <TableCell>
-                    <StockStatusBadge status={getStockStatus(item)} />
-                  </TableCell>
-
-                  <TableCell className="font-mono">
-                    {item.bin_aisle_number || item.bin_shelf_location
-                      ? `${item.bin_aisle_number ?? "-"} - ${
-                          item.bin_shelf_location ?? "-"
-                        }`
-                      : "-"}
-                  </TableCell>
-
-                  {/* action */}
-                  {showActions && (
+                    {/* status */}
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          render={
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label={`Actions for ${item.name}`}
-                            />
-                          }
-                        >
-                          <MoreHorizontal />
-                        </DropdownMenuTrigger>
+                      <StockStatusBadge status={stockStatus} />
+                    </TableCell>
 
-                        <DropdownMenuContent align="end" className="w-44">
-                          {canManageStock && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={() => setActive({ type: "in", item })}
-                              >
-                                Stock In
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => setActive({ type: "out", item })}
-                              >
-                                Stock Out
-                              </DropdownMenuItem>
+                    {/* bin location */}
+                    <TableCell>
+                      <div className="inline-flex items-center rounded-md bg-muted border border-border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground">
+                        {item.bin_aisle_number || item.bin_shelf_location
+                          ? `${item.bin_aisle_number ?? "-"} - ${
+                              item.bin_shelf_location ?? "-"
+                            }`
+                          : "-"}
+                      </div>
+                    </TableCell>
+
+                    {/* adjust stock (Stock In / Stock Out) */}
+                    {canManageStock && (
+                      <TableCell className="text-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button
+                                variant="outline"
+                                size="icon-sm"
+                                className="rounded-[4px] border-input hover:bg-muted"
+                                aria-label={`Adjust stock for ${item.name}`}
+                              />
+                            }
+                          >
+                            <SlidersHorizontal className="h-4 w-4" />
+                          </DropdownMenuTrigger>
+
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem
+                              onClick={() => setActive({ type: "in", item })}
+                            >
+                              Stock In
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setActive({ type: "out", item })}
+                            >
+                              Stock Out
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setActive({ type: "adjust", item })}
+                            >
+                              Manual Adjustment
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
+
+                    {/* actions (Assign Bin / Edit ROP) */}
+                    {showActions && (
+                      <TableCell className="text-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={`Actions for ${item.name}`}
+                              />
+                            }
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </DropdownMenuTrigger>
+
+                          <DropdownMenuContent align="end" className="w-40">
+                            {canManageStock && (
                               <DropdownMenuItem
                                 onClick={() => setActive({ type: "bin", item })}
                               >
                                 Assign Bin
                               </DropdownMenuItem>
-                            </>
-                          )}
-                          {canEditROP && (
-                            <DropdownMenuItem
-                              onClick={() => setActive({ type: "rop", item })}
-                            >
-                              Edit ROP
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  )}   
-                </TableRow>
-              ))
+                            )}
+                            {canEditROP && (
+                              <DropdownMenuItem
+                                onClick={() => setActive({ type: "rop", item })}
+                              >
+                                Edit ROP
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })
             ) : (
               <TableRow>
                 <TableCell
@@ -233,7 +288,7 @@ export function InventoryTable({
             )}
           </TableBody>
         </Table>
-      </div>
+      </div>    
 
       {active && (active.type === "in" || active.type === "out") && (
         <StockMovementModal

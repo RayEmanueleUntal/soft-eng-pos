@@ -99,7 +99,7 @@ export function DeliveryDetailViewModal({
           <div className="flex items-center gap-2">
             <PackageCheck className="h-5 w-5 text-primary" />
             <DialogTitle className="text-xl font-bold tracking-tight">
-              Delivery Receipt #{deliveryId}
+              Delivery Invoice #{deliveryId}
             </DialogTitle>
           </div>
         </DialogHeader>
@@ -107,7 +107,7 @@ export function DeliveryDetailViewModal({
         {loading ? (
           <div className="py-12 flex flex-col items-center justify-center gap-2 text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <span className="text-xs">Loading receipt details...</span>
+            <span className="text-xs">Loading invoice details...</span>
           </div>
         ) : error ? (
           <div className="py-8 text-center text-sm text-destructive bg-destructive/10 rounded-md p-4">
