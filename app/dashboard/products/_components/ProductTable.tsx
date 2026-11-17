@@ -44,6 +44,7 @@ export function ProductTable() {
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -75,6 +76,7 @@ export function ProductTable() {
 
       setProducts(response.data.data);
       setTotalPages(response.data.meta.totalPages);
+      setTotal(response.data.meta.total);
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to load products."));
     } finally {
@@ -223,6 +225,16 @@ export function ProductTable() {
         </div>
       )}
 
+      {/*info subheading*/}
+      <div className="flex items-center justify-between">
+        <h2 className="text-[15px] font-heading font-semibold text-foreground">
+          Product Profile List
+        </h2>
+        <span className="text-xs font-mono text-muted-foreground tabular-nums">
+          Total records: {total}
+        </span>
+      </div>
+
       <div className="rounded-lg border bg-background">
         <Table>
           <TableHeader>
@@ -361,7 +373,7 @@ export function ProductTable() {
           <TableCaption>
             {loading
               ? "Loading product catalog..."
-              : `${products.length} products shown`}
+              : `Showing ${products.length} of ${total} products`}
           </TableCaption>
         </Table>
       </div>

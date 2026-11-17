@@ -47,6 +47,17 @@ export function ShipmentTable({
 }: ShipmentTableProps) {
   return (
     <div className="space-y-4">
+      {/*info subheading*/}
+      <div className="flex items-center justify-between">
+        <h2 className="text-[15px] font-heading font-semibold text-foreground">
+          Outgoing Shipment History
+        </h2>
+        <span className="text-xs font-mono text-muted-foreground tabular-nums">
+          Total records: {total}
+        </span>
+      </div>
+
+      {/*actual table*/}
       <div className="rounded-md border border-border overflow-x-auto">
         <Table>
           <TableHeader className="bg-muted/50">

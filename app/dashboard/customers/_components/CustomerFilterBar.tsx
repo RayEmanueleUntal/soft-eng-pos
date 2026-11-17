@@ -90,7 +90,6 @@ export function CustomerFilterBar({
           </Select>
         </div>
 
-
         <div className="lg:col-start-5 flex lg:justify-end">
           <Button
             onClick={onOpenAddModal}

@@ -267,7 +267,7 @@ function AdjustmentForm({
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1.5">
               <Label htmlFor="newCount" className="text-xs">
-                New Counted Qty <span className="text-destructive">*</span>
+                New Counted Qty <span className="text-destructive">*</span><span className="text-destructive">*</span>
               </Label>
               <Input
                 id="newCount"

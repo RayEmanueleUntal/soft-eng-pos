@@ -188,11 +188,13 @@ export default function InventoryAdjustmentsPage() {
       if (typeFilter !== "ALL") {
         queryParams.type = typeFilter as MovementType;
       }
+      // Read the picked days in local time (like the Expenses page), so the
+      // range covers the whole day: 00:00:00 to 23:59:59.999.
       if (startDate) {
-        queryParams.startDate = new Date(startDate).toISOString();
+        queryParams.startDate = new Date(`${startDate}T00:00:00`).toISOString();
       }
       if (endDate) {
-        queryParams.endDate = new Date(endDate).toISOString();
+        queryParams.endDate = new Date(`${endDate}T23:59:59.999`).toISOString();
       }
 
       const needsProductAttrFilter =
@@ -262,6 +264,7 @@ export default function InventoryAdjustmentsPage() {
       const missingStaffIds = Array.from(
         new Set(
           list
+            .filter((m) => !m.staff) // the backend already sends the name with each movement
             .map((m) => m.staffId)
             .filter((id) => Boolean(id) && !knownStaff[id]),
         ),

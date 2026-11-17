@@ -11,10 +11,13 @@ import {
   Layers,
   AlertCircle,
   CheckCircle2,
+  ToothbrushSparkles,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AddBinModal } from "@/app/dashboard/inventory/bins/_components/AddBinModal";
+import { canCreateBin } from "@/lib/auth/permissions";
+import { useCurrentRole } from "@/lib/auth/use-current-role";
 import { BinDetailsModal } from "@/app/dashboard/inventory/bins/_components/BinDetailsModal";
 import {
   getBinLocations,
@@ -24,8 +27,10 @@ import {
 } from "@/lib/bin-locations/bin-locations";
 import { PageHeader } from "@/components/ui/pageheader";
 import { Label } from "@/components/ui/label";
+import { totalmem } from "os";
 
 export default function BinLocationsPage() {
+  const role = useCurrentRole();
   const [bins, setBins] = useState<BinLocation[]>([]);
   const [meta, setMeta] = useState<BinLocationMeta>({
     total: 0,
@@ -160,6 +165,7 @@ export default function BinLocationsPage() {
               </div>
           </div>
 
+          {canCreateBin(role) && (
           <AddBinModal
             onSuccess={(newBin) => {
               setSuccessMsg(
@@ -169,6 +175,7 @@ export default function BinLocationsPage() {
               fetchBins(1);
             }}
           />
+        )}
         </div>
       </div>
         {/* Success Banner */}
@@ -206,6 +213,16 @@ export default function BinLocationsPage() {
             </Button>
           </div>
         )}
+
+        {/*info subheading */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-[15px] font-heading font-semibold text-foreground">
+            Bin Location List
+          </h2>
+          <span className="text-xs font-mono text-muted-foreground tabular-nums">
+            Total records: {meta.total}
+          </span>
+        </div>
 
         {/* Data Table */}
         <div className="bg-white border border-[#CBD5E1] rounded-sm overflow-hidden">

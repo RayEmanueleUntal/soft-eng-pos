@@ -10,6 +10,7 @@ interface ForwarderTableProps {
   loading: boolean;
   currentPage: number;
   totalPages: number;
+  total: number;
   onPageChange: (page: number) => void;
   onEdit: (forwarder: Forwarder) => void;
   onDelete: (forwarder: Forwarder) => void;
@@ -20,12 +21,24 @@ export function ForwarderTable({
   loading,
   currentPage,
   totalPages,
+  total,
   onPageChange,
   onEdit,
   onDelete,
 }: ForwarderTableProps) {
   return (
     <div className="space-y-4">
+      {/*info subheading */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-[15px] font-heading font-semibold text-foreground">
+          Forwarder Profile List
+        </h2>
+        <span className="text-xs font-mono text-muted-foreground tabular-nums">
+          Total records: {total}
+        </span>
+      </div>
+
+      {/*actual table */}
       <div className="rounded-md border border-border overflow-hidden bg-background">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -115,7 +128,7 @@ export function ForwarderTable({
       {/* Pagination Controls */}
       <div className="flex items-center justify-between px-1">
         <p className="text-xs font-mono text-muted-foreground">
-          Page {currentPage} of {totalPages || 1}
+        Showing {data.length} of {total} forwarders · Page {currentPage} of {totalPages || 1}
         </p>
         <div className="flex items-center gap-2">
           <Button
