@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { PurchaseOrderDto } from "@/lib/inventory/purchase-order-types";
 import { formatPeso } from "@/lib/utils";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { PurchaseOrderItemsDetail } from "./PurchaseOrderItemsDetail";
 import { PurchaseOrderStatusBadge } from "./PurchaseOrderStatusBadge";
 import { Plus, RefreshCw } from "lucide-react";
@@ -40,6 +41,7 @@ interface PurchaseOrderTableProps {
   page: number;
   totalPages: number;
   total: number;
+  pageSize: number;
   canCancel: boolean;
   onPageChange: (page: number) => void;
   onCancelRequest: (order: PurchaseOrderDto) => void;
@@ -59,6 +61,7 @@ export function PurchaseOrderTable({
   page,
   totalPages,
   total,
+  pageSize,
   canCancel,
   onPageChange,
   onCancelRequest,
@@ -290,32 +293,15 @@ export function PurchaseOrderTable({
         </Table>
       </div>
 
-      <div className="flex items-center justify-between text-xs text-muted-foreground font-mono">
-        <div>
-          Showing {orders.length} of {total} records (Page {page} of{" "}
-          {Math.max(totalPages, 1)})
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onPageChange(page - 1)}
-            disabled={page <= 1 || loading}
-            className="font-sans"
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onPageChange(page + 1)}
-            disabled={page >= totalPages || loading}
-            className="font-sans"
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        totalItems={total}
+        pageSize={pageSize}
+        itemLabel="purchase orders"
+        loading={loading}
+        onPageChange={onPageChange}
+      />
     </div>
   );
 }

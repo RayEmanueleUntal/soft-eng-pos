@@ -1,3 +1,6 @@
+// Supplier master-data table for procurement contacts and lead-time records.
+// Handles search, status filter, create/edit/delete, and server-backed paging.
+// Footer uses shared TablePagination at 15 rows per page.
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -15,10 +18,9 @@ import {
   Search,
   MoreVertical,
   Plus,
-  ChevronLeft,
-  ChevronRight,
   ArrowUpDown
 } from "lucide-react";
+import { TablePagination } from "@/components/ui/table-pagination";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,7 +58,7 @@ export function SupplierTable() {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalItems, setTotalItems] = useState<number>(0);
   const [sortOrder, setSortOrder] = useState<"DEFAULT" | "ASC" | "DESC">("DEFAULT");
-  const pageSize = 10;
+  const pageSize = 15;
   // Pagination & Filtering state
 
   // Modal State
@@ -417,35 +419,15 @@ export function SupplierTable() {
         </Table>
       </div>
 
-      {/* Pagination Row */}
-      <div className="flex items-center justify-between px-2 pt-2">
-        <p className="text-sm text-muted-foreground">
-          Showing <span className="font-medium">{suppliers.length}</span> of{" "}
-          <span className="font-medium">{totalItems}</span> suppliers
-        </p>
-
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1 || loading}
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-          </Button>
-          <span className="text-sm font-medium text-muted-foreground">
-            Page {currentPage} of {totalPages || 1}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage >= totalPages || loading}
-          >
-            Next <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
-        </div>
-      </div>
+      <TablePagination
+        page={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        pageSize={pageSize}
+        itemLabel="suppliers"
+        loading={loading}
+        onPageChange={setCurrentPage}
+      />
 
       {/* Modals */}
       <SupplierModal

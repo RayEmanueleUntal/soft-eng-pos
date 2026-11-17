@@ -1,9 +1,13 @@
+// Paginated forwarder profile table for dashboard courier master data.
+// Lists company, tracking contact, status and created date with edit/delete actions.
+// Footer uses shared TablePagination; the header total-records count stays in place.
 "use client";
 
 import React from "react";
-import { Edit2, Trash2, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Edit2, Trash2, Loader2 } from "lucide-react";
 import { Forwarder } from "./types";
 import { Button } from "@/components/ui/button";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 interface ForwarderTableProps {
   data: Forwarder[];
@@ -11,6 +15,7 @@ interface ForwarderTableProps {
   currentPage: number;
   totalPages: number;
   total: number;
+  pageSize: number;
   onPageChange: (page: number) => void;
   onEdit: (forwarder: Forwarder) => void;
   onDelete: (forwarder: Forwarder) => void;
@@ -22,6 +27,7 @@ export function ForwarderTable({
   currentPage,
   totalPages,
   total,
+  pageSize,
   onPageChange,
   onEdit,
   onDelete,
@@ -125,32 +131,15 @@ export function ForwarderTable({
         </table>
       </div>
 
-      {/* Pagination Controls */}
-      <div className="flex items-center justify-between px-1">
-        <p className="text-xs font-mono text-muted-foreground">
-        Showing {data.length} of {total} forwarders · Page {currentPage} of {totalPages || 1}
-        </p>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage <= 1 || loading}
-            onClick={() => onPageChange(currentPage - 1)}
-            className="h-8 px-2.5 text-xs font-mono"
-          >
-            <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Prev
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage >= totalPages || loading}
-            onClick={() => onPageChange(currentPage + 1)}
-            className="h-8 px-2.5 text-xs font-mono"
-          >
-            Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
-          </Button>
-        </div>
-      </div>
+      <TablePagination
+        page={currentPage}
+        totalPages={totalPages}
+        totalItems={total}
+        pageSize={pageSize}
+        itemLabel="forwarders"
+        loading={loading}
+        onPageChange={onPageChange}
+      />
     </div>
   );
 }

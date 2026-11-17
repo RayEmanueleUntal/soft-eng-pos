@@ -1,4 +1,6 @@
-// app/(dashboard)/inventory/bins/page.tsx
+// Bin location list for warehouse aisle/shelf coordinates in the POS inventory module.
+// Supports paginated browse, exact aisle/shelf search, create bin, and a details modal.
+// Grey pagination bar renders only when there is more than one page.
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -27,7 +29,7 @@ import {
 } from "@/lib/bin-locations/bin-locations";
 import { PageHeader } from "@/components/ui/pageheader";
 import { Label } from "@/components/ui/label";
-import { totalmem } from "os";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 export default function BinLocationsPage() {
   const role = useCurrentRole();
@@ -35,7 +37,7 @@ export default function BinLocationsPage() {
   const [meta, setMeta] = useState<BinLocationMeta>({
     total: 0,
     page: 1,
-    limit: 10,
+    limit: 15,
     totalPages: 1,
   });
 
@@ -62,7 +64,7 @@ export default function BinLocationsPage() {
       try {
         const res = await getBinLocations({
           page: currentPage,
-          limit: 10,
+          limit: 15,
           search: search?.trim() || undefined,
         });
 
@@ -116,7 +118,7 @@ export default function BinLocationsPage() {
         shelf_location: searchShelf.trim(),
       });
       setBins([bin]);
-      setMeta({ total: 1, page: 1, limit: 10, totalPages: 1 });
+      setMeta({ total: 1, page: 1, limit: 15, totalPages: 1 });
     } catch (err: any) {
       if (err?.response?.status === 404) {
         setErrorMsg(
@@ -299,36 +301,17 @@ export default function BinLocationsPage() {
             </table>
           </div>
 
-          {/* Footer Bar */}
-          <div className="bg-[#F8FAFC] border-t border-[#E2E8F0] px-3 py-2 flex items-center justify-between text-xs font-mono text-[#565E74]">
-            <div>
-              Page <span className="font-bold text-[#0F172A]">{meta.page}</span>{" "}
-              of{" "}
-              <span className="font-bold text-[#0F172A]">{meta.totalPages}</span>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1 || loading}
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                className="h-7 text-xs border-[#CBD5E1] rounded-sm px-2"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" />
-                <span>Prev</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= meta.totalPages || loading}
-                onClick={() => setPage((prev) => prev + 1)}
-                className="h-7 text-xs border-[#CBD5E1] rounded-sm px-2"
-              >
-                <span>Next</span>
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+          <div className="bg-[#F8FAFC] border-t border-[#E2E8F0] px-3 py-2">
+            <TablePagination
+              className="w-full px-0"
+              page={page}
+              totalPages={meta.totalPages}
+              totalItems={meta.total}
+              pageSize={meta.limit || 15}
+              itemLabel="bins"
+              loading={loading}
+              onPageChange={setPage}
+            />
           </div>
         </div>
 
