@@ -113,7 +113,7 @@ export function AccountsReceivableTab({ refreshKey }: { refreshKey: number }) {
 
       {/* AR aging matrix */}
       <Card>
-        <CardHeader className="flex-row items-center justify-between pb-2">
+        <CardHeader className="flex-row items-center justify-between ">
           <CardTitle className="text-sm">AR Aging Matrix</CardTitle>
           <span className="text-[11px] text-muted-foreground">
             <span className="mr-2 inline-block h-2 w-2 rounded-sm bg-amber-400 align-middle" />
@@ -122,8 +122,8 @@ export function AccountsReceivableTab({ refreshKey }: { refreshKey: number }) {
             60+ days overdue
           </span>
         </CardHeader>
-        <CardContent className="px-0">
-          <div className="overflow-x-auto">
+        <CardContent className="">
+          <div className="rounded-md border bg-card overflow-x-auto">
             <Table>
               <TableHeader className="bg-muted/50">
                 <TableRow>
@@ -190,7 +190,7 @@ export function AccountsReceivableTab({ refreshKey }: { refreshKey: number }) {
 
       {/* Top credit wholesale customers */}
       <Card>
-        <CardHeader className="flex-row items-center justify-between pb-2">
+        <CardHeader className="flex-row items-center justify-between ">
           <CardTitle className="text-sm">Top Credit Wholesale Customers</CardTitle>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>Show top</span>
@@ -213,8 +213,8 @@ export function AccountsReceivableTab({ refreshKey }: { refreshKey: number }) {
             </Select>
           </div>
         </CardHeader>
-        <CardContent className="px-0">
-          <div className="overflow-x-auto">
+        <CardContent className="">
+          <div className="rounded-md border bg-card overflow-x-auto">
             <Table>
               <TableHeader className="bg-muted/50">
                 <TableRow>
