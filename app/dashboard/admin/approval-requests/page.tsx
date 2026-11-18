@@ -12,7 +12,7 @@ import {
   rejectApprovalRequest,
 } from "@/lib/approval/approval-api";
 import { fetchStaffUserById } from "@/lib/inventory/stock-movement-api";
-import { PayloadRenderer } from "@/app/dashboard/admin/approval-requests/_components/PayloadRenderer";
+import { ApprovalDetailsDialog } from "@/app/dashboard/admin/approval-requests/_components/ApprovalDetailsDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,69 +45,16 @@ import {
   AlertCircle,
   FileCheck,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/pageheader";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { formatReceiptDate } from "@/lib/pos";
-
-/** Parses string or object approval payloads into a plain object. */
-function parseApprovalPayload(raw: unknown): Record<string, unknown> {
-  if (!raw) return {};
-  if (typeof raw === "string") {
-    try {
-      const parsed = JSON.parse(raw);
-      return parsed && typeof parsed === "object"
-        ? (parsed as Record<string, unknown>)
-        : {};
-    } catch {
-      return {};
-    }
-  }
-  if (typeof raw === "object") return raw as Record<string, unknown>;
-  return {};
-}
-
-/** Invoice label and receipt route id from a return/exchange payload. */
-function getApprovalInvoiceMeta(payload: Record<string, unknown>): {
-  invoiceLabel: string | null;
-  receiptPathId: string | null;
-} {
-  const invoiceNumber = payload.invoice_number ?? payload.invoiceNumber;
-  const transactionId = payload.transactionId ?? payload.transaction_id;
-  const invoiceLabel = invoiceNumber
-    ? String(invoiceNumber)
-    : transactionId != null && transactionId !== ""
-      ? `INV-${transactionId}`
-      : null;
-  const receiptPathId = invoiceNumber
-    ? String(invoiceNumber)
-    : transactionId != null && transactionId !== ""
-      ? String(transactionId)
-      : null;
-  return { invoiceLabel, receiptPathId };
-}
 
 const PAGE_SIZE = 15;
 
 const HEAD_CLASS =
   "text-foreground font-semibold font-mono text-[11px] uppercase tracking-wider";
 
-function formatDate(value: string): string {
-  try {
-    return new Date(value).toLocaleString([], {
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return value;
-  }
-}
-
 export default function ApprovalRequestsPage() {
-  const router = useRouter();
   const [requests, setRequests] = useState<ApprovalRequestResponseDto[]>([]);
   const [staffMap, setStaffMap] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState<boolean>(true);
@@ -227,10 +174,6 @@ export default function ApprovalRequestsPage() {
 
   const totalPages = Math.max(1, Math.ceil(filteredRequests.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const detailsInvoiceMeta = selectedRequest
-    ? getApprovalInvoiceMeta(parseApprovalPayload(selectedRequest.payload))
-    : { invoiceLabel: null, receiptPathId: null };
-
   const paginatedRequests = filteredRequests.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
@@ -458,7 +401,7 @@ return (
 
                         {/* Date */}
                         <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
-                          {formatDate(req.createdAt)}
+                          {formatReceiptDate(req.createdAt)}
                         </TableCell>
 
                         {/* Type */}
@@ -517,127 +460,33 @@ return (
           </div>
         </Card>
 
-        {/* Details & Payload Dialog */}
-        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto w-[95vw] sm:w-full">
-            {selectedRequest && (
-              <>
-                <DialogHeader>
-                  <div className="flex items-center justify-between gap-2 pr-4 flex-wrap sm:flex-nowrap">
-                    <DialogTitle className="text-lg font-bold flex items-center gap-2 break-words">
-                      Request Details ({selectedRequest.id})
-                    </DialogTitle>
-                    {getStatusBadge(selectedRequest.status)}
-                  </div>
-                  <DialogDescription className="break-words">
-                    Review the audit trail metadata and payload content before
-                    deciding.
-                  </DialogDescription>
-                </DialogHeader>
-
-                {/* Clean Metadata Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-muted/50 rounded-lg text-xs">
-                  <div>
-                    <span className="text-muted-foreground block font-medium">
-                      Approval Type
-                    </span>
-                    <span className="font-semibold break-words text-foreground">
-                      {selectedRequest.type}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block font-medium">
-                      Requested By
-                    </span>
-                    <span className="font-semibold break-words text-foreground">
-                      {staffMap[Number(selectedRequest.requestedById)] ||
-                        selectedRequest.requestedById}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block font-medium">
-                      Reviewed By
-                    </span>
-                    <span className="font-semibold break-words text-foreground">
-                      {selectedRequest.reviewedById
-                        ? staffMap[Number(selectedRequest.reviewedById)] ||
-                          selectedRequest.reviewedById
-                        : "Pending Review"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block font-medium">
-                      Created At
-                    </span>
-                    <span className="text-foreground">
-                      {new Date(selectedRequest.createdAt).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <span className="text-muted-foreground block font-medium">
-                      Updated At
-                    </span>
-                    <span className="text-foreground">
-                      {new Date(selectedRequest.updatedAt).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Rejection Reason Box */}
-                {selectedRequest.rejectionReason && (
-                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg text-xs space-y-1">
-                    <span className="font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0" /> Rejection
-                      Reason:
-                    </span>
-                    <p className="text-rose-900 dark:text-rose-200 break-words whitespace-pre-wrap">
-                      {selectedRequest.rejectionReason}
-                    </p>
-                  </div>
-                )}
-
-                {/* Payload Data Container */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                    Request Payload Data
-                  </h4>
-                  <Card className="p-4 bg-background overflow-x-auto">
-                    <PayloadRenderer data={selectedRequest.payload} />
-                  </Card>
-                </div>
-
-                {/* Dialog Footer Actions */}
-                <DialogFooter className="gap-2 sm:gap-0 mt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsDetailsOpen(false)}
-                  >
-                    Close
-                  </Button>
-                  {selectedRequest.status === "PENDING" && (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="destructive"
-                        onClick={() => {
-                          setRejectingRequest(selectedRequest);
-                          setRejectionReasonInput("");
-                        }}
-                      >
-                        Reject Request
-                      </Button>
-                      <Button
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                        onClick={() => setApprovingRequest(selectedRequest)}
-                      >
-                        Approve Request
-                      </Button>
-                    </div>
-                  )}
-                </DialogFooter>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
+        {/* Details Dialog */}
+        <ApprovalDetailsDialog
+          request={selectedRequest}
+          open={isDetailsOpen}
+          onOpenChange={setIsDetailsOpen}
+          requesterName={
+            selectedRequest
+              ? staffMap[Number(selectedRequest.requestedById)] ||
+                `Staff #${selectedRequest.requestedById}`
+              : ""
+          }
+          reviewerName={
+            selectedRequest?.reviewedById
+              ? staffMap[Number(selectedRequest.reviewedById)] ||
+                `Staff #${selectedRequest.reviewedById}`
+              : null
+          }
+          statusBadge={
+            selectedRequest ? getStatusBadge(selectedRequest.status) : null
+          }
+          onApprove={() => selectedRequest && setApprovingRequest(selectedRequest)}
+          onReject={() => {
+            if (!selectedRequest) return;
+            setRejectingRequest(selectedRequest);
+            setRejectionReasonInput("");
+          }}
+        />
 
         {/* Confirm Approve Modal */}
         <Dialog

@@ -41,3 +41,4 @@
 2026-11-18: Approval request dates use formatReceiptDate so the table and details match invoice timestamps.
 2026-11-18: Invoice history GET /transactions now sends search, page, and limit so list search and paging work.
 2026-11-18: Invoice list filter bar adds type and start/end dates; search placeholder is invoice # / receipt ID.
+2026-11-19: Approval details popup is now 500px with one close control, decision data first, and a collapsible raw payload.

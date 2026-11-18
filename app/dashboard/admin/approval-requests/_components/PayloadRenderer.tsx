@@ -1,3 +1,6 @@
+// Recursive viewer that renders any approval request payload as labelled fields, lists and tables.
+// Used inside the collapsible "All details" section of the approval details dialog.
+// Stacks label above value so it fits the ~500px popup without horizontal scrolling.
 'use client';
 
 import React from 'react';
@@ -122,51 +125,15 @@ export const PayloadRenderer: React.FC<PayloadRendererProps> = ({ data, level = 
   }
 
   // Handle Objects
-  const entries = Object.entries(data);
+  const entries = Object.entries(data).filter(
+    ([, value]) => value !== null && value !== undefined && value !== '',
+  );
   if (entries.length === 0) {
     return <span className="text-muted-foreground italic text-xs">Empty Object</span>;
   }
 
-  // Check if data is or contains paymentBreakdown at root
-  const paymentBreakdown = data.paymentBreakdown || data.payment_breakdown;
-
   return (
     <div className={`space-y-2 ${level > 0 ? 'pl-2 border-l-2 border-primary/20 my-1' : ''}`}>
-      {/* Explicit Payment Breakdown Card if present at top level */}
-      {paymentBreakdown && level === 0 && (
-        <div className="mb-4 rounded-md border border-amber-300/60 bg-amber-500/10 p-3.5 space-y-2.5">
-          <div className="flex items-center justify-between pb-1 border-b border-amber-500/20">
-            <span className="font-heading font-bold text-xs uppercase tracking-wider text-amber-800 dark:text-amber-400">
-              Payment Breakdown
-            </span>
-            <Badge variant="outline" className="text-[10px] font-mono border-amber-500/40 text-amber-800 dark:text-amber-300">
-              Pre-computed
-            </Badge>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            <div className="p-2.5 rounded bg-background/80 border border-border">
-              <span className="text-[11px] text-muted-foreground block font-medium">Credit Debt Cancellation</span>
-              <span className="font-mono text-sm font-bold text-foreground tabular-nums">
-                ₱{Number(paymentBreakdown.creditDebtCancellation ?? paymentBreakdown.credit_debt_cancellation ?? paymentBreakdown.creditDebtReduction ?? paymentBreakdown.credit_debt_reduction ?? paymentBreakdown.credit ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-            </div>
-            <div className="p-2.5 rounded bg-background/80 border border-border">
-              <span className="text-[11px] text-muted-foreground block font-medium">Cash Payout</span>
-              <span className="font-mono text-sm font-bold text-foreground tabular-nums">
-                ₱{Number(paymentBreakdown.cashPayout ?? paymentBreakdown.cash_payout ?? paymentBreakdown.cashPayoutAmount ?? paymentBreakdown.cash_payout_amount ?? paymentBreakdown.cash ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-            </div>
-          </div>
-          {(paymentBreakdown.totalRefund !== undefined || paymentBreakdown.total_refund !== undefined || paymentBreakdown.totalRefundAmount !== undefined || paymentBreakdown.total_refund_amount !== undefined) && (
-            <div className="flex justify-between items-center pt-1 border-t border-amber-500/20 text-xs">
-              <span className="text-muted-foreground font-medium">Total Refund:</span>
-              <span className="font-mono font-bold text-foreground tabular-nums">
-                ₱{Number(paymentBreakdown.totalRefund ?? paymentBreakdown.total_refund ?? paymentBreakdown.totalRefundAmount ?? paymentBreakdown.total_refund_amount ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-            </div>
-          )}
-        </div>
-      )}
       {entries.map(([key, value]) => {
         const isComplex = typeof value === 'object' && value !== null;
 
@@ -176,10 +143,10 @@ export const PayloadRenderer: React.FC<PayloadRendererProps> = ({ data, level = 
             className={
               isComplex
                 ? 'col-span-full mt-2'
-                : 'flex flex-col sm:flex-row sm:items-start justify-between gap-1 py-1 border-b border-border/40 last:border-0'
+                : 'flex flex-col gap-0.5 py-1 border-b border-border/40 last:border-0'
             }
           >
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[130px] shrink-0 break-all pt-0.5">
+            <span className="text-[11px] font-mono font-semibold text-muted-foreground uppercase tracking-wider break-words">
               {formatTitle(key)}:
             </span>
             <div className="flex-1 min-w-0 break-words">
