@@ -118,6 +118,7 @@ export function InvoiceFilterBar({
           </Select>
         </div>
 
+
         <DateRangeFilter
           startDate={filters.startDate}
           endDate={filters.endDate}
@@ -129,6 +130,7 @@ export function InvoiceFilterBar({
           }
           label="Date range"
         />
+
 
         {hasActiveFilters && (
           <Button

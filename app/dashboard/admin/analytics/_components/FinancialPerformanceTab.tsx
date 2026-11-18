@@ -77,9 +77,6 @@ export function FinancialPerformanceTab({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          Revenue and net profit trends with payment method mix.
-        </p>
         <div className="flex items-center gap-3">
           <UpdatingBadge show={refreshing} />
           <span className="text-xs text-muted-foreground">Interval</span>

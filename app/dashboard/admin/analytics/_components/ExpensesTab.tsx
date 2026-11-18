@@ -123,7 +123,7 @@ export function ExpensesTab({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <Select
-          value={category || "all"}
+          value={category || "All Categories"}
           onValueChange={(value) =>
             setCategory(value === "all" ? "" : (value as ExpenseCategory))
           }
@@ -144,12 +144,12 @@ export function ExpensesTab({
         </Select>
 
         <Select
-          value={paymentMethod || "all"}
+          value={paymentMethod || "All Payment Methods"}
           onValueChange={(value) =>
             setPaymentMethod(value === "all" ? "" : (value as PaymentMethod))
           }
         >
-          <SelectTrigger className="h-8 w-[160px] text-xs">
+          <SelectTrigger className="h-8 w-[200px] text-xs">
             <SelectValue placeholder="All payment methods" />
           </SelectTrigger>
           <SelectContent>
@@ -167,7 +167,7 @@ export function ExpensesTab({
         <UpdatingBadge show={refreshing} />
         <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
           <span>Total OpEx</span>
-          <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+          <span className="text-sm font-semibold tabular-nums text-foreground">
             {formatPeso(data.total_opex)}
           </span>
         </div>
@@ -180,7 +180,8 @@ export function ExpensesTab({
       )}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
+        <div>
+          <Card className="lg:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Spending by Category</CardTitle>
           </CardHeader>
@@ -232,7 +233,7 @@ export function ExpensesTab({
                       <span className="truncate text-muted-foreground">
                         {EXPENSE_CATEGORY_LABELS[entry.category] ?? entry.category}
                       </span>
-                      <span className="font-mono tabular-nums">
+                      <span className=" tabular-nums">
                         {formatPeso(entry.total_amount)}{" "}
                         <span className="text-muted-foreground">
                           ({entry.percentage_share.toFixed(1)}%)
@@ -247,13 +248,15 @@ export function ExpensesTab({
             )}
           </CardContent>
         </Card>
+        </div>
 
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-2">
+        <div className="lg:col-span-2">
+          <Card className="lg:col-span-2">
+          <CardHeader className="">
             <CardTitle className="text-sm">Itemized Expense Ledger</CardTitle>
           </CardHeader>
-          <CardContent className="px-0">
-            <div className="overflow-x-auto">
+          <CardContent className="">
+            <div className="rounded-md border bg-card overflow-x-auto">
               <Table>
                 <TableHeader className="bg-muted/50">
                   <TableRow>
@@ -318,6 +321,7 @@ export function ExpensesTab({
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );

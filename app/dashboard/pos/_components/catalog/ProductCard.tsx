@@ -4,6 +4,13 @@ import { useState } from "react";
 import type { CatalogProduct } from "./PosCatalog";
 import { formatPeso } from "@/lib/pos";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ProductCardProps {
   product: CatalogProduct;
@@ -24,6 +31,15 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
     (product.uoms ?? []).some(
       (u) => u.uom && u.uom.toUpperCase() !== baseUom.toUpperCase(),
     );
+  const availableUoms = Array.from(
+    new Map(
+      [
+        baseUom,
+        pricingUom,
+        ...(product.uoms ?? []).map((u) => u.uom).filter(Boolean),
+      ].map((uom) => [uom.toUpperCase(), uom]),
+    ).values(),
+  );
 
   // Resolve the price for a given UoM directly from backend data:
   //   • For the base UoM → use product.retailPrice (retail_price from API, per base unit)
@@ -56,9 +72,6 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
     return Number((basePrice * (factor || 1)).toFixed(2));
   };
 
-  
-
-  
   const getConversionFactor = (uom: string) => {
     if (uom.toUpperCase() === baseUom.toUpperCase()) return 1;
 
@@ -75,7 +88,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
 
     return factor > 0 ? factor : 1;
   };
-   const totalBaseStock =
+  const totalBaseStock =
     typeof product.current_quantity === "number" ? product.current_quantity : 0;
 
   const canSellUom = (uom: string) =>
@@ -85,12 +98,11 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
     canSellUom(pricingUom) ? pricingUom : baseUom,
   );
 
-
   // Conversion factor for stock display: how many base units = 1 of selectedUom
   const conversionFactor = getConversionFactor(selectedUom);
 
   // Compute dynamic stock availability: current_quantity / conversion_factor
- 
+
   const rawAvailableStock = totalBaseStock / conversionFactor;
   const availableStock =
     conversionFactor > 1
@@ -193,52 +205,32 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         </div>
 
         {/* UoM Switcher if alternate UoM exists */}
-        {hasAlternateUom ? (
-          <div
-            className="flex items-center gap-0.5 bg-muted/80 p-0.5 rounded-[3px] border border-border"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              onClick={(e) => handleUomToggle(e, baseUom)}
-              className={`px-1.5 py-0.5 text-[9px] font-mono font-bold rounded-[2px] transition-colors ${
-                selectedUom.toUpperCase() === baseUom.toUpperCase()
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              } ${!canSellUom(baseUom) ? "opacity-40" : ""}`}
-              title={`Switch to Base unit (${baseUom})`}
-              disabled={!canSellUom(baseUom)}
-            >
-              {baseUom}
-            </button>
-            <button
+        <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-1">
+          <Select
+            value={selectedUom}
+            onValueChange={(value) => {
+              if (value !== null) setSelectedUom(value);
+            }}
             
-              type="button"
-              onClick={(e) => handleUomToggle(e, pricingUom)}
-              className={`px-1.5 py-0.5 text-[9px] font-mono font-bold rounded-[2px] transition-colors  ${
-                selectedUom.toUpperCase() === pricingUom.toUpperCase()
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              } ${!canSellUom(pricingUom) ? "opacity-40" : ""}`}
-              title={`Switch unit`}
-              disabled={!canSellUom(pricingUom)}
-            >
-              {pricingUom}
-            </button>
-          </div>
-        ) : <button
-              type="button"
-              onClick={(e) => handleUomToggle(e, baseUom)}
-              className={`px-1.5 py-0.5 text-[9px] font-mono font-bold rounded-[2px] transition-colors ${
-                selectedUom.toUpperCase() === baseUom.toUpperCase()
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              } ${!canSellUom(baseUom) ? "opacity-40" : ""}`}
-              title={`Switch to Base unit (${baseUom})`}
-              disabled={!canSellUom(baseUom)}
-            >
-              {baseUom}
-            </button>}
+          >
+            <SelectTrigger className=" w-[82px]  text-[9px] font-mono font-bold p-1" >
+              <SelectValue className=" p-1 rounded-lg  justify-center bg-primary text-white border border-primary/20" />
+            </SelectTrigger>
+            <SelectContent side="bottom" alignItemWithTrigger={false} className="max-w-[82px] min-w-0">
+              {availableUoms.map((uom) => (
+                <SelectItem
+                  key={uom.toUpperCase()}
+                  value={uom}
+                  disabled={!canSellUom(uom)}
+                  className="text-xs max-w-[82px] "
+                  
+                >
+                  {uom}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
     </div>
   );
