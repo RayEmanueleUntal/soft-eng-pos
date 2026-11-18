@@ -6,6 +6,7 @@
 
 import { RefreshCw, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -117,31 +118,19 @@ export function InvoiceFilterBar({
           </Select>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <Label>Date range</Label>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground">From:</span>
-            <Input
-              type="date"
-              value={filters.startDate}
-              max={filters.endDate || undefined}
-              onChange={(e) =>
-                onFiltersChange({ ...filters, startDate: e.target.value })
-              }
-              className="h-8 w-[125px] font-mono text-xs rounded-[2px]"
-            />
-            <span className="text-xs text-muted-foreground">To:</span>
-            <Input
-              type="date"
-              value={filters.endDate}
-              min={filters.startDate || undefined}
-              onChange={(e) =>
-                onFiltersChange({ ...filters, endDate: e.target.value })
-              }
-              className="h-8 w-[125px] font-mono text-xs rounded-[2px]"
-            />
-          </div>
-        </div>
+
+        <DateRangeFilter
+          startDate={filters.startDate}
+          endDate={filters.endDate}
+          onStartDateChange={(startDate) =>
+            onFiltersChange({ ...filters, startDate })
+          }
+          onEndDateChange={(endDate) =>
+            onFiltersChange({ ...filters, endDate })
+          }
+          label="Date range"
+        />
+
 
         {hasActiveFilters && (
           <Button
