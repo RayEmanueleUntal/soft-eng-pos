@@ -36,3 +36,4 @@
 2026-11-06: Purchase Orders create form: dropped the Use default button; empty factor on blur restores the catalog lock.
 2026-11-18: Receipt GET maps Decimal amounts and include* flags so returns/print totals are not ₱0.00; pending ₱ aliases only.
 2026-11-18: Return rows show qty with UoM; full refunds use FULLY REFUNDED ₱0.00 on the on-screen summary.
+2026-11-18: Invoice page skips Sale Completed; refund-all remaining, INV- header, hide ₱0 credit, sticky footers, Open invoice.

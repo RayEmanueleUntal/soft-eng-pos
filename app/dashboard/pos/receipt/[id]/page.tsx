@@ -1,25 +1,40 @@
 "use client";
 
+// Invoice detail for a completed POS sale: print, refund, and exchange without the checkout hop.
+// Loads GET receipt plus pending/approved return payloads so cashiers see live totals.
+// Refund and Exchange open classmate modals directly from this page footer.
+
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PrintableInvoice } from "./_components/PrintableInvoice";
-import { ReceiptModal } from "./_components/ReceiptModal";
 import { ReceiptSummaryCard } from "./_components/ReceiptSummaryCard";
 import { RefundModal } from "./_components/return/RefundModal";
 import { ExchangeModal } from "./_components/return/ExchangeModal";
-import {
-  fetchReceiptApi,
-  type Receipt,
-  type ReceiptReturn,
-  type ReceiptExchange,
-} from "@/lib/pos";
-import {
-  getApprovalRequests,
-  type ApprovalRequestResponseDto,
-} from "@/lib/approval/approval-api";
+import { fetchReceiptApi, type Receipt } from "@/lib/pos";
+import { getApprovalRequests } from "@/lib/approval/approval-api";
 import { ArrowLeft, Printer, Loader2, AlertCircle } from "lucide-react";
 import { getErrorMessage } from "@/lib/utils";
+
+/** Prefers the backend invoice_number, then INV-{transactionId}. */
+function getInvoiceHeading(receipt: Receipt | null, routeId: string): string {
+  if (!receipt) return `INV-${routeId}`;
+  return (
+    receipt.invoice_number || `INV-${receipt.transactionId ?? routeId}`
+  );
+}
+
+/** Reads credit-cancellation aliases from a pending return breakdown. */
+function getPendingCreditAmount(breakdown: Record<string, unknown>): number {
+  return Number(
+    breakdown.creditDebtCancellation ??
+      breakdown.credit_debt_cancellation ??
+      breakdown.creditDebtReduction ??
+      breakdown.credit_debt_reduction ??
+      breakdown.credit ??
+      0,
+  );
+}
 
 export default function ReceiptPage() {
   const params = useParams();
@@ -29,7 +44,6 @@ export default function ReceiptPage() {
   const [loading, setLoading] = useState(true);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const [refundModalOpen, setRefundModalOpen] = useState(false);
   const [exchangeModalOpen, setExchangeModalOpen] = useState(false);
   const [hasPendingApproval, setHasPendingApproval] = useState(false);
@@ -257,7 +271,7 @@ export default function ReceiptPage() {
           </Button>
           <div className="h-6 w-px bg-border" />
           <h1 className="text-[24px] font-bold font-heading tracking-tight text-foreground">
-            Invoice #{id}
+            {getInvoiceHeading(receipt, id)}
           </h1>
         </div>
       </div>
@@ -329,26 +343,29 @@ export default function ReceiptPage() {
                     PENDING APPROVAL
                   </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <div className="rounded border border-amber-200 bg-white/80 p-2.5">
-                    <span className="text-muted-foreground block text-[11px] mb-1">
-                      Credit Debt Cancellation
-                    </span>
-                    <span className="font-mono text-sm font-bold text-foreground">
-                      ₱
-                      {Number(
-                        pendingBreakdown.creditDebtCancellation ??
-                          pendingBreakdown.credit_debt_cancellation ??
-                          pendingBreakdown.creditDebtReduction ??
-                          pendingBreakdown.credit_debt_reduction ??
-                          pendingBreakdown.credit ??
-                          0,
-                      ).toLocaleString("en-PH", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
-                  </div>
+                <div
+                  className={`grid grid-cols-1 gap-3 pt-1 ${
+                    getPendingCreditAmount(pendingBreakdown) !== 0
+                      ? "sm:grid-cols-2"
+                      : ""
+                  }`}
+                >
+                  {getPendingCreditAmount(pendingBreakdown) !== 0 && (
+                    <div className="rounded border border-amber-200 bg-white/80 p-2.5">
+                      <span className="text-muted-foreground block text-[11px] mb-1">
+                        Credit Debt Cancellation
+                      </span>
+                      <span className="font-mono text-sm font-bold text-foreground">
+                        ₱
+                        {getPendingCreditAmount(
+                          pendingBreakdown,
+                        ).toLocaleString("en-PH", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                  )}
                   <div className="rounded border border-amber-200 bg-white/80 p-2.5">
                     <span className="text-muted-foreground block text-[11px] mb-1">
                       Cash Payout
@@ -419,10 +436,19 @@ export default function ReceiptPage() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => setSummaryModalOpen(true)}
+                onClick={() => setRefundModalOpen(true)}
+                disabled={hasPendingApproval}
                 className="rounded-[4px] text-xs border-input hover:bg-muted"
               >
-                Process Refund / Exchange
+                Refund
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setExchangeModalOpen(true)}
+                disabled={hasPendingApproval}
+                className="rounded-[4px] text-xs border-input hover:bg-muted"
+              >
+                Exchange
               </Button>
               <Button
                 onClick={handlePrint}
@@ -441,23 +467,8 @@ export default function ReceiptPage() {
         </div>
       )}
 
-      {/* Return Modals & Summary Modal */}
       {receipt && (
         <>
-          <ReceiptModal
-            open={summaryModalOpen}
-            onOpenChange={setSummaryModalOpen}
-            receipt={receipt}
-            onNewSale={() => router.push("/dashboard/pos")}
-            onProcessRefund={() => {
-              setSummaryModalOpen(false);
-              setRefundModalOpen(true);
-            }}
-            onProcessExchange={() => {
-              setSummaryModalOpen(false);
-              setExchangeModalOpen(true);
-            }}
-          />
           <RefundModal
             open={refundModalOpen}
             onOpenChange={setRefundModalOpen}

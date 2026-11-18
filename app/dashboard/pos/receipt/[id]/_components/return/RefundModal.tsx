@@ -1,7 +1,10 @@
 "use client";
 
+// Cashier refund request modal for one SKU or every remaining line on an invoice.
+// Posts CreateRefundDto.items[] to POST /returns/refund and waits for manager approval.
+// Single-item form is unchanged; Refund all remaining reuses condition and reason.
+
 import { useState, useMemo, useEffect } from "react";
-import axios from "axios";
 import {
   Dialog,
   DialogContent,
@@ -26,11 +29,35 @@ import { getErrorMessage } from "@/lib/utils";
 import {
   ItemCondition,
   type Receipt,
+  type ReceiptItem,
   type CreateRefundDto,
+  type CreateRefundItemDto,
   type ReturnResponse,
   processRefund,
   usePosCatalog,
 } from "@/lib/pos";
+
+/** Remaining refundable qty for a receipt line (item flag vs recorded returns). */
+function remainingForItem(item: ReceiptItem, receipt: Receipt): number {
+  const fromItem = item.already_returned_qty ?? 0;
+  const fromReceiptReturns =
+    receipt.returns
+      ?.filter((r) => r.productId === item.productId)
+      .reduce((sum, r) => sum + (r.quantity || 0), 0) ?? 0;
+  const already = Math.max(fromItem, fromReceiptReturns);
+  return Math.max(0, item.quantity - already);
+}
+
+/** Purchased selling UoM for a line, used on refund payloads. */
+function purchasedUomFor(item: ReceiptItem): string {
+  return (
+    item.unit_of_measure ||
+    item.pricing_uom ||
+    "PCS"
+  )
+    .toString()
+    .toUpperCase();
+}
 
 interface RefundModalProps {
   open: boolean;
@@ -58,22 +85,16 @@ export function RefundModal({
   const selectedItem =
     selectedItemIndex !== null ? receipt.items[selectedItemIndex] : null;
 
-  // Calculate already returned quantity including recorded returns
-  const alreadyReturned = useMemo(() => {
-    if (!selectedItem) return 0;
-    const fromItem = selectedItem.already_returned_qty ?? 0;
-    const fromReceiptReturns =
-      receipt.returns
-        ?.filter((r) => r.productId === selectedItem.productId)
-        .reduce((sum, r) => sum + (r.quantity || 0), 0) ?? 0;
-    return Math.max(fromItem, fromReceiptReturns);
-  }, [selectedItem, receipt.returns]);
-
-  // Remaining refundable quantity on this transaction
-  const maxQuantity = Math.max(
-    0,
-    (selectedItem?.quantity ?? 0) - alreadyReturned,
+  const remainingLines = useMemo(
+    () =>
+      receipt.items.filter((item) => remainingForItem(item, receipt) > 0),
+    [receipt],
   );
+
+  // Remaining refundable quantity on the selected line
+  const maxQuantity = selectedItem
+    ? remainingForItem(selectedItem, receipt)
+    : 0;
 
   // Derive allowed UoMs strictly restricted to: [purchasedUom, baseUom]
   const allowedUoms = useMemo(() => {
@@ -194,10 +215,61 @@ export function RefundModal({
     }
   };
 
+  /** Submits every unfinished line in one POST using shared condition/reason. */
+  const handleRefundAllRemaining = async () => {
+    if (remainingLines.length === 0) {
+      setError("There are no remaining quantities to refund.");
+      return;
+    }
+
+    if (!condition) {
+      setError("Please select an item condition (Defective or Change of Mind).");
+      return;
+    }
+
+    if (reason.trim().length < 5) {
+      setError("Please provide a return reason (minimum 5 characters).");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const items: CreateRefundItemDto[] = remainingLines.map((item) => {
+        const uom = purchasedUomFor(item);
+        return {
+          productId: Number(item.productId),
+          quantity: remainingForItem(item, receipt),
+          condition,
+          reason: `${reason.trim()} (UoM: ${uom})`,
+          uom,
+        };
+      });
+      const requestPayload: CreateRefundDto = {
+        transactionId: Number(receipt.transactionId),
+        items,
+      };
+      const response: ReturnResponse = await processRefund(requestPayload);
+      onSuccess(response.approvalRequestId);
+      handleClose();
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to submit refund request."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const canRefundAll =
+    remainingLines.length >= 1 &&
+    !!condition &&
+    reason.trim().length >= 5 &&
+    !isSubmitting;
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
-      <DialogContent className="sm:max-w-[520px] rounded-[4px] border border-input shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
-        <DialogHeader>
+      <DialogContent className="flex flex-col sm:max-w-[520px] max-h-[85vh] overflow-hidden rounded-[4px] border border-input shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="text-xl font-bold font-heading text-center">
             Process Refund
           </DialogTitle>
@@ -206,7 +278,7 @@ export function RefundModal({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Error Alert */}
+        <div className="min-h-0 flex-1 overflow-y-auto space-y-3.5 pr-1">
         {error && (
           <div className="flex items-center gap-2 text-xs font-medium text-destructive bg-destructive/10 border border-destructive/30 p-2.5 rounded-[4px]">
             <AlertCircle className="h-4 w-4 shrink-0" />
@@ -238,12 +310,7 @@ export function RefundModal({
               </SelectTrigger>
               <SelectContent>
                 {receipt.items.map((item, index) => {
-                  const itemReturned =
-                    (item.already_returned_qty ?? 0) +
-                    (receipt.returns
-                      ?.filter((r) => r.productId === item.productId)
-                      .reduce((sum, r) => sum + (r.quantity || 0), 0) ?? 0);
-                  const remaining = Math.max(0, item.quantity - itemReturned);
+                  const remaining = remainingForItem(item, receipt);
 
                   return (
                     <SelectItem
@@ -330,7 +397,7 @@ export function RefundModal({
             <Select
               value={condition || ""}
               onValueChange={(value) => setCondition(value as ItemCondition)}
-              disabled={!selectedItem}
+              disabled={!selectedItem && remainingLines.length === 0}
             >
               <SelectTrigger id="condition" className="w-full rounded-[4px] text-xs h-8">
                 <SelectValue placeholder="Select condition">
@@ -362,7 +429,7 @@ export function RefundModal({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Describe the defect or reason for the refund request..."
-              disabled={!selectedItem}
+              disabled={!selectedItem && remainingLines.length === 0}
               className="rounded-[4px] text-xs min-h-[70px]"
               maxLength={500}
             />
@@ -371,8 +438,16 @@ export function RefundModal({
             </p>
           </div>
         </div>
+        </div>
 
-        <DialogFooter className="gap-2 pt-2">
+        {remainingLines.length >= 1 && (
+          <p className="shrink-0 text-[10px] text-muted-foreground font-sans">
+            This will request a refund of {remainingLines.length} line(s). Fill
+            condition and reason, then Refund all remaining.
+          </p>
+        )}
+
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card pt-3">
           <Button
             type="button"
             variant="outline"
@@ -382,6 +457,17 @@ export function RefundModal({
           >
             Cancel
           </Button>
+          {remainingLines.length >= 1 && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleRefundAllRemaining}
+              disabled={!canRefundAll}
+              className="rounded-[4px] text-xs border-input hover:bg-muted"
+            >
+              Refund all remaining
+            </Button>
+          )}
           <Button
             type="button"
             onClick={handleSubmit}

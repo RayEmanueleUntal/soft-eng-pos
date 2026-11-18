@@ -1,5 +1,9 @@
 "use client";
 
+// Cashier exchange request modal for 1-to-1 same-SKU replacement on an invoice.
+// Posts to POST /returns/exchange and waits for manager approval.
+// Footer stays pinned so Submit remains visible on short screens.
+
 import { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
@@ -221,8 +225,8 @@ export function ExchangeModal({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
-      <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto rounded-[4px] border border-input shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
-        <DialogHeader>
+      <DialogContent className="flex flex-col sm:max-w-[520px] max-h-[85vh] overflow-hidden rounded-[4px] border border-input shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="text-xl font-bold font-heading text-center">
             Process Exchange
           </DialogTitle>
@@ -231,6 +235,7 @@ export function ExchangeModal({
           </DialogDescription>
         </DialogHeader>
 
+        <div className="min-h-0 flex-1 overflow-y-auto space-y-3.5 pr-1">
         {/* Informational Callout for Cashier */}
         <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 p-2.5 rounded-[4px] text-xs leading-relaxed">
           <Info className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" />
@@ -455,8 +460,9 @@ export function ExchangeModal({
             </div>
           </div>
         </div>
+        </div>
 
-        <DialogFooter className="gap-2 pt-2">
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card pt-3">
           <Button
             type="button"
             variant="outline"
