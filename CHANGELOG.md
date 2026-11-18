@@ -34,3 +34,5 @@
 2026-11-06: Purchase Orders create form: shortened the line-items helper to one sentence.
 2026-11-06: Purchase Orders create form: Yes/No confirm after editing a conversion factor that differs from the product record.
 2026-11-06: Purchase Orders create form: dropped the Use default button; empty factor on blur restores the catalog lock.
+2026-11-18: Invoice history GET /transactions now sends search, page, and limit so list search and paging work.
+2026-11-18: Invoice list filter bar adds type and start/end dates; search placeholder is invoice # / receipt ID.
