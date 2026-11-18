@@ -92,6 +92,15 @@ export async function fetchSuppliers(params?: {
   };
 }
 
+export async function fetchSupplierById(
+  id: string | number,
+): Promise<Supplier> {
+  const response = await apiClient.get<Supplier>(`/suppliers/${id}`);
+  return mapSupplier(response.data);
+}
+
+// In src/lib/suppliers/suppliers.ts
+
 export async function createSupplier(
   data: SupplierFormData,
 ): Promise<Supplier> {
@@ -105,14 +114,11 @@ export async function createSupplier(
     is_active: data.status ? data.status === "ACTIVE" : true,
   };
 
-  const response = await apiClient.post<Supplier>("/suppliers", payload);
-  return mapSupplier(response.data);
-}
-
-export async function fetchSupplierById(
-  id: string | number,
-): Promise<Supplier> {
-  const response = await apiClient.get<Supplier>(`/suppliers/${id}`);
+  const response = await apiClient.post<Supplier>("/suppliers", payload, {
+    headers: {
+      "Idempotency-Key": crypto.randomUUID(),
+    },
+  });
   return mapSupplier(response.data);
 }
 
@@ -132,15 +138,40 @@ export async function updateSupplier(
     payload.lead_time_days = Number(data.leadTimeDays) || 0;
   if (data.status !== undefined) payload.is_active = data.status === "ACTIVE";
 
-  const response = await apiClient.patch<Supplier>(`/suppliers/${id}`, payload);
+  const response = await apiClient.patch<Supplier>(`/suppliers/${id}`, payload, {
+    headers: {
+      "Idempotency-Key": crypto.randomUUID(),
+    },
+  });
   return mapSupplier(response.data);
 }
 
 export async function deleteSupplier(
   id: string | number,
-): Promise<{ message: string }> {
-  const response = await apiClient.delete<{ message: string }>(
-    `/suppliers/${id}`,
-  );
-  return response.data;
+): Promise<{ message: string; deactivated: boolean }> {
+  try {
+    const response = await apiClient.delete<{ message: string }>(
+      `/suppliers/${id}`,
+      {
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+      },
+    );
+    return {
+      message: response.data?.message || "Supplier permanently deleted.",
+      deactivated: false,
+    };
+  } catch (err: any) {
+    // 409 means the supplier has Purchase Order history and was auto-deactivated by the backend
+    if (err?.response?.status === 409) {
+      return {
+        message:
+          err.response?.data?.message ||
+          "Supplier has existing history and was marked as Inactive instead.",
+        deactivated: true,
+      };
+    }
+    throw err;
+  }
 }

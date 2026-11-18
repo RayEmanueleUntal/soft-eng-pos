@@ -39,3 +39,5 @@
 2026-11-18: Invoice page skips Sale Completed; refund-all remaining, INV- header, hide ₱0 credit, sticky footers, Open invoice.
 2026-11-18: Refund modal uses a line checklist plus Select all remaining; POST items omit uom so the API accepts bulk refunds.
 2026-11-18: Approval request dates use formatReceiptDate so the table and details match invoice timestamps.
+2026-11-18: Invoice history GET /transactions now sends search, page, and limit so list search and paging work.
+2026-11-18: Invoice list filter bar adds type and start/end dates; search placeholder is invoice # / receipt ID.

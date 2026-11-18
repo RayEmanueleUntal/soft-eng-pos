@@ -94,7 +94,7 @@ export default function AnalyticsPage() {
  
 
       {/* Global controls */}
-      <div className="bg-card p-6 rounded-lg shadow-sm border border-border flex flex-col gap-4">
+      <div className="bg-card p-4 rounded-lg shadow-sm border border-border flex gap-8">
         <div className="flex items-center gap-1">
           {DATE_PRESETS.map((preset) => (
             <Button

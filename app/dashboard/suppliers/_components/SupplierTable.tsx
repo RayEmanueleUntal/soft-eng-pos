@@ -3,7 +3,7 @@
 // Footer uses shared TablePagination at 15 rows per page.
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -14,12 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Search,
-  MoreVertical,
-  Plus,
-  ArrowUpDown
-} from "lucide-react";
+import { Search, MoreVertical, Plus } from "lucide-react";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
   DropdownMenu,
@@ -45,6 +40,8 @@ import {
 import { SupplierModal } from "./SupplierModal";
 import { SupplierDeleteDialog } from "./SupplierDeleteDialog";
 import { Label } from "@/components/ui/label";
+import { SortSelect, SortKey } from "@/components/ui/sort-select";
+import { sortItems } from "@/components/ui/sort-items";
 
 export function SupplierTable() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -57,9 +54,8 @@ export function SupplierTable() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalItems, setTotalItems] = useState<number>(0);
-  const [sortOrder, setSortOrder] = useState<"DEFAULT" | "ASC" | "DESC">("DEFAULT");
+  const [sortOrder, setSortOrder] = useState<SortKey>("DEFAULT");
   const pageSize = 15;
-  // Pagination & Filtering state
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -141,7 +137,13 @@ export function SupplierTable() {
       );
       setIsDeleteDialogOpen(false);
       setSupplierToDelete(null);
-      loadData();
+
+      // If permanently deleted and it was the only item on a page > 1, step back a page
+      if (!res.deactivated && suppliers.length === 1 && currentPage > 1) {
+        setCurrentPage((prev) => prev - 1);
+      } else {
+        loadData();
+      }
     } catch (err: any) {
       showFeedback(
         "error",
@@ -157,20 +159,17 @@ export function SupplierTable() {
     ALL: "All Status",
     ACTIVE: "Active",
     INACTIVE: "Inactive",
-  };  
-
-  //for filtering
-  const SORT_LABELS: Record<string, string> = {
-    DEFAULT: "Default Sort",
-    ASC: "Alphabetical A-Z",
-    DESC: "Alphabetical Z-A",
   };
 
-  const displayedSuppliers = [...suppliers].sort((a, b) => {
-    if (sortOrder === "ASC") return a.name.localeCompare(b.name);
-    if (sortOrder === "DESC") return b.name.localeCompare(a.name);
-    return 0;
-  });
+  const displayedSuppliers = useMemo(
+    () =>
+      sortItems(suppliers, sortOrder, {
+        getName: (s) => s.companyName || s.name || "",
+        getStock: (s) => Number(s.leadTimeDays ?? s.lead_time_days ?? 0),
+        getId: (s) => s.id,
+      }),
+    [suppliers, sortOrder],
+  );
 
   return (
     <div className="space-y-4">
@@ -233,28 +232,32 @@ export function SupplierTable() {
             </div>
 
             {/* Filters (Sort) */}
-            <div className="flex flex-col gap-2">
-              <Label>Sort</Label>
-              <Select
-                value={sortOrder}
-                onValueChange={(val) => {
-                  setSortOrder((val ?? "DEFAULT") as "DEFAULT" | "ASC" | "DESC");
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="w-full sm:w-[175px] !h-9 [&>svg:last-child]:hidden">
-                  <ArrowUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  <SelectValue placeholder="Sort">
-                    {SORT_LABELS[sortOrder] ?? "Sort"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent alignItemWithTrigger={false}>
-                  <SelectItem value="DEFAULT">Default Order</SelectItem>
-                  <SelectItem value="ASC">Alphabetical A-Z</SelectItem>
-                  <SelectItem value="DESC">Alphabetical Z-A</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <SortSelect
+              value={sortOrder}
+              onChange={(val) => {
+                setSortOrder(val);
+                setCurrentPage(1);
+              }}
+              showDefaultOption
+              options={[
+                "NAME_ASC",
+                "NAME_DESC",
+                "STOCK_ASC",
+                "STOCK_DESC",
+              ]}
+              labelOverrides={{
+                DEFAULT: { menuLabel: "Default Order" },
+                STOCK_ASC: {
+                  shortLabel: "Lead Low-High",
+                  menuLabel: "Lead Time Low to High",
+                },
+                STOCK_DESC: {
+                  shortLabel: "Lead High-Low",
+                  menuLabel: "Lead Time High to Low",
+                },
+              }}
+              triggerClassName="w-full sm:w-[175px] !h-9"
+            />
           </div>
 
           {/* Big Blue Button */}
@@ -281,7 +284,6 @@ export function SupplierTable() {
           Total records: {totalItems}
         </span>
       </div>
-
 
       {/* Table Container */}
       <div className="rounded-md border bg-card overflow-x-auto">
@@ -372,9 +374,6 @@ export function SupplierTable() {
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                             : "bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-300"
                         }`}
-
- 
-
                       >
                         {status}
                       </span>
@@ -384,7 +383,7 @@ export function SupplierTable() {
                         <DropdownMenuTrigger
                           className={buttonVariants({
                             variant: "ghost",
-                            className: "h-8 w-8 p-0",
+                            className: "9 w-8 p-0",
                           })}
                         >
                           <MoreVertical className="h-4 w-4 text-muted-foreground" />

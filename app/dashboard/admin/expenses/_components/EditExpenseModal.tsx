@@ -90,6 +90,10 @@ export function EditExpenseModal({
     e.preventDefault();
     setError("");
     if (amountError) return;
+    if (!values.date) {
+      setError("Date is required. Expenses always have a date.");
+      return;
+    }
 
     const changes = buildChanges(expense, values);
     if (Object.keys(changes).length === 0) {

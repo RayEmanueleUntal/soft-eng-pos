@@ -8,6 +8,8 @@ import { Edit2, Trash2, Loader2 } from "lucide-react";
 import { Forwarder } from "./types";
 import { Button } from "@/components/ui/button";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { SortKey } from "@/components/ui/sort-select";
+import { sortItems } from "@/components/ui/sort-items";
 
 interface ForwarderTableProps {
   data: Forwarder[];
@@ -16,6 +18,7 @@ interface ForwarderTableProps {
   totalPages: number;
   total: number;
   pageSize: number;
+  sort?: SortKey;
   onPageChange: (page: number) => void;
   onEdit: (forwarder: Forwarder) => void;
   onDelete: (forwarder: Forwarder) => void;
@@ -28,10 +31,28 @@ export function ForwarderTable({
   totalPages,
   total,
   pageSize,
+  sort = "DEFAULT",
   onPageChange,
   onEdit,
   onDelete,
 }: ForwarderTableProps) {
+  const sortedData = React.useMemo(() => {
+    if (sort === "DEFAULT") return data;
+
+    return [...data].sort((a, b) => {
+      const aName = (a.company_name ?? (a as any).companyName ?? "").trim();
+      const bName = (b.company_name ?? (b as any).companyName ?? "").trim();
+
+      if (sort === "NAME_ASC") {
+        return aName.localeCompare(bName, undefined, { sensitivity: "base" });
+      }
+      if (sort === "NAME_DESC") {
+        return bName.localeCompare(aName, undefined, { sensitivity: "base" });
+      }
+      return 0;
+    });
+  }, [data, sort]);
+
   return (
     <div className="space-y-4">
       {/*info subheading */}
@@ -66,14 +87,14 @@ export function ForwarderTable({
                   </div>
                 </td>
               </tr>
-            ) : data.length === 0 ? (
+            ) : sortedData.length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-12 text-center text-muted-foreground">
                   No forwarders found matching your criteria.
                 </td>
               </tr>
             ) : (
-              data.map((item) => (
+              sortedData.map((item) => (
                 <tr
                   key={item.id}
                   className="hover:bg-[#F8FAFC] transition-colors h-[36px]"
