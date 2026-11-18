@@ -93,11 +93,24 @@ export default function CashPaymentForm({ amountDue, onPaymentChange }: CashPaym
           id="cash-amount"
           type="number"
           step="any"
+          min="0"
+          max={amountDue}
           placeholder="0.00"
           value={amountToApply}
           onChange={(e) => {
-            const val = e.target.value === "" ? "" : Number(e.target.value);
-            setAmountToApply(val);
+            if (e.target.value === "") {
+              setAmountToApply("");
+              return;
+            }
+            const val = Number(e.target.value);
+            if (isNaN(val)) return;
+            if (val > amountDue) {
+              setAmountToApply(amountDue);
+            } else if (val < 0) {
+              setAmountToApply(0);
+            } else {
+              setAmountToApply(val);
+            }
           }}
           className="h-9 rounded-[4px] border-input font-mono text-sm"
         />
