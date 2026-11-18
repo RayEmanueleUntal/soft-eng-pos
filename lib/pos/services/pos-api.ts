@@ -563,8 +563,6 @@ export async function fetchTransactionsApi(options?: {
     const params: Record<string, string | number | boolean> = {
       page,
       limit,
-      includeReturns: true,
-      includeExchanges: true,
     };
     if (options?.search?.trim()) {
       params.search = options.search.trim();
