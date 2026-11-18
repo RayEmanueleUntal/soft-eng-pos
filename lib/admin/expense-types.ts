@@ -3,6 +3,16 @@
 // Used by expense-api.ts and the /dashboard/admin/expenses components.
 import type { ExpenseCategory, PaymentMethod } from "@/lib/analytics/types";
 
+// Title-cases a payment method enum for display ("BANK_TRANSFER" -> "Bank Transfer");
+// GCASH keeps its brand casing -> "GCash".
+export function formatPaymentMethodLabel(method: string): string {
+  const label = method
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+  return label === "Gcash" ? "GCash" : label;
+}
+
 export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   RENT: "Rent",
   UTILITIES: "Utilities",

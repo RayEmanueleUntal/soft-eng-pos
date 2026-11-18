@@ -60,14 +60,7 @@ export default function ExpensesPage() {
     return () => clearTimeout(timer);
   }, [notice]);
 
-  // Auto-dismiss error banner after 4 seconds
-  React.useEffect(() => {
-    if (!error) return;
-    const timer = setTimeout(() => setError(null), 4000);
-    return () => clearTimeout(timer);
-  }, [error]);
-
-  // Loads the current page of expenses for the active filters.
+  // Loads the current page of expenses for the active filters."}
   const loadExpenses = React.useCallback(async () => {
     const requestId = ++requestIdRef.current;
     if (rangeInvalid) {

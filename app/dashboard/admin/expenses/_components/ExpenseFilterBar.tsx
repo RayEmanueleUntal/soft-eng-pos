@@ -18,6 +18,7 @@ import {
 import {
   EMPTY_EXPENSE_FILTERS,
   EXPENSE_CATEGORY_LABELS,
+  formatPaymentMethodLabel,
   type ExpenseFilters,
 } from "@/lib/admin/expense-types";
 import {
@@ -127,7 +128,7 @@ export function ExpenseFilterBar({
                 {(value: string) =>
                   value === "ALL"
                     ? "All Payment Methods"
-                    : formatTitleCase(value)
+                    : formatPaymentMethodLabel(value)
                 }
               </SelectValue>
             </SelectTrigger>
@@ -137,12 +138,13 @@ export function ExpenseFilterBar({
               </SelectItem>
               {PAYMENT_METHODS.map((method) => (
                 <SelectItem key={method} value={method} className="text-xs">
-                  {formatTitleCase(method)}
+                  {formatPaymentMethodLabel(method)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
+
 
         <DateRangeFilter
           startDate={filters.startDate}

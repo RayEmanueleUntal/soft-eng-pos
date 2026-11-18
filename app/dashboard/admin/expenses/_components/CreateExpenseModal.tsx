@@ -19,6 +19,7 @@ import { createExpense } from "@/lib/admin/expense-api";
 import { ExpenseDto } from "@/lib/admin/expense-types";
 import { getErrorMessage } from "@/lib/utils";
 import {
+  currentDateInput,
   dateInputToIso,
   EMPTY_EXPENSE_FORM,
   ExpenseFormFields,
@@ -36,7 +37,10 @@ export function CreateExpenseModal({
   onClose,
   onCreated,
 }: CreateExpenseModalProps) {
-  const [values, setValues] = useState<ExpenseFormValues>(EMPTY_EXPENSE_FORM);
+  const [values, setValues] = useState<ExpenseFormValues>(() => ({
+    ...EMPTY_EXPENSE_FORM,
+    date: currentDateInput(),
+  }));
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -52,6 +56,10 @@ export function CreateExpenseModal({
     setSubmitted(true);
     setError("");
     if (validateAmount(values.amount) || !values.category) return;
+    if (!values.date) {
+      setError("Date is required.");
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -101,6 +109,7 @@ export function CreateExpenseModal({
             values={values}
             amountError={amountError}
             categoryError={categoryError}
+            dateRequired
             disabled={submitting}
             onChange={setValues}
           />

@@ -12,7 +12,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { EXPENSE_CATEGORY_LABELS } from "@/lib/admin/expense-types";
+import {
+  EXPENSE_CATEGORY_LABELS,
+  formatPaymentMethodLabel,
+} from "@/lib/admin/expense-types";
 import {
   EXPENSE_CATEGORIES,
   PAYMENT_METHODS,
@@ -72,8 +75,17 @@ interface ExpenseFormFieldsProps {
   values: ExpenseFormValues;
   amountError: string;
   categoryError?: string;
+  dateRequired?: boolean;
   disabled?: boolean;
   onChange: (values: ExpenseFormValues) => void;
+}
+
+// Returns today's date as a YYYY-MM-DD value for date inputs (local time).
+export function currentDateInput(): string {
+  const date = new Date();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
 }
 
 // Renders the amount, category, payment method, date and notes inputs.
@@ -82,6 +94,7 @@ export function ExpenseFormFields({
   values,
   amountError,
   categoryError = "",
+  dateRequired = false,
   disabled = false,
   onChange,
 }: ExpenseFormFieldsProps) {
@@ -158,13 +171,13 @@ export function ExpenseFormFields({
           >
             <SelectTrigger className={`h-8 w-full ${FIELD_CLASS}`}>
               <SelectValue>
-                {(value: string) => value.replace(/_/g, " ")}
+                {(value: string) => formatPaymentMethodLabel(value)}
               </SelectValue>
             </SelectTrigger>
             <SelectContent alignItemWithTrigger={false}>
               {PAYMENT_METHODS.map((method) => (
                 <SelectItem key={method} value={method}>
-                  {method.replace(/_/g, " ")}
+                  {formatPaymentMethodLabel(method)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -174,7 +187,12 @@ export function ExpenseFormFields({
 
       <div className="grid gap-1.5">
         <label htmlFor={`${idPrefix}-date`} className={labelClass}>
-          Date <span className="text-muted-foreground">(optional)</span>
+          Date{" "}
+          {dateRequired ? (
+            <span className="text-destructive">*</span>
+          ) : (
+            <span className="text-muted-foreground">(optional)</span>
+          )}
         </label>
         <Input
           id={`${idPrefix}-date`}
