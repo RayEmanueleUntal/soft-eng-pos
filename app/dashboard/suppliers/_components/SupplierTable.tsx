@@ -131,26 +131,32 @@ export function SupplierTable() {
   };
 
   const handleDelete = async () => {
-    if (!supplierToDelete) return;
-    try {
-      setActionLoading(true);
-      const res = await deleteSupplier(supplierToDelete.id);
-      showFeedback(
-        "success",
-        res.message || "Supplier processed successfully.",
-      );
-      setIsDeleteDialogOpen(false);
-      setSupplierToDelete(null);
-      loadData();
-    } catch (err: any) {
-      showFeedback(
-        "error",
-        err.response?.data?.message || "Failed to delete supplier.",
-      );
-    } finally {
-      setActionLoading(false);
-    }
-  };
+      if (!supplierToDelete) return;
+      try {
+        setActionLoading(true);
+        const res = await deleteSupplier(supplierToDelete.id);
+        showFeedback(
+          "success",
+          res.message || "Supplier processed successfully.",
+        );
+        setIsDeleteDialogOpen(false);
+        setSupplierToDelete(null);
+
+        // If permanently deleted and it was the only item on a page > 1, step back a page
+        if (!res.deactivated && suppliers.length === 1 && currentPage > 1) {
+          setCurrentPage((prev) => prev - 1);
+        } else {
+          loadData();
+        }
+      } catch (err: any) {
+        showFeedback(
+          "error",
+          err.response?.data?.message || "Failed to delete supplier.",
+        );
+      } finally {
+        setActionLoading(false);
+      }
+    };
 
   //for parsing status
   const STATUS_LABELS: Record<string, string> = {
