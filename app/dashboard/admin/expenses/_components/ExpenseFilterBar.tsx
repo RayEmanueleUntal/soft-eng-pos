@@ -3,10 +3,11 @@
 // Used only by /dashboard/admin/expenses.
 "use client";
 
-import { X } from "lucide-react";
+import { Plus, RefreshCw, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -25,10 +26,6 @@ import {
   type ExpenseCategory,
   type PaymentMethod,
 } from "@/lib/analytics/types";
-import { Label } from "@/components/ui/label";
-import { RefreshCw } from "lucide-react";
-import { Plus } from "lucide-react";
-
 
 interface ExpenseFilterBarProps {
   filters: ExpenseFilters;
@@ -67,7 +64,7 @@ export function ExpenseFilterBar({
       .toLowerCase()
       .replace(/\b\w/g, (char) => char.toUpperCase());
 
-return (
+  return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-end gap-2.5">
         <div className="flex flex-col gap-2">
@@ -147,31 +144,16 @@ return (
           </Select>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <Label>Date Range</Label>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground">From:</span>
-            <Input
-              type="date"
-              value={filters.startDate}
-              max={filters.endDate || undefined}
-              onChange={(e) =>
-                onFiltersChange({ ...filters, startDate: e.target.value })
-              }
-              className="h-8 w-[125px] font-mono text-xs rounded-[2px]"
-            />
-            <span className="text-xs text-muted-foreground">To:</span>
-            <Input
-              type="date"
-              value={filters.endDate}
-              min={filters.startDate || undefined}
-              onChange={(e) =>
-                onFiltersChange({ ...filters, endDate: e.target.value })
-              }
-              className="h-8 w-[125px] font-mono text-xs rounded-[2px]"
-            />
-          </div>
-        </div>
+        <DateRangeFilter
+          startDate={filters.startDate}
+          endDate={filters.endDate}
+          onStartDateChange={(startDate) =>
+            onFiltersChange({ ...filters, startDate })
+          }
+          onEndDateChange={(endDate) =>
+            onFiltersChange({ ...filters, endDate })
+          }
+        />
 
         {hasActiveFilters && (
           <Button

@@ -49,8 +49,8 @@ export function ReceiptModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[520px] bg-card print:hidden rounded-[4px] border border-input shadow-[0px_4px_0px_rgba(15,23,42,0.08)] max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="flex flex-col sm:max-w-[520px] bg-card print:hidden rounded-[4px] border border-input shadow-[0px_4px_0px_rgba(15,23,42,0.08)] max-h-[85vh] overflow-hidden">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="text-foreground font-heading font-bold text-xl">
               Sale Completed
             </DialogTitle>
@@ -60,9 +60,11 @@ export function ReceiptModal({
             </DialogDescription>
           </DialogHeader>
 
-          <ReceiptSummaryCard receipt={receipt} />
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            <ReceiptSummaryCard receipt={receipt} />
+          </div>
 
-          <DialogFooter className="gap-2 mt-4">
+          <DialogFooter className="shrink-0 gap-2 mt-0 border-t border-border bg-card pt-3">
             {onProcessRefund && (
               <Button
                 type="button"

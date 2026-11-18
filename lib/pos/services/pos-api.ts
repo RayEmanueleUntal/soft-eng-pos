@@ -28,6 +28,7 @@ import type {
   ProductCategoryItem,
 } from "../types/pos-types";
 import { getStoredUserName, useCurrentUserName } from "@/lib/auth/storage";
+import { mapReceiptPayload } from "../utils/map-receipt";
 
 // Re-export all types so consumers can import types and service functions together
 export type * from "../types/pos-types";
@@ -639,14 +640,14 @@ export async function fetchReceiptApi(id: string | number): Promise<Receipt> {
     ? `/transactions/receipt/${id}`
     : `/transactions/receipt/${numericId}`;
 
-  const response = await apiClient.get<Receipt>(endpoint, {
-  params: {
-    includeReturns: true,
-    includeExchanges: true,
-    includeShipments: true,
-  },
-});
-  return response.data;
+  const response = await apiClient.get(endpoint, {
+    params: {
+      includeReturns: true,
+      includeExchanges: true,
+      includeShipments: true,
+    },
+  });
+  return mapReceiptPayload(response.data);
 }
 
 /**

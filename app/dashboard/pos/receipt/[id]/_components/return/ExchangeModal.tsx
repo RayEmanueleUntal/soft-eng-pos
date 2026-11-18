@@ -1,6 +1,10 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+// Cashier exchange request modal for 1-to-1 same-SKU replacement on an invoice.
+// Groups receipt lines by productId into a pooled Base UoM balance.
+// Posts to POST /returns/exchange and waits for manager approval.
+
+import { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +31,7 @@ import type {
   ExchangeRequest,
   ReturnResponse,
   ItemCondition,
+  UnitOfMeasure,
 } from "@/lib/pos";
 import { processExchange, usePosCatalog } from "@/lib/pos";
 
@@ -37,6 +42,12 @@ interface ExchangeModalProps {
   onSuccess: (approvalRequestId: number) => void;
 }
 
+interface ExchangeLineDraft {
+  quantity: string;
+  unitOfMeasure: string;
+  reason: string;
+}
+
 export function ExchangeModal({
   open,
   onOpenChange,
@@ -44,93 +55,165 @@ export function ExchangeModal({
   onSuccess,
 }: ExchangeModalProps) {
   const { products } = usePosCatalog();
-  const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
-  const [quantity, setQuantity] = useState<string>("1");
-  const [selectedUom, setSelectedUom] = useState<string>("");
-  const [condition, setCondition] = useState<ItemCondition | null>(null);
-  const [reason, setReason] = useState("");
+  const [drafts, setDrafts] = useState<Record<number, ExchangeLineDraft>>({});
   const [allowStockOverride, setAllowStockOverride] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedItem =
-    selectedItemIndex !== null ? receipt.items[selectedItemIndex] : null;
+  // Group receipt lines by productId into a single pooled Base UoM balance per product
+  const itemMeta = useMemo(() => {
+    const grouped = new Map<
+      number,
+      {
+        productId: number;
+        productName: string;
+        totalPurchasedBase: number;
+        purchasedUoms: Set<string>;
+        baseUom: string;
+        uomConversions: Record<string, number>;
+      }
+    >();
 
-  // Calculate already returned / exchanged quantity
-  const alreadyReturned = useMemo(() => {
-    if (!selectedItem) return 0;
-    const fromItem = selectedItem.already_returned_qty ?? 0;
-    const fromReceiptReturns =
-      receipt.returns
-        ?.filter((r) => r.productId === selectedItem.productId)
-        .reduce((sum, r) => sum + (r.quantity || 0), 0) ?? 0;
-    const fromReceiptExchanges =
-      receipt.exchanges
-        ?.filter((e) => e.productId === selectedItem.productId)
-        .reduce((sum, e) => sum + (e.quantity || 0), 0) ?? 0;
-    return Math.max(fromItem, fromReceiptReturns + fromReceiptExchanges);
-  }, [selectedItem, receipt.returns, receipt.exchanges]);
+    for (const item of receipt.items) {
+      if (!item.productId) continue;
+      const pid = Number(item.productId);
+      const conv = Number(item.uom_conversion_factor) || 1;
+      const lineBase =
+        item.base_quantity_deducted !== undefined
+          ? Number(item.base_quantity_deducted)
+          : (item.quantity ?? 0) * conv;
 
-  const maxQuantity = Math.max(
-    0,
-    (selectedItem?.quantity ?? 0) - alreadyReturned,
+      const purchasedUom = (item.unit_of_measure || item.pricing_uom || "PCS")
+        .toString()
+        .toUpperCase();
+
+      const catalogProduct = products.find((p) => Number(p.id) === pid) ?? null;
+
+      const baseUom = (item.base_uom || catalogProduct?.base_uom || "PCS")
+        .toString()
+        .toUpperCase();
+
+      const existing = grouped.get(pid);
+      if (existing) {
+        existing.totalPurchasedBase += lineBase;
+        existing.purchasedUoms.add(purchasedUom);
+        existing.uomConversions[purchasedUom] = conv;
+      } else {
+        grouped.set(pid, {
+          productId: pid,
+          productName: item.product_name,
+          totalPurchasedBase: lineBase,
+          purchasedUoms: new Set([purchasedUom]),
+          baseUom,
+          uomConversions: {
+            [baseUom]: 1,
+            [purchasedUom]: conv,
+          },
+        });
+      }
+    }
+
+    return Array.from(grouped.values()).map((entry) => {
+      const returnedBase =
+        receipt.returns
+          ?.filter((r) => Number(r.productId) === entry.productId)
+          .reduce((sum, r) => sum + Number(r.quantity || 0), 0) ?? 0;
+
+      const exchangedBase =
+        receipt.exchanges
+          ?.filter((e) => Number(e.productId) === entry.productId)
+          .reduce((sum, e) => sum + Number(e.quantity || 0), 0) ?? 0;
+
+      const remainingBase = Math.max(
+        0,
+        Number(
+          (entry.totalPurchasedBase - returnedBase - exchangedBase).toFixed(3),
+        ),
+      );
+
+      const catalogProduct =
+        products.find((p) => Number(p.id) === entry.productId) ?? null;
+
+      const allowedUoms = Array.from(
+        new Set([entry.baseUom, ...entry.purchasedUoms]),
+      ).filter(Boolean);
+
+      const replacementStock =
+        catalogProduct?.current_quantity !== undefined
+          ? Number(catalogProduct.current_quantity)
+          : null;
+
+      return {
+        productId: entry.productId,
+        productName: entry.productName,
+        totalPurchasedBase: Number(entry.totalPurchasedBase.toFixed(3)),
+        remainingBase,
+        baseUom: entry.baseUom,
+        purchasedUoms: entry.purchasedUoms,
+        allowedUoms,
+        uomConversions: entry.uomConversions,
+        replacementStock,
+      };
+    });
+  }, [receipt.items, receipt.returns, receipt.exchanges, products]);
+
+  const selectedProductIds = useMemo(
+    () =>
+      Object.keys(drafts)
+        .map(Number)
+        .sort((a, b) => a - b),
+    [drafts],
   );
 
-  // Look up catalog product for base UoM & inventory stock
-  const catalogProduct = useMemo(() => {
-    if (!selectedItem) return null;
-    return (
-      products.find(
-        (p) => Number(p.id) === Number(selectedItem.productId),
-      ) ?? null
-    );
-  }, [selectedItem, products]);
+  const toggleProduct = (productId: number) => {
+    setError(null);
+    setDrafts((prev) => {
+      if (prev[productId]) {
+        const next = { ...prev };
+        delete next[productId];
+        return next;
+      }
+      const meta = itemMeta.find((m) => m.productId === productId);
+      if (!meta || meta.remainingBase <= 0) return prev;
+      return {
+        ...prev,
+        [productId]: {
+          quantity: "1",
+          unitOfMeasure: meta.baseUom || meta.allowedUoms[0] || "PCS",
+          reason: "",
+        },
+      };
+    });
+  };
 
-  // Restrict UoM strictly to purchased UoM and base UoM
-  const allowedUoms = useMemo(() => {
-    if (!selectedItem) return [];
-    const purchasedUom = (
-      selectedItem.unit_of_measure ||
-      selectedItem.pricing_uom ||
-      "PCS"
-    ).toString().toUpperCase();
+  const updateDraft = (
+    productId: number,
+    patch: Partial<ExchangeLineDraft>,
+  ) => {
+    setDrafts((prev) => {
+      const existing = prev[productId];
+      if (!existing) return prev;
+      return {
+        ...prev,
+        [productId]: { ...existing, ...patch },
+      };
+    });
+  };
 
-    const baseUom = (
-      selectedItem.base_uom ||
-      catalogProduct?.base_uom ||
-      purchasedUom
-    ).toString().toUpperCase();
-
-    return Array.from(new Set([purchasedUom, baseUom])).filter(Boolean);
-  }, [selectedItem, catalogProduct]);
-
-  // Auto-initialize UoM and Quantity when selected item changes
-  useEffect(() => {
-    if (selectedItem) {
-      const defaultUom =
-        selectedItem.unit_of_measure ||
-        selectedItem.pricing_uom ||
-        allowedUoms[0] ||
-        "PCS";
-      setSelectedUom(defaultUom.toString().toUpperCase());
-      setQuantity(maxQuantity > 0 ? "1" : "0");
-    }
-  }, [selectedItemIndex]);
-
-  // Stock sufficiency check for replacement
-  const replacementStock =
-    catalogProduct?.current_quantity !== undefined
-      ? Number(catalogProduct.current_quantity)
-      : null;
-  const isStockInsufficient =
-    replacementStock !== null && replacementStock < Number(quantity);
+  // Check if any selected item's converted base quantity exceeds available replacement stock
+  const anyStockInsufficient = useMemo(() => {
+    return selectedProductIds.some((pid) => {
+      const meta = itemMeta.find((m) => m.productId === pid);
+      const draft = drafts[pid];
+      if (!meta || !draft || meta.replacementStock === null) return false;
+      const conv = meta.uomConversions[draft.unitOfMeasure] ?? 1;
+      const requestedBase = Number(draft.quantity || 0) * conv;
+      return meta.replacementStock < requestedBase;
+    });
+  }, [selectedProductIds, itemMeta, drafts]);
 
   const resetForm = () => {
-    setSelectedItemIndex(null);
-    setQuantity("1");
-    setSelectedUom("");
-    setCondition(null);
-    setReason("");
+    setDrafts({});
     setAllowStockOverride(false);
     setError(null);
   };
@@ -142,70 +225,74 @@ export function ExchangeModal({
   };
 
   const handleSubmit = async () => {
-    if (selectedItemIndex === null || !selectedItem?.productId) {
-      setError("Please select an item to exchange.");
+    if (selectedProductIds.length === 0) {
+      setError("Please select at least one item to exchange.");
       return;
     }
 
-    const qty = Number(quantity);
-    if (isNaN(qty) || qty <= 0) {
-      setError("Quantity must be greater than 0.");
-      return;
-    }
+    const payloadItems: ExchangeRequest["items"] = [];
 
-    if (maxQuantity <= 0) {
-      setError("This item has already been fully returned or exchanged.");
-      return;
-    }
+    for (const pid of selectedProductIds) {
+      const meta = itemMeta.find((m) => m.productId === pid);
+      const draft = drafts[pid];
+      if (!meta || !draft) continue;
 
-    if (qty > maxQuantity) {
-      setError(`Quantity cannot exceed available quantity (${maxQuantity}).`);
-      return;
-    }
+      const qty = Number(draft.quantity);
+      if (isNaN(qty) || qty <= 0) {
+        setError(`Quantity for "${meta.productName}" must be greater than 0.`);
+        return;
+      }
 
-    if (!selectedUom) {
-      setError("Please select a Unit of Measure (UoM).");
-      return;
-    }
+      if (!draft.unitOfMeasure) {
+        setError(`Please select a Unit of Measure for "${meta.productName}".`);
+        return;
+      }
 
-    if (!condition) {
-      setError("Please select an item condition.");
-      return;
-    }
+      const conv = meta.uomConversions[draft.unitOfMeasure] ?? 1;
+      const requestedBase = Number((qty * conv).toFixed(3));
+      const maxForChosenUom = Number((meta.remainingBase / conv).toFixed(3));
 
-    if (reason.trim().length < 5) {
-      setError("Please provide a reason (minimum 5 characters).");
-      return;
-    }
+      if (requestedBase > meta.remainingBase) {
+        setError(
+          `Quantity for "${meta.productName}" cannot exceed available quantity (${maxForChosenUom} ${draft.unitOfMeasure} / ${meta.remainingBase} ${meta.baseUom}).`,
+        );
+        return;
+      }
 
-    // Require override toggle if stock is known and insufficient
-    if (isStockInsufficient && !allowStockOverride) {
-      setError(
-        `Replacement inventory is insufficient (Current stock: ${replacementStock}). Check "Manager Stock Override" to proceed.`,
-      );
-      return;
+      if (draft.reason.trim().length < 5) {
+        setError(
+          `Please provide a reason (minimum 5 characters) for "${meta.productName}".`,
+        );
+        return;
+      }
+
+      if (
+        meta.replacementStock !== null &&
+        meta.replacementStock < requestedBase &&
+        !allowStockOverride
+      ) {
+        setError(
+          `Insufficient replacement stock for "${meta.productName}" (Needs ${requestedBase} ${meta.baseUom}, In stock: ${meta.replacementStock} ${meta.baseUom}). Enable "Manager Stock Override" to proceed.`,
+        );
+        return;
+      }
+
+      payloadItems.push({
+        productId: meta.productId,
+        quantity: qty,
+        unit_of_measure: draft.unitOfMeasure as UnitOfMeasure,
+        condition: "DEFECTIVE" as ItemCondition,
+        reason: draft.reason.trim(),
+      });
     }
 
     setIsSubmitting(true);
     setError(null);
 
     try {
-      const formattedReason = selectedUom
-        ? `${reason.trim()} (UoM: ${selectedUom})`
-        : reason.trim();
-
       const request: ExchangeRequest = {
         transactionId: Number(receipt.transactionId),
-        items: [
-          {
-            productId: Number(selectedItem.productId),
-            quantity: qty,
-            condition,
-            reason: formattedReason,
-          },
-        ],
-        newProductId: Number(selectedItem.productId),
-        newQuantity: qty,
+        items: payloadItems,
         allowStockOverride: Boolean(allowStockOverride),
       };
 
@@ -221,242 +308,246 @@ export function ExchangeModal({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
-      <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto rounded-[4px] border border-input shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
-        <DialogHeader>
+      <DialogContent className="flex flex-col sm:max-w-[560px] max-h-[85vh] overflow-hidden rounded-[4px] border border-input shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="text-xl font-bold font-heading text-center">
             Process Exchange
           </DialogTitle>
           <DialogDescription className="text-center text-xs text-muted-foreground font-sans">
-            1-to-1 same-product replacement for transaction #{receipt.transactionId}
+            1-to-1 same-product replacement for transaction #
+            {receipt.transactionId}
           </DialogDescription>
         </DialogHeader>
 
-        {/* Informational Callout for Cashier */}
-        <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 p-2.5 rounded-[4px] text-xs leading-relaxed">
-          <Info className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" />
-          <div>
-            <strong>1-to-1 Same-Product Replacement Only:</strong> Exchanges are strictly for replacing defective items with the same product SKU. For swapping different items or multiple SKUs, please cancel and process a <strong>Refund</strong> + <strong>New POS Sale</strong>.
+        <div className="min-h-0 flex-1 overflow-y-auto space-y-3.5 pr-1">
+          {/* Informational Callout */}
+          <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 p-2.5 rounded-[4px] text-xs leading-relaxed">
+            <Info className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" />
+            <div>
+              <strong>1-to-1 Same-Product Replacement Only:</strong> Select one
+              or more purchased products to replace with the exact same product
+              SKU. To swap into different products, process a{" "}
+              <strong>Refund</strong> + <strong>New POS Sale</strong>.
+            </div>
           </div>
-        </div>
 
-        {/* Error Alert */}
-        {error && (
-          <div className="flex items-center gap-2 text-xs font-medium text-destructive bg-destructive/10 border border-destructive/30 p-2.5 rounded-[4px]">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
+          {/* Error Alert */}
+          {error && (
+            <div className="flex items-center gap-2 text-xs font-medium text-destructive bg-destructive/10 border border-destructive/30 p-2.5 rounded-[4px]">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
-        <div className="space-y-3.5">
-          {/* Item Selection */}
-          <div className="space-y-1.5">
-            <Label htmlFor="item-select" className="text-xs font-medium">
-              Select Item to Exchange <span className="text-destructive">*</span>
+          {/* Multi-Item Pooled Checklist */}
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">
+              Select Items to Exchange ({selectedProductIds.length} selected){" "}
+              <span className="text-destructive">*</span>
             </Label>
-            <Select
-              value={selectedItemIndex !== null ? String(selectedItemIndex) : ""}
-              onValueChange={(value) => {
-                setSelectedItemIndex(Number(value));
-              }}
-            >
-              <SelectTrigger id="item-select" className="w-full rounded-[4px] text-xs h-8">
-                <SelectValue placeholder="Choose an item from receipt">
-                  {(val: string | null) => {
-                    if (val === null || val === "" || val === undefined) {
-                      return "Choose an item from receipt";
-                    }
-                    const idx = Number(val);
-                    const it = receipt.items[idx];
-                    return it ? `${it.product_name} (Qty: ${it.quantity})` : "Choose an item from receipt";
-                  }}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {receipt.items.map((item, index) => {
-                  const itemReturned =
-                    (item.already_returned_qty ?? 0) +
-                    (receipt.returns
-                      ?.filter((r) => r.productId === item.productId)
-                      .reduce((sum, r) => sum + (r.quantity || 0), 0) ?? 0) +
-                    (receipt.exchanges
-                      ?.filter((e) => e.productId === item.productId)
-                      .reduce((sum, e) => sum + (e.quantity || 0), 0) ?? 0);
-                  const remaining = Math.max(0, item.quantity - itemReturned);
 
-                  return (
-                    <SelectItem
-                      key={index}
-                      value={String(index)}
-                      className="text-xs"
-                      disabled={remaining <= 0}
+            <div className="space-y-2">
+              {itemMeta.map((meta) => {
+                const isSelected = Boolean(drafts[meta.productId]);
+                const draft = drafts[meta.productId];
+                const disabled = meta.remainingBase <= 0;
+
+                const activeConv = draft
+                  ? (meta.uomConversions[draft.unitOfMeasure] ?? 1)
+                  : 1;
+                const maxForChosenUom = Number(
+                  (meta.remainingBase / activeConv).toFixed(3),
+                );
+                const requestedBase = draft
+                  ? Number(draft.quantity || 0) * activeConv
+                  : 0;
+
+                const lineStockInsufficient =
+                  isSelected &&
+                  meta.replacementStock !== null &&
+                  meta.replacementStock < requestedBase;
+
+                return (
+                  <div
+                    key={meta.productId}
+                    className={cn(
+                      "rounded-[4px] border p-3 transition-colors space-y-3",
+                      isSelected
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-card",
+                      disabled && "opacity-55",
+                    )}
+                  >
+                    {/* Product Checkbox Row */}
+                    <label
+                      className={cn(
+                        "flex items-start justify-between gap-2",
+                        disabled ? "cursor-not-allowed" : "cursor-pointer",
+                      )}
                     >
-                      {item.product_name} (Purchased: {item.quantity}
-                      {item.pricing_uom ? ` ${item.pricing_uom}` : ""})
-                      {remaining <= 0
-                        ? " - Fully Returned/Exchanged"
-                        : ` [Available: ${remaining}]`}
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
+                      <div className="flex items-start gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          disabled={disabled}
+                          onChange={() => toggleProduct(meta.productId)}
+                          className="mt-0.5 rounded-[2px] border-input"
+                        />
+                        <div>
+                          <p className="text-xs font-semibold text-foreground">
+                            {meta.productName}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground font-mono">
+                            Purchased: {meta.totalPurchasedBase} {meta.baseUom}{" "}
+                            ·{" "}
+                            {disabled
+                              ? "Fully Returned/Exchanged"
+                              : `Available: ${meta.remainingBase} ${meta.baseUom}`}
+                          </p>
+                        </div>
+                      </div>
+                      <span
+                        className={cn(
+                          "text-[11px] font-mono shrink-0",
+                          lineStockInsufficient
+                            ? "text-destructive font-bold"
+                            : "text-muted-foreground",
+                        )}
+                      >
+                        {meta.replacementStock !== null
+                          ? `Stock: ${meta.replacementStock} ${meta.baseUom}`
+                          : ""}
+                      </span>
+                    </label>
 
-          {/* Quantity and UoM Grid */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Quantity */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center">
-                <Label htmlFor="quantity" className="text-xs font-medium">
-                  Quantity <span className="text-destructive">*</span>
-                </Label>
-                <span className="text-[10px] text-muted-foreground font-mono">
-                  Max: {maxQuantity}
-                </span>
-              </div>
-              <Input
-                id="quantity"
-                type="number"
-                min="1"
-                step="1"
-                max={maxQuantity}
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                disabled={!selectedItem || maxQuantity === 0}
-                className="rounded-[4px] text-xs h-8"
-              />
+                    {/* Expanded Per-Product Controls when checked */}
+                    {isSelected && draft && (
+                      <div className="pt-2 border-t border-border/60 space-y-2.5">
+                        <div className="grid grid-cols-2 gap-2">
+                          {/* Quantity */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center">
+                              <Label className="text-[11px]">
+                                Qty <span className="text-destructive">*</span>
+                              </Label>
+                              <span className="text-[10px] text-muted-foreground font-mono">
+                                Max {maxForChosenUom} {draft.unitOfMeasure}
+                              </span>
+                            </div>
+                            <Input
+                              type="number"
+                              min="0.001"
+                              step="any"
+                              max={maxForChosenUom}
+                              value={draft.quantity}
+                              onChange={(e) =>
+                                updateDraft(meta.productId, {
+                                  quantity: e.target.value,
+                                })
+                              }
+                              className="rounded-[4px] text-xs h-8 bg-background"
+                            />
+                          </div>
+
+                          {/* UoM */}
+                          <div className="space-y-1">
+                            <Label className="text-[11px]">
+                              UoM <span className="text-destructive">*</span>
+                            </Label>
+                            <Select
+                              value={draft.unitOfMeasure}
+                              onValueChange={(val) =>
+                                updateDraft(meta.productId, {
+                                  unitOfMeasure: val ?? meta.baseUom,
+                                })
+                              }
+                            >
+                              <SelectTrigger className="w-full rounded-[4px] text-xs h-8 bg-background">
+                                <SelectValue placeholder="UoM">
+                                  {draft.unitOfMeasure}
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {meta.allowedUoms.map((uom) => {
+                                  const conv = meta.uomConversions[uom] ?? 1;
+                                  const tag =
+                                    uom === meta.baseUom
+                                      ? "(Base)"
+                                      : `(1 ${uom} = ${conv} ${meta.baseUom})`;
+                                  return (
+                                    <SelectItem
+                                      key={uom}
+                                      value={uom}
+                                      className="text-xs"
+                                    >
+                                      {uom} {tag}
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        {/* Reason */}
+                        <div className="space-y-1">
+                          <Label className="text-[11px]">
+                            Reason <span className="text-destructive">*</span>
+                          </Label>
+                          <Textarea
+                            value={draft.reason}
+                            onChange={(e) =>
+                              updateDraft(meta.productId, {
+                                reason: e.target.value,
+                              })
+                            }
+                            placeholder="Describe the defect or reason for replacement..."
+                            className="rounded-[4px] text-xs min-h-[54px] resize-none bg-background"
+                            maxLength={500}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-
-            {/* UoM Dropdown */}
-            <div className="space-y-1.5">
-              <Label htmlFor="uom-select" className="text-xs font-medium">
-                Unit of Measure (UoM) <span className="text-destructive">*</span>
-              </Label>
-              <Select
-                value={selectedUom}
-                onValueChange={(val) => setSelectedUom(val ?? "")}
-                disabled={!selectedItem || allowedUoms.length === 0}
-              >
-                <SelectTrigger id="uom-select" className="w-full rounded-[4px] text-xs h-8">
-                  <SelectValue placeholder="Select UoM">
-                    {selectedUom || "Select UoM"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {allowedUoms.map((uom) => {
-                    const purchasedUom = (
-                      selectedItem?.unit_of_measure ||
-                      selectedItem?.pricing_uom ||
-                      ""
-                    ).toUpperCase();
-                    const isPurchased = uom === purchasedUom;
-                    return (
-                      <SelectItem key={uom} value={uom} className="text-xs">
-                        {uom} {isPurchased ? "(Purchased)" : "(Base)"}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
-          {/* Item Condition */}
-          <div className="space-y-1.5">
-            <Label htmlFor="condition-select" className="text-xs font-medium">
-              Item Condition <span className="text-destructive">*</span>
-            </Label>
-            <Select
-              value={condition || ""}
-              onValueChange={(value) => setCondition(value as ItemCondition)}
-              disabled={!selectedItem}
-            >
-              <SelectTrigger id="condition-select" className="w-full rounded-[4px] text-xs h-8">
-                <SelectValue placeholder="Select condition">
-                  {condition === "DEFECTIVE"
-                    ? "Defective"
-                    : condition === "CHANGE_OF_MIND"
-                    ? "Change of Mind"
-                    : "Select condition"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="DEFECTIVE" className="text-xs">
-                  Defective
-                </SelectItem>
-                <SelectItem value="CHANGE_OF_MIND" className="text-xs">
-                  Change of Mind
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Reason for Exchange */}
-          <div className="space-y-1.5">
-            <Label htmlFor="reason" className="text-xs font-medium">
-              Reason for Exchange <span className="text-destructive">*</span>
-            </Label>
-            <Textarea
-              id="reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Describe the defect or reason for same-product replacement..."
-              disabled={!selectedItem}
-              className="rounded-[4px] text-xs min-h-[70px] resize-none"
-              maxLength={500}
-            />
-            <p className="text-[10px] text-muted-foreground text-right font-mono">
-              {reason.length}/500
-            </p>
-          </div>
-
-          {/* Replacement Stock & Stock Override Toggle */}
-          <div className="p-3 rounded-[4px] border border-border bg-muted/40 space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground font-medium">
-                Replacement Inventory Stock:
-              </span>
-              <span
-                className={cn(
-                  "font-mono font-bold",
-                  isStockInsufficient
-                    ? "text-destructive"
-                    : "text-foreground",
-                )}
-              >
-                {replacementStock !== null ? `${replacementStock} in stock` : "N/A"}
-              </span>
-            </div>
-
-            {isStockInsufficient && (
+          {/* Manager Stock Override Toggle */}
+          <div className="p-3 rounded-[4px] border border-border bg-muted/40 space-y-1.5">
+            {anyStockInsufficient && (
               <p className="text-[11px] text-destructive font-medium">
-                ⚠️ Replacement stock is insufficient for this exchange quantity.
+                ⚠️ One or more selected items have insufficient replacement
+                stock.
               </p>
             )}
-
-            <div className="flex items-start space-x-2 pt-1 border-t border-border/50">
+            <div className="flex items-start space-x-2">
               <input
                 type="checkbox"
                 id="stock-override"
                 checked={allowStockOverride}
                 onChange={(e) => setAllowStockOverride(e.target.checked)}
-                disabled={!selectedItem}
+                disabled={selectedProductIds.length === 0}
                 className="mt-0.5 rounded-[2px] border-input"
               />
               <Label
                 htmlFor="stock-override"
                 className="text-xs cursor-pointer leading-tight text-foreground"
               >
-                <span className="font-semibold block">Manager Stock Override</span>
+                <span className="font-semibold block">
+                  Manager Stock Override
+                </span>
                 <span className="text-[10px] text-muted-foreground">
-                  Allow exchange approval even if replacement inventory is low or zero.
+                  Allow exchange approval even if replacement inventory is low
+                  or zero.
                 </span>
               </Label>
             </div>
           </div>
         </div>
 
-        <DialogFooter className="gap-2 pt-2">
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card pt-3">
           <Button
             type="button"
             variant="outline"
@@ -469,7 +560,7 @@ export function ExchangeModal({
           <Button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting || !selectedItem || maxQuantity <= 0}
+            disabled={isSubmitting || selectedProductIds.length === 0}
             className="bg-primary hover:bg-primary/80 text-white rounded-[4px] text-xs font-bold uppercase tracking-wider"
           >
             {isSubmitting ? (
@@ -478,7 +569,7 @@ export function ExchangeModal({
                 Processing...
               </>
             ) : (
-              "Submit Exchange"
+              `Submit Exchange (${selectedProductIds.length})`
             )}
           </Button>
         </DialogFooter>

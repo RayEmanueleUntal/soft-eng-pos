@@ -270,6 +270,8 @@ export interface ReceiptItem {
   discounted_price?: number;
   net_price?: number; // Optional or derived
   pricing_uom?: string;
+  uom_conversion_factor?: number;
+  base_quantity_deducted?: number;
   type?: TransactionType;
   unit_of_measure?: UnitOfMeasure | string;
   base_uom?: UnitOfMeasure | string;
@@ -294,9 +296,11 @@ export interface ReceiptReturn {
   product_name: string;
   quantity: number;
   date: string;
+  condition: ItemCondition;
   defect_reason: string;
   refund_amount: number;
   processed_by_staff: string;
+  pricing_uom?: string;
 }
 
 export interface ReceiptExchange {
@@ -305,8 +309,8 @@ export interface ReceiptExchange {
   product_name: string;
   quantity: number;
   date: string;
-  price_difference: number;
-  is_within_7_days: boolean;
+  staffId: number;
+  processed_by_staff: string;
 }
 
 export interface ReceiptShipment {
@@ -360,6 +364,7 @@ export interface CreateRefundItemDto {
   condition: ItemCondition;
   reason: string;
   uom?: string;
+  unit_of_measure?: UnitOfMeasure;
 }
 export interface CreateRefundDto {
   transactionId: number;
@@ -373,11 +378,17 @@ export interface CreateRefundDto {
 
 export type RefundRequest = CreateRefundDto;
 
+export interface ExchangeItemRequest {
+  productId: number;
+  quantity: number;
+  unit_of_measure?: UnitOfMeasure;
+  condition: ItemCondition;
+  reason: string;
+}
+
 export interface ExchangeRequest {
   transactionId: number;
-  items: CreateRefundItemDto[];
-  newProductId: number;
-  newQuantity: number;
+  items: ExchangeItemRequest[];
   allowStockOverride?: boolean;
 }
 

@@ -16,15 +16,6 @@ export function computeTotalRefunds(receipt: Receipt): number {
   return receipt.returns.reduce((sum, r) => sum + (r.refund_amount ?? 0), 0);
 }
 
-/** Sum of all price_difference values across the receipt's exchanges. */
-export function computeTotalExchangeDifference(receipt: Receipt): number {
-  if (!receipt.exchanges || receipt.exchanges.length === 0) return 0;
-  return receipt.exchanges.reduce(
-    (sum, e) => sum + (e.price_difference ?? 0),
-    0
-  );
-}
-
 /**
  * Computes the adjusted net total after refunds and exchange price differences.
  * Formula: grand_total − total_refunds + total_exchange_differences
@@ -32,8 +23,7 @@ export function computeTotalExchangeDifference(receipt: Receipt): number {
  */
 export function computeAdjustedTotal(receipt: Receipt): number {
   const refunds = computeTotalRefunds(receipt);
-  const exchangeDiff = computeTotalExchangeDifference(receipt);
-  return Math.max(0, receipt.grand_total - refunds + exchangeDiff);
+  return Math.max(0, receipt.grand_total - refunds);
 }
 
 /** Returns true when the receipt has any returns or exchanges. */
@@ -52,7 +42,7 @@ export function hasAdjustments(receipt: Receipt): boolean {
  * - NORMAL: no returns or exchanges
  */
 export function getReceiptDisplayStatus(
-  receipt: Receipt
+  receipt: Receipt,
 ): ReceiptDisplayStatus {
   const totalRefunds = computeTotalRefunds(receipt);
   const hasReturns = receipt.returns && receipt.returns.length > 0;
