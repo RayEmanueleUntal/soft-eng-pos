@@ -5,7 +5,7 @@
 
 import * as React from "react";
 import axios from "axios";
-import { AlertCircle, AlertTriangle, Loader2, Search } from "lucide-react";
+import { AlertCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,7 +34,8 @@ import {
   Forwarder,
   Shipment,
 } from "@/lib/inventory/shipment-types";
-import { cn, formatPeso, getErrorMessage } from "@/lib/utils";
+import { getErrorMessage } from "@/lib/utils";
+import { OrderSearchSelect } from "./OrderSearchSelect";
 
 const TRACKING_MAX = 100;
 const NOTES_MAX = 500;
@@ -43,13 +44,6 @@ interface CreateShipmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: (shipment: Shipment) => void;
-}
-
-// True when the order already has a PENDING or DISPATCHED shipment (backend would answer 409).
-function hasActiveShipment(transaction: EligibleTransaction): boolean {
-  return (transaction.shipments ?? []).some(
-    (shipment) => shipment.tracking_status !== "DELIVERED",
-  );
 }
 
 export function CreateShipmentModal({
@@ -67,6 +61,7 @@ export function CreateShipmentModal({
   const [txError, setTxError] = React.useState<string | null>(null);
   const [selectedTx, setSelectedTx] =
     React.useState<EligibleTransaction | null>(null);
+  const [pickerKey, setPickerKey] = React.useState(0);
 
   // Forwarder selector
   const [forwarders, setForwarders] = React.useState<Forwarder[]>([]);
@@ -90,6 +85,7 @@ export function CreateShipmentModal({
     setSearch("");
     setQuery("");
     setSelectedTx(null);
+    setPickerKey((key) => key + 1);
     setForwarderId("");
     setTrackingNumber("");
     setNotes("");
@@ -240,78 +236,23 @@ export function CreateShipmentModal({
             <Label className="text-xs text-muted-foreground">
               Completed order <span className="text-destructive">*</span>
             </Label>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search invoice number or customer"
-                className="h-8 pl-8 text-xs"
-                disabled={submitting}
-              />
-            </div>
+            <OrderSearchSelect
+              key={pickerKey}
+              transactions={transactions}
+              value={selectedTx}
+              disabled={submitting}
+              loading={txLoading}
+              onQueryChange={setSearch}
+              onChange={(transaction) => {
+                setSelectedTx(transaction);
+                setConflict(null);
+                setError(null);
+              }}
+            />
 
             {txError && (
               <p className="text-xs text-destructive break-words">{txError}</p>
             )}
-
-            <div className="max-h-44 overflow-y-auto rounded-md border border-border divide-y divide-border">
-              {txLoading ? (
-                <p className="py-6 text-center text-xs text-muted-foreground">
-                  Loading orders...
-                </p>
-              ) : transactions.length === 0 ? (
-                <p className="py-6 text-center text-xs text-muted-foreground">
-                  No completed orders found.
-                </p>
-              ) : (
-                transactions.map((tx) => {
-                  const blocked = hasActiveShipment(tx);
-                  const selected = selectedTx?.id === tx.id;
-                  return (
-                    <button
-                      key={tx.id}
-                      type="button"
-                      disabled={blocked || submitting}
-                      onClick={() => {
-                        setSelectedTx(tx);
-                        setConflict(null);
-                        setError(null);
-                      }}
-                      className={cn(
-                        "flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs transition-colors",
-                        selected
-                          ? "bg-primary/10 border-l-2 border-primary"
-                          : "hover:bg-accent/40",
-                        blocked && "cursor-not-allowed opacity-60",
-                      )}
-                    >
-                      <span className="min-w-0">
-                        <span className="block font-mono font-semibold tabular-nums">
-                          {tx.invoice_number ?? `Order #${tx.id}`}
-                        </span>
-                        <span
-                          className="block truncate text-muted-foreground"
-                          title={tx.customer?.name ?? ""}
-                        >
-                          {tx.customer?.name ?? "Walk-in Customer"}
-                        </span>
-                      </span>
-                      <span className="shrink-0 text-right">
-                        <span className="block font-mono tabular-nums">
-                          {formatPeso(Number(tx.grand_total))}
-                        </span>
-                        {blocked && (
-                          <span className="block text-[10px] font-semibold text-amber-700">
-                            Active shipment exists
-                          </span>
-                        )}
-                      </span>
-                    </button>
-                  );
-                })
-              )}
-            </div>
           </div>
 
           {/* Forwarder selector */}
