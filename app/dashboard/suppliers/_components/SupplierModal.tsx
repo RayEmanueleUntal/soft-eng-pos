@@ -215,7 +215,7 @@ export function SupplierModal({
             </Button>
             <Button
               type="submit"
-              className="bg-[#6366f1] hover:bg-[#4f46e5]"
+              className="bg-[#0060B2] hover:bg-[#004888]"
               disabled={isLoading}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

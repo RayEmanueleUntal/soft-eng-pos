@@ -28,7 +28,7 @@ import { PurchaseOrderTable } from "./_components/PurchaseOrderTable";
 import { PageHeader } from "@/components/ui/pageheader";
 import { Label } from "@/components/ui/label";
 
-const PAGE_LIMIT = 10;
+const PAGE_LIMIT = 15;
 
 // Renders the purchase orders list with filter, create and cancel flows.
 export default function PurchaseOrdersPage() {
@@ -155,6 +155,7 @@ export default function PurchaseOrdersPage() {
           page={page}
           totalPages={totalPages}
           total={total}
+          pageSize={PAGE_LIMIT}
           canCancel={canManagePOStatus(role)}
           onPageChange={setPage}
           onCancelRequest={setCancelTarget}

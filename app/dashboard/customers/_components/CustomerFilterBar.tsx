@@ -77,7 +77,7 @@ export function CustomerFilterBar({
               }
             }}
           >
-            <SelectTrigger className="w-[170px] h-8 text-[13px] rounded-[2px]">
+            <SelectTrigger className="w-[170px] h-9 text-[13px] rounded-[2px]">
               <SelectValue placeholder="All Customers">
                 {TYPE_LABELS[filters.type || "all"] ?? "All Customers"}
               </SelectValue>

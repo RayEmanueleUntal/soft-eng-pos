@@ -7,14 +7,20 @@ import * as React from "react";
 import {
   InventoryFilterBar,
   type StatusTab,
+  type SortOption,
 } from "@/app/dashboard/inventory/_components/InventoryFilterBar";
 import { InventoryTable } from "@/app/dashboard/inventory/_components/InventoryTable";
 import { Button } from "@/components/ui/button";
 import { canEditROP, canManageStock } from "@/lib/auth/permissions";
 import { useCurrentRole } from "@/lib/auth/use-current-role";
 import { getStockStatus } from "@/lib/inventory/stock-status";
-import { useInventory } from "@/lib/inventory/useInventory";
+import {
+  INVENTORY_PAGE_LIMIT,
+  useInventory,
+} from "@/lib/inventory/useInventory";
 import { PageHeader } from "@/components/ui/pageheader";
+import { useState } from "react";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 // Lists inventory with filters, status tabs, pagination and role-aware row actions.
 export default function InventoryPage() {
@@ -35,6 +41,7 @@ export default function InventoryPage() {
 
   const role = useCurrentRole();
   const [statusTab, setStatusTab] = React.useState<StatusTab>("all");
+  const [sort, setSort] = useState<SortOption>("default");
 
   const categoryOptions = React.useMemo(
     () =>
@@ -45,7 +52,7 @@ export default function InventoryPage() {
     [allCategoriesList],
   );
 
-  // Low-stock tabs only filter the rows on the current page (the list is paginated server-side).
+  // Low-stock tabs and alphabetical sort apply to the rows on the current page.
   const visibleInventory = React.useMemo(() => {
     if (statusTab === "all") {
       return inventory;
@@ -54,14 +61,6 @@ export default function InventoryPage() {
     const wanted = statusTab === "low" ? "low-stock" : "adequate-stock";
     return inventory.filter((item) => getStockStatus(item) === wanted);
   }, [inventory, statusTab]);
-
-  const handlePreviousPage = () => {
-    setPage((current) => Math.max(current - 1, 1));
-  };
-
-  const handleNextPage = () => {
-    setPage((current) => Math.min(current + 1, totalPages));
-  };
 
   return (
     <div className="flex-1 space-y-6">
@@ -87,6 +86,8 @@ export default function InventoryPage() {
           categories={categoryOptions}
           status={statusTab}
           setStatus={setStatusTab}
+          sort={sort}
+          setSort={setSort}
         />
 
         {statusTab !== "all" && !loading && !error && (
@@ -110,40 +111,22 @@ export default function InventoryPage() {
           <>
             <InventoryTable
               inventory={visibleInventory}
-              totalRecords={statusTab === "all" ? totalRecords : visibleInventory.length} 
+              totalRecords={statusTab === "all" ? totalRecords : visibleInventory.length}
               categories={categories}
               onRefresh={refetch}
               canManageStock={canManageStock(role)}
               canEditROP={canEditROP(role)}
             />
 
-            <div className="flex items-center justify-between">
-              <p className="font-mono text-xs text-muted-foreground">
-                Page {page} of {totalPages}
-              </p>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePreviousPage}
-                  disabled={page === 1}
-                  className="rounded-md"
-                >
-                  Previous
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleNextPage}
-                  disabled={page === totalPages}
-                  className="rounded-md"
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
+            <TablePagination
+              page={page}
+              totalPages={totalPages}
+              totalItems={totalRecords}
+              pageSize={INVENTORY_PAGE_LIMIT}
+              itemLabel="items"
+              loading={loading}
+              onPageChange={setPage}
+            />
           </>
         )}
       </div>

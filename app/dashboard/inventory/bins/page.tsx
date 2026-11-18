@@ -1,4 +1,6 @@
-// app/(dashboard)/inventory/bins/page.tsx
+// Bin location list for warehouse aisle/shelf coordinates in the POS inventory module.
+// Supports paginated browse, exact aisle/shelf search, create bin, and a details modal.
+// Grey pagination bar renders only when there is more than one page.
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -7,7 +9,7 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
-  Info,
+  Eye,
   Layers,
   AlertCircle,
   CheckCircle2,
@@ -27,7 +29,7 @@ import {
 } from "@/lib/bin-locations/bin-locations";
 import { PageHeader } from "@/components/ui/pageheader";
 import { Label } from "@/components/ui/label";
-import { totalmem } from "os";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 export default function BinLocationsPage() {
   const role = useCurrentRole();
@@ -35,7 +37,7 @@ export default function BinLocationsPage() {
   const [meta, setMeta] = useState<BinLocationMeta>({
     total: 0,
     page: 1,
-    limit: 10,
+    limit: 15,
     totalPages: 1,
   });
 
@@ -62,7 +64,7 @@ export default function BinLocationsPage() {
       try {
         const res = await getBinLocations({
           page: currentPage,
-          limit: 10,
+          limit: 15,
           search: search?.trim() || undefined,
         });
 
@@ -116,7 +118,7 @@ export default function BinLocationsPage() {
         shelf_location: searchShelf.trim(),
       });
       setBins([bin]);
-      setMeta({ total: 1, page: 1, limit: 10, totalPages: 1 });
+      setMeta({ total: 1, page: 1, limit: 15, totalPages: 1 });
     } catch (err: any) {
       if (err?.response?.status === 404) {
         setErrorMsg(
@@ -234,7 +236,7 @@ export default function BinLocationsPage() {
                   <th className="px-3 py-1">Aisle Number</th>
                   <th className="px-3 py-1">Shelf Location</th>
                   <th className="px-3 py-1">Barcode Tag</th>
-                  <th className="px-3 py-1 text-right w-24">Actions</th>
+                  <th className="px-3 py-1 text-right w-24"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8F0] font-['Inter'] text-xs">
@@ -279,16 +281,17 @@ export default function BinLocationsPage() {
                       </td>
                       <td className="px-3 py-1 text-right">
                         <Button
-                          variant="ghost"
+                          type="button"
+                          variant="outline"
                           size="sm"
                           onClick={() => {
                             setSelectedBin(bin);
                             setDetailsOpen(true);
                           }}
-                          className="h-6 px-2 text-[11px] font-medium text-[#0060B2] hover:bg-[#C8DCFF] rounded-xs flex items-center gap-1 ml-auto"
+                          className="h-7 gap-1.5 rounded-[4px] text-xs border-input hover:bg-muted font-sans"
                         >
-                          <Info className="h-3 w-3" />
-                          <span>View</span>
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>View Products</span>
                         </Button>
                       </td>
                     </tr>
@@ -298,36 +301,17 @@ export default function BinLocationsPage() {
             </table>
           </div>
 
-          {/* Footer Bar */}
-          <div className="bg-[#F8FAFC] border-t border-[#E2E8F0] px-3 py-2 flex items-center justify-between text-xs font-mono text-[#565E74]">
-            <div>
-              Page <span className="font-bold text-[#0F172A]">{meta.page}</span>{" "}
-              of{" "}
-              <span className="font-bold text-[#0F172A]">{meta.totalPages}</span>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1 || loading}
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                className="h-7 text-xs border-[#CBD5E1] rounded-sm px-2"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" />
-                <span>Prev</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= meta.totalPages || loading}
-                onClick={() => setPage((prev) => prev + 1)}
-                className="h-7 text-xs border-[#CBD5E1] rounded-sm px-2"
-              >
-                <span>Next</span>
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+          <div className="bg-[#F8FAFC] border-t border-[#E2E8F0] px-3 py-2">
+            <TablePagination
+              className="w-full px-0"
+              page={page}
+              totalPages={meta.totalPages}
+              totalItems={meta.total}
+              pageSize={meta.limit || 15}
+              itemLabel="bins"
+              loading={loading}
+              onPageChange={setPage}
+            />
           </div>
         </div>
 

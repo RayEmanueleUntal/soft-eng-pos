@@ -6,12 +6,13 @@ import { InventoryItem, InventoryResponse } from "./types"
 import { getApiErrorMessage } from "./api-error"
 
 // Fetches the items whose quantity is at or below their reorder point.
-// Fetches products from /products and filters items where current_quantity <= reorder_point_ROP.
+// The backend does the filtering (GET /products?belowRop=true), so items beyond the first page are not missed.
 export async function fetchROPItems(): Promise<InventoryItem[]> {
   try {
     const response = await apiClient.get<InventoryResponse>("/products", {
       params: {
         limit: 100,
+        belowRop: true,
       },
     })
     const products: InventoryItem[] = response.data.data || []

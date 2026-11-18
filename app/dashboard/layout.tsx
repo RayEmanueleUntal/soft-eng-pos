@@ -15,6 +15,7 @@ import {
   LogOut,
   Package,
   Settings,
+  ShelvingUnit,
   ShoppingCart,
   Users,
   UserRound,
@@ -55,9 +56,10 @@ const navigation: NavItem[] = [
     name: "POS",
     href: "/dashboard/pos",
     icon: ShoppingCart,
+    allowedRoles: ROLE_PERMISSIONS["/dashboard/pos"],
     children: [
       {
-        name: "Receipts",
+        name: "Invoices",
         href: "/dashboard/pos/receipt",
       },
     ],
@@ -66,24 +68,27 @@ const navigation: NavItem[] = [
     name: "Products",
     href: "/dashboard/products",
     icon: Package,
+    allowedRoles: ROLE_PERMISSIONS["/dashboard/products"],
+  },
+  {
+    name: "Inventory",
+    href: "/dashboard/inventory",
+    icon: ShelvingUnit,
+    allowedRoles: ROLE_PERMISSIONS["/dashboard/inventory"],
     children: [
       {
-        name: "Inventory",
-        href: "/dashboard/inventory",
-      },  
-      {
-        name: "Adjustments",
+        name: "Movement History",
         href: "/dashboard/inventory/adjustments",
         requiresStockRole: true,
       },
-            { name: "Bin Locations", href: "/dashboard/inventory/bins" },
-
-    ]
+      { name: "Bin Locations", href: "/dashboard/inventory/bins" },
+    ],
   },
   {
     name: "Suppliers",
     href: "/dashboard/suppliers",
     icon: Truck,
+    allowedRoles: ROLE_PERMISSIONS["/dashboard/suppliers"],
     children: [
       {
         name: "Purchase Orders",
@@ -94,27 +99,30 @@ const navigation: NavItem[] = [
         name: "Receive Deliveries",
         href: "/dashboard/inventory/deliveries",
       },
-    ]  
+    ],
   },
   {
     name: "Forwarders",
     href: "/dashboard/forwarders",
     icon: Truck,
+    allowedRoles: ROLE_PERMISSIONS["/dashboard/forwarders"],
     children: [
       {
         name: "Outgoing Shipments",
         href: "/dashboard/inventory/shipments",
-      }
-    ]
+      },
+    ],
   },
   {
     name: "Customers",
     href: "/dashboard/customers",
+    allowedRoles: ROLE_PERMISSIONS["/dashboard/customers"],
     icon: Users,
   },
   {
     name: "Staff",
     href: "/dashboard/staff",
+    allowedRoles: ROLE_PERMISSIONS["/dashboard/staff"],
     icon: UserRound,
   },
   {

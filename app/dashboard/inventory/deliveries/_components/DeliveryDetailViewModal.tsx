@@ -94,32 +94,32 @@ export function DeliveryDetailViewModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl w-full font-sans">
-        {" "}
+      <DialogContent className="sm:max-w-3xl w-full font-sans overflow-hidden">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <PackageCheck className="h-5 w-5 text-primary" />
             <DialogTitle className="text-xl font-bold tracking-tight">
-              Delivery Receipt #{deliveryId}
+              Delivery Invoice #{deliveryId}
             </DialogTitle>
           </div>
         </DialogHeader>
+
         {loading ? (
           <div className="py-12 flex flex-col items-center justify-center gap-2 text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <span className="text-xs">Loading receipt details...</span>
+            <span className="text-xs">Loading invoice details...</span>
           </div>
         ) : error ? (
           <div className="py-8 text-center text-sm text-destructive bg-destructive/10 rounded-md p-4">
             {error}
           </div>
         ) : record ? (
-          <div className="space-y-4">
+          <div className="space-y-4 min-w-0">
             {/* Meta summary card */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-muted/40 p-3.5 rounded-lg border border-border text-xs">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                <div>
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div className="min-w-0">
                   <span className="text-muted-foreground block text-[11px]">
                     Purchase Order
                   </span>
@@ -129,9 +129,9 @@ export function DeliveryDetailViewModal({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <div>
+              <div className="flex items-center gap-2 min-w-0">
+                <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div className="min-w-0">
                   <span className="text-muted-foreground block text-[11px]">
                     Received Date
                   </span>
@@ -141,13 +141,13 @@ export function DeliveryDetailViewModal({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <div>
+              <div className="flex items-center gap-2 min-w-0">
+                <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div className="min-w-0">
                   <span className="text-muted-foreground block text-[11px]">
                     Staff In-Charge
                   </span>
-                  <span className="font-medium text-foreground">
+                  <span className="font-medium text-foreground truncate block">
                     {record.staffName || `Staff ID #${record.staffId}`}
                   </span>
                 </div>
@@ -155,15 +155,12 @@ export function DeliveryDetailViewModal({
             </div>
 
             {/* Line items table */}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-md border border-border">
               <Table>
                 <TableHeader className="bg-muted/50">
                   <TableRow>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider">
                       Product
-                    </TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider font-mono">
-                      SKU
                     </TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-right font-mono">
                       Received
@@ -179,11 +176,16 @@ export function DeliveryDetailViewModal({
                 <TableBody>
                   {record.deliveryItems.map((item) => (
                     <TableRow key={item.id} className="text-xs">
-                      <TableCell className="font-medium text-foreground break-words max-w-[220px]">
-                        {item.productName}
-                      </TableCell>
-                      <TableCell className="font-mono text-muted-foreground">
-                        {item.productSku || "—"}
+                      {/* Unified Product & SKU */}
+                      <TableCell className="whitespace-normal max-w-[260px]">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-xs text-foreground break-words">
+                            {item.productName}
+                          </span>
+                          <span className="font-mono text-[11px] text-muted-foreground break-all">
+                            {item.productSku ?? "-"}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums whitespace-nowrap">
                         {item.received_quantity.toLocaleString()}{" "}
@@ -198,10 +200,10 @@ export function DeliveryDetailViewModal({
                     </TableRow>
                   ))}
                   <TableRow className="bg-muted/20 font-medium">
-                    <TableCell colSpan={4} className="text-right text-xs">
+                    <TableCell colSpan={3} className="text-right text-xs">
                       Total Base Units Received:
                     </TableCell>
-                    <TableCell className="text-right font-mono font-bold text-foreground text-sm tabular-nums">
+                    <TableCell className="text-right font-mono font-bold text-foreground text-sm tabular-nums whitespace-nowrap">
                       {totalItemsCount.toLocaleString()}
                     </TableCell>
                   </TableRow>

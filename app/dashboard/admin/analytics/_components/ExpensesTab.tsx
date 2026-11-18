@@ -1,3 +1,6 @@
+// Analytics expenses tab: category pie chart plus an itemized OpEx ledger.
+// Ledger paging is server-backed through useExpenseAnalytics at a fixed 15 rows per page.
+// Shared TablePagination replaced the previous Prev/Next and page-size selector.
 "use client";
 
 import { useEffect, useState } from "react";
@@ -18,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -44,6 +46,7 @@ import {
   UpdatingBadge,
 } from "./AnalyticsFeedback";
 import { colorForIndex } from "./chart-theme";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   RENT: "Rent",
@@ -56,7 +59,7 @@ const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   MISCELLANEOUS: "Miscellaneous",
 };
 
-const PAGE_SIZE_OPTIONS = [10, 25, 50];
+const PAGE_SIZE = 15;
 
 const EXPENSE_DATE_FORMAT: Intl.DateTimeFormatOptions = {
   year: "numeric",
@@ -86,7 +89,7 @@ export function ExpensesTab({
   const [category, setCategory] = useState<ExpenseCategory | "">("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const limit = PAGE_SIZE;
 
   const query = useExpenseAnalytics(
     {
@@ -105,7 +108,7 @@ export function ExpensesTab({
   // Reset to first page whenever filters or the global range change.
   useEffect(() => {
     setPage(1);
-  }, [params.startDate, params.endDate, category, paymentMethod, limit]);
+  }, [params.startDate, params.endDate, category, paymentMethod]);
 
   if (!enabled) return <InvalidRangeNotice />;
   if (loading && !data) return <AnalyticsLoading />;
@@ -301,51 +304,17 @@ export function ExpensesTab({
               </Table>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2 text-xs text-muted-foreground">
-              <span>
-                {pagination.total_count} record
-                {pagination.total_count === 1 ? "" : "s"} · Page{" "}
-                {pagination.current_page} of {Math.max(pagination.total_pages, 1)}
-              </span>
-              <div className="flex items-center gap-2">
-                <Select
-                  value={String(limit)}
-                  onValueChange={(value) => setLimit(Number(value))}
-                >
-                  <SelectTrigger className="h-7 w-[90px] text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {PAGE_SIZE_OPTIONS.map((size) => (
-                        <SelectItem key={size} value={String(size)}>
-                          {size} / page
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-xs"
-                  disabled={page <= 1 || loading}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Prev
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-xs"
-                  disabled={
-                    page >= pagination.total_pages || loading || !hasExpenses
-                  }
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next
-                </Button>
-              </div>
+            <div className="border-t px-4 py-2">
+              <TablePagination
+                className="w-full px-0"
+                page={pagination.current_page}
+                totalPages={pagination.total_pages}
+                totalItems={pagination.total_count}
+                pageSize={limit}
+                itemLabel="expenses"
+                loading={loading}
+                onPageChange={setPage}
+              />
             </div>
           </CardContent>
         </Card>

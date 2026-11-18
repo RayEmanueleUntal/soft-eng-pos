@@ -21,6 +21,8 @@ import type {
   PaymentTabDetails,
   PaymentMethod,
   RefundRequest,
+  CreateRefundDto,
+  CreateRefundItemDto,
   ExchangeRequest,
   ReturnResponse,
   ProductCategoryItem,
@@ -502,18 +504,74 @@ interface BackendTransactionsListResponse {
   meta?: { total?: number; page?: number; limit?: number; totalPages?: number };
 }
 
+export interface TransactionListResult {
+  items: TransactionSummary[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+// Maps a backend transaction row into the receipt-list summary shape.
+function mapTransactionItem(item: BackendTransactionItem): TransactionSummary {
+  const isSplit = Array.isArray(item.payments) && item.payments.length > 1;
+  const paymentMethod = isSplit
+    ? "SPLIT"
+    : ((item.payments?.[0]?.payment_method || "CASH") as
+        | "CASH"
+        | "GCASH"
+        | "CREDIT"
+        | "SPLIT");
+  let formattedDate = "N/A";
+  if (item.date) {
+    try {
+      formattedDate = new Date(item.date).toLocaleString("en-PH", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+    } catch {
+      formattedDate = String(item.date);
+    }
+  }
+
+  return {
+    id: item.id,
+    transactionId: item.id,
+    invoice_number: item.invoice_number ?? `INV-${item.id}`,
+    date: formattedDate,
+    status: item.status,
+    customerName: item.customer?.name?.trim() ? item.customer.name : "-",
+    paymentMethod,
+    totalAmount: Number(item.grand_total ?? 0),
+    cashierName: item.cashier_name || "Cashier",
+  };
+}
+
 /**
  * Fetches historical POS transaction logs from backend (GET /transactions).
  */
-export async function fetchTransactionsApi(): Promise<TransactionSummary[]> {
+export async function fetchTransactionsApi(options?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}): Promise<TransactionListResult> {
+  const page = options?.page ?? 1;
+  const limit = options?.limit ?? 15;
   try {
+    const params: Record<string, string | number | boolean> = {
+      page,
+      limit,
+      includeReturns: true,
+      includeExchanges: true,
+    };
+    if (options?.search?.trim()) {
+      params.search = options.search.trim();
+    }
+
     const response = await apiClient.get<
       BackendTransactionsListResponse | BackendTransactionItem[]
     >("/transactions", {
       params: {
         limit: 100,
-        includeReturns: true,
-        includeExchanges: true,
       },
     });
     const payload = response.data;
@@ -523,42 +581,23 @@ export async function fetchTransactionsApi(): Promise<TransactionSummary[]> {
         ? payload.data
         : [];
 
-    return rawList.map((item) => {
-      const isSplit = Array.isArray(item.payments) && item.payments.length > 1;
-      const paymentMethod = isSplit
-        ? "SPLIT"
-        : ((item.payments?.[0]?.payment_method || "CASH") as
-            | "CASH"
-            | "GCASH"
-            | "CREDIT"
-            | "SPLIT");
-      let formattedDate = "N/A";
-      if (item.date) {
-        try {
-          formattedDate = new Date(item.date).toLocaleString("en-PH", {
-            dateStyle: "medium",
-            timeStyle: "short",
-          });
-        } catch {
-          formattedDate = String(item.date);
-        }
-      }
+    const items = rawList.map(mapTransactionItem);
+    if (Array.isArray(payload)) {
+      return { items, total: items.length, page: 1, totalPages: 1 };
+    }
 
-      return {
-        id: item.id,
-        transactionId: item.id,
-        invoice_number: item.invoice_number ?? `INV-${item.id}`,
-        date: formattedDate,
-        status: item.status,
-        customerName: item.customer?.name?.trim() ? item.customer.name : "-",
-        paymentMethod,
-        totalAmount: Number(item.grand_total ?? 0),
-        cashierName: item.cashier_name || "Cashier",
-      };
-    });
+    const total = payload?.meta?.total ?? items.length;
+    const totalPages =
+      payload?.meta?.totalPages ?? Math.max(1, Math.ceil(total / limit));
+    return {
+      items,
+      total,
+      page: payload?.meta?.page ?? page,
+      totalPages,
+    };
   } catch (error) {
     console.error("Failed to fetch transactions:", error);
-    return [];
+    return { items: [], total: 0, page: 1, totalPages: 1 };
   }
 }
 
@@ -592,7 +631,13 @@ export async function fetchReceiptApi(id: string | number): Promise<Receipt> {
     ? `/transactions/receipt/${id}`
     : `/transactions/receipt/${numericId}`;
 
-  const response = await apiClient.get<Receipt>(endpoint);
+  const response = await apiClient.get<Receipt>(endpoint, {
+  params: {
+    includeReturns: true,
+    includeExchanges: true,
+    includeShipments: true,
+  },
+});
   return response.data;
 }
 
@@ -600,7 +645,7 @@ export async function fetchReceiptApi(id: string | number): Promise<Receipt> {
  * Process a refund request via backend API (POST /returns/refund).
  */
 export async function processRefund(
-  request: RefundRequest,
+  request: CreateRefundDto,
 ): Promise<ReturnResponse> {
   try {
     const response = await apiClient.post<ReturnResponse>(
