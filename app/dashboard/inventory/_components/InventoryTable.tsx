@@ -38,7 +38,7 @@ interface InventoryTableProps {
 }
 
 const HEAD_CLASS =
-  "text-foreground font-semibold font-mono text-[11px] uppercase tracking-wider";
+  "text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold";
 
 type RowAction = "in" | "out" | "adjust" | "bin" | "rop";
 
@@ -87,10 +87,10 @@ export function InventoryTable({
       </div>
 
       {/*actual table*/}
-      <div className="overflow-hidden rounded-[4px] border border-border bg-card">
+      <div className="overflow-x-auto rounded-[4px] border border-input bg-card shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
         <Table>
           <TableHeader>
-            <TableRow className="bg-[#F1F5F9] hover:bg-[#F1F5F9]">
+            <TableRow className="bg-muted hover:bg-muted border-b border-border">
               <TableHead className={HEAD_CLASS}>Product</TableHead>
               <TableHead className={HEAD_CLASS}>Specifications</TableHead>
               <TableHead className={`${HEAD_CLASS} text-right`}>
@@ -119,11 +119,11 @@ export function InventoryTable({
                 const isLowStock = stockStatus === "low-stock";
 
                 return (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} className="h-[36px] border-b border-border hover:bg-accent hover:border-l-[2px] hover:border-l-primary transition-colors">
                     {/* unified name */}
-                    <TableCell className="align-top py-3">
+                    <TableCell className="align-top py-3 whitespace-normal">
                       <div className="flex flex-col">
-                        <span className="font-semibold text-sm text-foreground">
+                        <span className="font-semibold text-sm text-foreground break-words">
                           {item.name}
                         </span>
                         <span className="font-mono text-[11px] text-muted-foreground mt-0.5">
@@ -141,8 +141,8 @@ export function InventoryTable({
                     </TableCell>
 
                     {/* specifications */}
-                    <TableCell className="align-top py-3">
-                      <div className="space-y-0.5 text-xs">
+                    <TableCell className="align-top py-3 whitespace-normal">
+                      <div className="space-y-0.5 text-xs break-words">
                         <div>
                           <span className="text-muted-foreground">Size:</span>{" "}
                           <span className="font-medium text-foreground">

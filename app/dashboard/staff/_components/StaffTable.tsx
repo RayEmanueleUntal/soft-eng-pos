@@ -414,20 +414,20 @@ export function StaffTable() {
       </div>
 
       {/* Table */}
-      <div className="rounded-[4px] border border-border bg-card shadow-2xs overflow-hidden">
+      <div className="overflow-x-auto rounded-[4px] border border-input bg-card shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/70 hover:bg-muted/70 hover:border-l-0 border-b border-border">
-              <TableHead className="text-foreground font-mono text-[11px] font-semibold uppercase tracking-wider h-9">
+            <TableRow className="bg-muted hover:bg-muted border-b border-border">
+              <TableHead className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
                 Employee Name
               </TableHead>
-              <TableHead className="text-foreground font-mono text-[11px] font-semibold uppercase tracking-wider h-9">
+              <TableHead className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
                 Role
               </TableHead>
-              <TableHead className="text-foreground font-mono text-[11px] font-semibold uppercase tracking-wider h-9">
+              <TableHead className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
                 Account Status
               </TableHead>
-              <TableHead className="w-[100px] text-foreground font-mono text-[11px] font-semibold uppercase tracking-wider h-9 text-right pr-4">
+              <TableHead className="w-[100px] text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold text-right pr-4">
                 Actions
               </TableHead>
             </TableRow>

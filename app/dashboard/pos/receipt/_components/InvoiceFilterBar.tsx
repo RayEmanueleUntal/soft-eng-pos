@@ -128,7 +128,7 @@ export function InvoiceFilterBar({
               onChange={(e) =>
                 onFiltersChange({ ...filters, startDate: e.target.value })
               }
-              className="h-8 w-[125px] font-mono text-xs rounded-[2px]"
+              className="h-8 w-[145px] font-mono text-xs rounded-[2px]"
             />
             <span className="text-xs text-muted-foreground">To:</span>
             <Input
@@ -138,7 +138,7 @@ export function InvoiceFilterBar({
               onChange={(e) =>
                 onFiltersChange({ ...filters, endDate: e.target.value })
               }
-              className="h-8 w-[125px] font-mono text-xs rounded-[2px]"
+              className="h-8 w-[145px] font-mono text-xs rounded-[2px]"
             />
           </div>
         </div>
