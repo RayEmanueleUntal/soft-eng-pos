@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AlertCircle, Loader2, RefreshCw, SearchIcon } from "lucide-react";
+import { AlertCircle, Loader2, PackageSearch, RefreshCw, SearchIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,10 +63,7 @@ export function PosCatalog({
             placeholder="Search SKU..."
             className="pl-9 h-9 rounded-[4px] border-input focus-visible:ring-0 focus-visible:border-primary focus-visible:ring-offset-0 focus-visible:ring-transparent focus-visible:shadow-[0_0_0_2px_rgba(0,96,178,0.2)]"
             value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setSelectedCategoryId(undefined);
-            }}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
             <span className="inline-flex items-center justify-center px-1.5 h-5 text-[10px] font-mono font-bold rounded-[2px] border border-input bg-muted/80 text-foreground">
@@ -80,11 +77,11 @@ export function PosCatalog({
           <Select
             value={
               selectedCategoryId === undefined
-                ? "all"
+                ? ""
                 : String(selectedCategoryId)
             }
             onValueChange={(value) =>
-              setSelectedCategoryId(value === "all" ? undefined : Number(value))
+              setSelectedCategoryId(value ? Number(value) : undefined)
             }
           >
             <SelectTrigger
@@ -94,18 +91,17 @@ export function PosCatalog({
                   : ""
               }`}
             >
-              <SelectValue placeholder="Select category">
+              <SelectValue placeholder="Categories">
                 {(value: string | null) =>
-                  !value || value === "all"
-                    ? "All Categories"
+                  !value
+                    ? "Categories"
                     : (categories.find(
                         (category) => String(category.id) === value,
-                      )?.name ?? "Select category")
+                      )?.name ?? "Categories")
                 }
               </SelectValue>
             </SelectTrigger>
             <SelectContent side="bottom" alignItemWithTrigger={false}>
-              <SelectItem value="all">All Categories</SelectItem>
               {categories.map((category) => (
                 <SelectItem key={category.id} value={String(category.id)}>
                   {category.name}
@@ -118,7 +114,17 @@ export function PosCatalog({
 
       {/* Product Catalog Grid */}
       <div className="min-h-0 flex-1 overflow-y-auto rounded-md border border-input bg-muted/30 p-1"> 
-        {loading ? (
+        {selectedCategoryId === undefined && !searchQuery ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center text-xs text-muted-foreground gap-2">
+            <PackageSearch className="h-8 w-8 text-muted-foreground/50" />
+            <p className="text-foreground font-medium text-sm">
+              Select a category to open products
+            </p>
+            <p className="text-muted-foreground text-xs">
+              Choose a category above to view products
+            </p>
+          </div>
+        ) : loading ? (
           <div className="flex items-center justify-center py-12 text-muted-foreground text-xs gap-2">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
             <span>Loading products from inventory...</span>

@@ -483,10 +483,10 @@ export default function PaymentModal({
             <Tabs
               value={currentTab}
               onValueChange={setActiveTab}
-              className="w-full"
+              className="w-full space-y-2.5"
             >
               <TabsList
-                className="grid w-full rounded-[4px] bg-muted p-1"
+                className="grid w-full !h-auto p-1 rounded-[4px] bg-muted gap-1"
                 style={{
                   gridTemplateColumns: `repeat(${availableTabs.length}, minmax(0, 1fr))`,
                 }}
@@ -495,39 +495,41 @@ export default function PaymentModal({
                   <TabsTrigger
                     key={id}
                     value={id}
-                    className="flex items-center gap-1.5 py-2 rounded-[2px] text-xs font-medium"
+                    className="flex items-center justify-center gap-1.5 h-8 px-2 rounded-[3px] text-xs font-semibold text-muted-foreground hover:text-foreground transition-all data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-xs min-w-0"
                   >
-                    <Icon className="h-4 w-4" />
-                    <span>{label}</span>
+                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{label}</span>
                   </TabsTrigger>
                 ))}
               </TabsList>
 
-              {availableTabs.some((t) => t.id === "cash") && (
-                <TabsContent value="cash">
-                  <CashPaymentForm
-                    amountDue={remainingDue}
-                    onPaymentChange={handleTabDetailChange}
-                  />
-                </TabsContent>
-              )}
-              {availableTabs.some((t) => t.id === "gcash") && (
-                <TabsContent value="gcash">
-                  <GCashPaymentForm
-                    amountDue={remainingDue}
-                    onPaymentChange={handleTabDetailChange}
-                  />
-                </TabsContent>
-              )}
-              {isWholesale && availableTabs.some((t) => t.id === "credit") && (
-                <TabsContent value="credit">
-                  <CreditPaymentForm
-                    amountDue={remainingDue}
-                    initialCustomerId={customer?.id}
-                    onPaymentChange={handleTabDetailChange}
-                  />
-                </TabsContent>
-              )}
+              <div className="rounded-[4px] border border-border bg-card p-3 shadow-xs">
+                {availableTabs.some((t) => t.id === "cash") && (
+                  <TabsContent value="cash" className="mt-0 outline-none">
+                    <CashPaymentForm
+                      amountDue={remainingDue}
+                      onPaymentChange={handleTabDetailChange}
+                    />
+                  </TabsContent>
+                )}
+                {availableTabs.some((t) => t.id === "gcash") && (
+                  <TabsContent value="gcash" className="mt-0 outline-none">
+                    <GCashPaymentForm
+                      amountDue={remainingDue}
+                      onPaymentChange={handleTabDetailChange}
+                    />
+                  </TabsContent>
+                )}
+                {isWholesale && availableTabs.some((t) => t.id === "credit") && (
+                  <TabsContent value="credit" className="mt-0 outline-none">
+                    <CreditPaymentForm
+                      amountDue={remainingDue}
+                      initialCustomerId={customer?.id}
+                      onPaymentChange={handleTabDetailChange}
+                    />
+                  </TabsContent>
+                )}
+              </div>
             </Tabs>
 
             {/* Add to Split Button */}
@@ -537,7 +539,7 @@ export default function PaymentModal({
                 variant="outline"
                 onClick={handleAddCurrentTender}
                 disabled={!isPaymentValid || isSubmitting || currentAmount <= 0}
-                className="w-full rounded-[4px] text-xs font-semibold border-primary/30 text-primary hover:bg-primary/10 flex items-center justify-center gap-1.5 py-2"
+                className="w-full rounded-[4px] text-xs font-semibold border-primary/30 text-primary hover:bg-primary/10 flex items-center justify-center gap-1.5 h-9 transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 <span>
@@ -563,7 +565,7 @@ export default function PaymentModal({
             variant="outline"
             onClick={handleClose}
             disabled={isSubmitting}
-            className="rounded-[4px] text-xs"
+            className="rounded-[4px] text-xs h-9 px-4"
           >
             Cancel
           </Button>
@@ -571,7 +573,7 @@ export default function PaymentModal({
             type="button"
             onClick={() => handleCompleteSale()}
             disabled={!canCompleteSale || isSubmitting}
-            className="bg-primary hover:bg-primary/80 text-white min-w-[150px] rounded-[4px] text-xs uppercase font-bold tracking-wider"
+            className="bg-primary hover:bg-primary/80 text-white min-w-[160px] rounded-[4px] text-xs uppercase font-bold tracking-wider h-9 px-4"
           >
             {isSubmitting ? (
               <>
