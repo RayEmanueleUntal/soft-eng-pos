@@ -570,9 +570,7 @@ export async function fetchTransactionsApi(options?: {
     const response = await apiClient.get<
       BackendTransactionsListResponse | BackendTransactionItem[]
     >("/transactions", {
-      params: {
-        limit: 100,
-      },
+      params,
     });
     const payload = response.data;
     const rawList: BackendTransactionItem[] = Array.isArray(payload)

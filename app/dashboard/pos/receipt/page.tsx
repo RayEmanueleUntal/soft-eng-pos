@@ -29,6 +29,7 @@ export default function TransactionHistoryPage() {
   const router = useRouter();
   const [transactions, setTransactions] = useState<TransactionSummary[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -42,7 +43,7 @@ export default function TransactionHistoryPage() {
       const result = await fetchTransactionsApi({
         page,
         limit: PAGE_SIZE,
-        search: searchTerm,
+        search: debouncedSearch,
       });
       setTransactions(result.items);
       setTotal(result.total);
@@ -55,11 +56,18 @@ export default function TransactionHistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, searchTerm]);
+  }, [page, debouncedSearch]);
 
   const handleRefresh = useCallback(async () => {
     await loadTransactions();
   }, [loadTransactions]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   useEffect(() => {
     void loadTransactions();
