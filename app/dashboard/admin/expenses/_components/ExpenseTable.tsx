@@ -5,6 +5,7 @@
 
 import { Loader2, PencilIcon, Trash2Icon } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -24,7 +25,22 @@ import { TablePagination } from "@/components/ui/table-pagination";
 const COLUMN_COUNT = 7;
 
 const HEAD_CLASS =
-  "text-foreground font-mono text-[11px] font-semibold uppercase tracking-wider h-9";
+  "text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold";
+
+function getPaymentBadgeVariant(method: string) {
+  switch (method) {
+    case "CASH":
+      return "default" as const;
+    case "GCASH":
+    case "CHECK":
+    case "BANK_TRANSFER":
+      return "secondary" as const;
+    case "CREDIT":
+      return "outline" as const;
+    default:
+      return "default" as const;
+  }
+}
 
 interface ExpenseTableProps {
   expenses: ExpenseDto[];
@@ -72,9 +88,9 @@ export function ExpenseTable({
 }: ExpenseTableProps) {
   return (
     <div className="space-y-4">
-      <div className="overflow-x-auto rounded-md border border-border">
+      <div className="overflow-x-auto rounded-[4px] border border-input bg-card shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
         <Table>
-          <TableHeader className="bg-muted/50">
+          <TableHeader className="bg-muted border-b border-border">
             <TableRow>
               <TableHead className={HEAD_CLASS}>Date</TableHead>
               <TableHead className={HEAD_CLASS}>Category</TableHead>
@@ -94,7 +110,7 @@ export function ExpenseTable({
               <TableRow>
                 <TableCell
                   colSpan={COLUMN_COUNT}
-                  className="py-12 text-center text-sm text-muted-foreground"
+                  className="py-8 text-center text-muted-foreground text-xs font-sans"
                 >
                   Loading expenses...
                 </TableCell>
@@ -103,25 +119,33 @@ export function ExpenseTable({
               <TableRow>
                 <TableCell
                   colSpan={COLUMN_COUNT}
-                  className="py-12 text-center text-sm text-muted-foreground"
+                  className="py-8 text-center text-muted-foreground text-xs font-sans"
                 >
                   No expenses found. Use &quot;New Expense&quot; to record one.
                 </TableCell>
               </TableRow>
             ) : (
               expenses.map((expense) => (
-                <TableRow key={expense.id} className="text-xs">
-                  <TableCell className="font-mono tabular-nums whitespace-nowrap">
+                <TableRow
+                  key={expense.id}
+                  className="h-[36px] border-b border-border hover:bg-accent hover:border-l-[2px] hover:border-l-primary transition-colors"
+                >
+                  <TableCell className="font-mono text-xs tabular-nums text-foreground whitespace-nowrap">
                     {formatExpenseDate(expense.date)}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap font-medium text-foreground">
+                  <TableCell className="whitespace-nowrap font-medium text-foreground text-xs font-sans">
                     {EXPENSE_CATEGORY_LABELS[expense.category] ??
                       expense.category}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    {expense.payment_method.replace(/_/g, " ")}
+                    <Badge
+                      variant={getPaymentBadgeVariant(expense.payment_method)}
+                      className="rounded-[2px] font-mono text-[11px] font-semibold uppercase"
+                    >
+                      {expense.payment_method.replace(/_/g, " ")}
+                    </Badge>
                   </TableCell>
-                  <TableCell className="text-right  font-semibold tabular-nums text-foreground whitespace-nowrap">
+                  <TableCell className="text-right font-semibold text-xs tabular-nums text-foreground whitespace-nowrap">
                     {formatPeso(Number(expense.amount))}
                   </TableCell>
                   <TableCell>
@@ -132,7 +156,7 @@ export function ExpenseTable({
                       {formatStaffName(expense)}
                     </span>
                   </TableCell>
-                  <TableCell className="max-w-[260px] whitespace-normal break-words text-muted-foreground">
+                  <TableCell className="max-w-[260px] whitespace-normal break-words text-muted-foreground text-xs font-sans">
                     {expense.notes?.trim() ? expense.notes : "—"}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-center">

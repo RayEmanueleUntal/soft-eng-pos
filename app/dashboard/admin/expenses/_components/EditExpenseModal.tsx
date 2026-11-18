@@ -147,6 +147,7 @@ export function EditExpenseModal({
             idPrefix="edit-expense"
             values={values}
             amountError={amountError}
+            dateRequired
             disabled={submitting}
             onChange={setValues}
           />
