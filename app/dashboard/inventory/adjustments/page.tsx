@@ -24,6 +24,9 @@ import { getErrorMessage } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/pageheader";
 import { TablePagination } from "@/components/ui/table-pagination";
 
+import { SortKey } from "@/components/ui/sort-select";
+import { mapMovementSortKeyToApiParams } from "@/lib/utils/sort";
+
 function includesText(value: unknown, query: string): boolean {
   return String(value ?? "")
     .toLowerCase()
@@ -118,6 +121,7 @@ export default function InventoryAdjustmentsPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [sortKey, setSortKey] = useState<SortKey>("DEFAULT");
 
   // Categories & Staff cache
   const [categoriesList, setCategoriesList] = useState<
@@ -181,9 +185,13 @@ export default function InventoryAdjustmentsPage() {
       setLoading(true);
       setError(null);
 
+      const { sortBy, sortOrder } = mapMovementSortKeyToApiParams(sortKey);
+
       const queryParams: StockMovementsQueryParams = {
         page,
         limit: PAGE_LIMIT,
+        ...(sortBy && { sortBy }),
+        ...(sortOrder && { sortOrder }),
       };
 
       if (typeFilter !== "ALL") {
@@ -305,6 +313,7 @@ export default function InventoryAdjustmentsPage() {
     typeFilter,
     startDate,
     endDate,
+    sortKey,
     debouncedSearch,
     debouncedSize,
     debouncedThread,
@@ -335,6 +344,7 @@ export default function InventoryAdjustmentsPage() {
     categoryFilter !== "ALL" ||
     Boolean(startDate) ||
     Boolean(endDate);
+  sortKey !== "DEFAULT";
 
   const handleResetFilters = () => {
     setSearch("");
@@ -345,6 +355,7 @@ export default function InventoryAdjustmentsPage() {
     setCategoryFilter("ALL");
     setStartDate("");
     setEndDate("");
+    setSortKey("DEFAULT");
     setPage(1);
   };
 
@@ -377,7 +388,6 @@ export default function InventoryAdjustmentsPage() {
 
       {/* Movements Table */}
       <div className="rounded-[4px] border border-border bg-card shadow-sm overflow-hidden flex-1 p-4 space-y-4">
-
         {error ? (
           <div className="flex items-center justify-between gap-3 rounded-[2px] border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive">
             <span>{error}</span>
@@ -415,6 +425,11 @@ export default function InventoryAdjustmentsPage() {
             endDate={endDate}
             onEndDateChange={(val) => {
               setEndDate(val);
+              setPage(1);
+            }}
+            sortKey={sortKey}
+            onSortKeyChange={(val) => {
+              setSortKey(val);
               setPage(1);
             }}
             hasActiveFilters={hasActiveFilters}

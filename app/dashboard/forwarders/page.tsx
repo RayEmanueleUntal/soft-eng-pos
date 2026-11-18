@@ -14,7 +14,7 @@ import { CreateForwarderModal } from "./_components/CreateForwarderModal";
 import { EditForwarderModal } from "./_components/EditForwarderModal";
 import { DeleteForwarderModal } from "./_components/DeleteForwarderModal";
 import { PageHeader } from "@/components/ui/pageheader";
-import { SortKey } from "@/components/ui/sort-select";
+import { SortKey, mapForwarderSortKeyToApiParams } from "@/lib/utils/sort";
 
 export default function ForwardersPage() {
   const [forwarders, setForwarders] = useState<Forwarder[]>([]);
@@ -45,6 +45,7 @@ export default function ForwardersPage() {
       const params: Record<string, string | number | boolean> = {
         page,
         limit,
+        ...mapForwarderSortKeyToApiParams(sort),
       };
 
       if (searchQuery.trim()) {
@@ -68,7 +69,7 @@ export default function ForwardersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, searchQuery, statusFilter]);
+  }, [page, limit, searchQuery, statusFilter, sort]);
 
   useEffect(() => {
     fetchForwarders();

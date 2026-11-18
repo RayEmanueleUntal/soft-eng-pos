@@ -27,6 +27,8 @@ export async function fetchPurchaseOrderList(
         supplierId: params.supplierId,
         startDate: params.startDate,
         endDate: params.endDate,
+        sortBy: params.sortBy,
+        sortOrder: params.sortOrder,
       },
     },
   );

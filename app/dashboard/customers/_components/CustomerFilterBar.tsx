@@ -46,11 +46,11 @@ export function CustomerFilterBar({
 
   const hasActiveFilters = Boolean(
     filters.search ||
-      filters.name ||
-      filters.contact_number ||
-      filters.type ||
-      filters.company_name ||
-      sort !== "DEFAULT",
+    filters.name ||
+    filters.contact_number ||
+    filters.type ||
+    filters.company_name ||
+    sort !== "DEFAULT",
   );
 
   const TYPE_LABELS: Record<string, string> = {
@@ -107,9 +107,13 @@ export function CustomerFilterBar({
             showDefaultOption
             options={[
               "NAME_ASC",
-              "NAME_DESC"
+              "NAME_DESC",
+              "CREDIT_LIMIT_ASC",
+              "CREDIT_LIMIT_DESC",
+              "OUTSTANDING_ASC",
+              "OUTSTANDING_DESC",
             ]}
-            triggerClassName="w-[175px] !h-9 text-sm rounded-[2px]"
+            triggerClassName="w-[210px] !h-9 text-sm rounded-[2px]"
           />
         </div>
 

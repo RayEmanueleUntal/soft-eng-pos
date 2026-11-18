@@ -30,7 +30,7 @@ import { Pencil, SlidersHorizontal } from "lucide-react";
 
 interface InventoryTableProps {
   inventory: InventoryItem[];
-  totalRecords: number; 
+  totalRecords: number;
   categories: Record<number, string>;
   onRefresh: () => void;
   canManageStock: boolean;
@@ -68,11 +68,11 @@ export function InventoryTable({
   const handleSaved = () => {
     onRefresh();
 
-  // Inside InventoryTable component:
-  const showActions = canManageStock || canEditROP;
-  const columnCount =
-    6 + (canManageStock ? 1 : 0) + (showActions ? 1 : 0);  
-    };
+    // Inside InventoryTable component:
+    // const showActions = canManageStock || canEditROP;
+    // const columnCount =
+    //   6 + (canManageStock ? 1 : 0) + (showActions ? 1 : 0);
+  };
 
   return (
     <>
@@ -106,7 +106,7 @@ export function InventoryTable({
               )}
               {showActions && (
                 <TableHead className={`${HEAD_CLASS} text-center w-16`}>
-                  Edit 
+                  Edit
                 </TableHead>
               )}
             </TableRow>
@@ -158,7 +158,9 @@ export function InventoryTable({
                         </div>
 
                         <div>
-                          <span className="text-muted-foreground">Material:</span>{" "}
+                          <span className="text-muted-foreground">
+                            Material:
+                          </span>{" "}
                           <span className="font-medium text-foreground">
                             {item.material_grade || "-"}
                           </span>
@@ -229,7 +231,9 @@ export function InventoryTable({
                               Stock Out
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => setActive({ type: "adjust", item })}
+                              onClick={() =>
+                                setActive({ type: "adjust", item })
+                              }
                             >
                               Manual Adjustment
                             </DropdownMenuItem>
@@ -266,7 +270,7 @@ export function InventoryTable({
                               <DropdownMenuItem
                                 onClick={() => setActive({ type: "rop", item })}
                               >
-                                Edit 
+                                Edit
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
@@ -288,7 +292,7 @@ export function InventoryTable({
             )}
           </TableBody>
         </Table>
-      </div>    
+      </div>
 
       {active && (active.type === "in" || active.type === "out") && (
         <StockMovementModal

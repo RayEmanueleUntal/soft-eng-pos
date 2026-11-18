@@ -14,6 +14,7 @@ import { canManageStock } from "@/lib/auth/permissions";
 import { getErrorMessage } from "@/lib/utils";
 import { AlertTriangle, CheckCircle2, RefreshCw, X } from "lucide-react";
 import { PageHeader } from "@/components/ui/pageheader";
+import { mapDeliverySortKeyToApiParams } from "@/lib/utils/sort";
 
 export default function DeliveriesPage() {
   const role = useCurrentRole();
@@ -47,7 +48,16 @@ export default function DeliveriesPage() {
     setError(null);
 
     try {
-      const res = await fetchDeliveries({ page, limit });
+      const { sortBy, sortOrder } = mapDeliverySortKeyToApiParams(sort);
+
+      const res = await fetchDeliveries({
+        page,
+        limit,
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
+        ...(sortBy && { sortBy }),
+        ...(sortOrder && { sortOrder }),
+      });
 
       setDeliveries(res.data || []);
       setTotal(res.total || 0);
@@ -64,7 +74,7 @@ export default function DeliveriesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit]);
+  }, [page, limit, sort, startDate, endDate]);
 
   React.useEffect(() => {
     loadDeliveries();
@@ -86,7 +96,9 @@ export default function DeliveriesPage() {
     const startTs = startDate
       ? new Date(`${startDate}T00:00:00`).getTime()
       : null;
-    const endTs = endDate ? new Date(`${endDate}T23:59:59.999`).getTime() : null;
+    const endTs = endDate
+      ? new Date(`${endDate}T23:59:59.999`).getTime()
+      : null;
 
     const filtered = deliveries.filter((d) => {
       const rawDate =
@@ -270,12 +282,12 @@ export default function DeliveriesPage() {
 
         {/* Deliveries Table */}
         <DeliveryHistoryTable
-          deliveries={displayedDeliveries}
+          deliveries={deliveries}
           loading={loading}
           onViewDetails={handleViewDetails}
           page={page}
-          totalPages={hasActiveFilters ? 1 : totalPages}
-          total={hasActiveFilters ? displayedDeliveries.length : total}
+          totalPages={totalPages}
+          total={total}
           pageSize={limit}
           onPageChange={(newPage) => setPage(newPage)}
         />

@@ -31,6 +31,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { mapSortKeyToApiParams, SortKey } from "@/lib/utils/sort";
+
 const LIMIT = 15;
 
 export function ProductTable() {
@@ -46,6 +48,8 @@ export function ProductTable() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
+  const [sort, setSort] = useState<SortKey>("DEFAULT");
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -57,18 +61,40 @@ export function ProductTable() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [bannerError, setBannerError] = useState<string | null>(null);
 
+  // Debounce ONLY text search inputs so dropdowns and pagination fire immediately
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
+  const [debouncedThread, setDebouncedThread] = useState(thread);
+  const [debouncedMaterial, setDebouncedMaterial] = useState(material);
+  const [debouncedSize, setDebouncedSize] = useState(size);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setDebouncedThread(thread);
+      setDebouncedMaterial(material);
+      setDebouncedSize(size);
+      setPage(1);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, thread, material, size]);
+
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
 
+      const { sortBy, sortOrder } = mapSortKeyToApiParams(sort);
+
       const response = await apiClient.get("/products", {
         params: {
-          search: searchTerm || undefined,
-          thread: thread || undefined,
-          material: material || undefined,
-          size: size || undefined,
+          search: debouncedSearch || undefined,
+          thread: debouncedThread || undefined,
+          material: debouncedMaterial || undefined,
+          size: debouncedSize || undefined,
           categoryId: categoryId ? Number(categoryId) : undefined,
+          sortBy,
+          sortOrder,
           page,
           limit: LIMIT,
         },
@@ -82,23 +108,19 @@ export function ProductTable() {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, thread, material, size, categoryId, page]);
+  }, [
+    debouncedSearch,
+    debouncedThread,
+    debouncedMaterial,
+    debouncedSize,
+    categoryId,
+    sort,
+    page,
+  ]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchProducts();
-    }, 300);
-
-    return () => clearTimeout(timer);
+    fetchProducts();
   }, [fetchProducts]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [searchTerm, thread, material, size, categoryId]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [searchTerm, thread, material, size, categoryId]);
 
   // 1. Place the auto-dismiss useEffect right here:
   useEffect(() => {
@@ -214,7 +236,15 @@ export function ProductTable() {
           size={size}
           onSizeChange={setSize}
           categoryId={categoryId}
-          onCategoryChange={setCategoryId}
+          onCategoryChange={(val) => {
+            setCategoryId(val);
+            setPage(1);
+          }}
+          sort={sort}
+          onSortChange={(val) => {
+            setSort(val);
+            setPage(1);
+          }}
           actionSlot={<AddProductModal onSaved={handleProductSaved} />}
         />
       </div>
@@ -275,7 +305,10 @@ export function ProductTable() {
                         </span>
 
                         {product.needsRecount && (
-                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                          <Badge
+                            variant="destructive"
+                            className="text-[10px] px-1.5 py-0"
+                          >
                             Recount Required
                           </Badge>
                         )}
@@ -287,12 +320,14 @@ export function ProductTable() {
                     </div>
 
                     <div className="mt-2">
-                        <span className="inline-flex items-center rounded-md bg-muted border border-border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground">
-                          {product.category_name ||
-                            product.category?.name ||
-                            (product.categoryId ? `Category #${product.categoryId}` : "-")}
-                        </span>
-                      </div>
+                      <span className="inline-flex items-center rounded-md bg-muted border border-border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground">
+                        {product.category_name ||
+                          product.category?.name ||
+                          (product.categoryId
+                            ? `Category #${product.categoryId}`
+                            : "-")}
+                      </span>
+                    </div>
                   </TableCell>
 
                   <TableCell className="align-top py-3 whitespace-normal">

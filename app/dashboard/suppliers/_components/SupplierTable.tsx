@@ -41,7 +41,7 @@ import { SupplierModal } from "./SupplierModal";
 import { SupplierDeleteDialog } from "./SupplierDeleteDialog";
 import { Label } from "@/components/ui/label";
 import { SortSelect, SortKey } from "@/components/ui/sort-select";
-import { sortItems } from "@/components/ui/sort-items";
+import { mapSupplierSortKeyToApiParams } from "@/lib/utils/sort";
 
 export function SupplierTable() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -83,11 +83,13 @@ export function SupplierTable() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      const sortParams = mapSupplierSortKeyToApiParams(sortOrder);
       const res = await fetchSuppliers({
         page: currentPage,
         limit: pageSize,
         search: searchTerm,
         status: statusFilter,
+        ...sortParams,
       });
       setSuppliers(res.data);
       setTotalPages(res.totalPages);
@@ -100,7 +102,7 @@ export function SupplierTable() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchTerm, statusFilter]);
+  }, [currentPage, searchTerm, statusFilter, sortOrder]);
 
   useEffect(() => {
     loadData();
@@ -160,16 +162,6 @@ export function SupplierTable() {
     ACTIVE: "Active",
     INACTIVE: "Inactive",
   };
-
-  const displayedSuppliers = useMemo(
-    () =>
-      sortItems(suppliers, sortOrder, {
-        getName: (s) => s.companyName || s.name || "",
-        getStock: (s) => Number(s.leadTimeDays ?? s.lead_time_days ?? 0),
-        getId: (s) => s.id,
-      }),
-    [suppliers, sortOrder],
-  );
 
   return (
     <div className="space-y-4">
@@ -239,12 +231,7 @@ export function SupplierTable() {
                 setCurrentPage(1);
               }}
               showDefaultOption
-              options={[
-                "NAME_ASC",
-                "NAME_DESC",
-                "STOCK_ASC",
-                "STOCK_DESC",
-              ]}
+              options={["NAME_ASC", "NAME_DESC", "STOCK_ASC", "STOCK_DESC"]}
               labelOverrides={{
                 DEFAULT: { menuLabel: "Default Order" },
                 STOCK_ASC: {
@@ -332,7 +319,7 @@ export function SupplierTable() {
                 </TableCell>
               </TableRow>
             ) : (
-              displayedSuppliers.map((supplier) => {
+              suppliers.map((supplier) => {
                 const name = supplier.companyName || supplier.name || "N/A";
                 const contact =
                   supplier.contactPerson || supplier.contact_person || "N/A";

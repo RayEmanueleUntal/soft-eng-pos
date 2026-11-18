@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { apiClient } from "@/lib/api";
+import { apiClient, getApiErrorMessage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -126,11 +126,9 @@ export function StaffTable() {
         setStaffList(normalizedStaff);
       }
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { message?: string } } };
-      const msg =
-        axiosErr.response?.data?.message ||
-        "Failed to load staff records from server.";
-      setError(typeof msg === "string" ? msg : JSON.stringify(msg));
+      setError(
+        getApiErrorMessage(err, "Failed to load staff records from server."),
+      );
     } finally {
       setLoading(false);
     }
@@ -221,10 +219,7 @@ export function StaffTable() {
       );
       await fetchStaff();
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { message?: string } } };
-      setError(
-        axiosErr.response?.data?.message || "Failed to update account status.",
-      );
+      setError(getApiErrorMessage(err, "Failed to update account status."));
     } finally {
       setTogglingId(null);
     }
@@ -310,7 +305,9 @@ export function StaffTable() {
               >
                 <SelectTrigger className="w-full sm:w-[160px] !h-9">
                   <SelectValue placeholder="All Roles">
-                    {roleFilter === "ALL" ? "All Roles" : formatRole(roleFilter)}
+                    {roleFilter === "ALL"
+                      ? "All Roles"
+                      : formatRole(roleFilter)}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent alignItemWithTrigger={false}>
@@ -409,7 +406,7 @@ export function StaffTable() {
           Staff Profile List
         </h2>
         <span className="text-xs font-mono text-muted-foreground tabular-nums">
-          Total records: 
+          Total records:
         </span>
       </div>
 

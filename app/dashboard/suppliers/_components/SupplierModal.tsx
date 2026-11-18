@@ -14,6 +14,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { Supplier, SupplierFormData } from "@/lib/suppliers/suppliers";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface SupplierModalProps {
   isOpen: boolean;
@@ -112,7 +119,9 @@ export function SupplierModal({
 
         <form onSubmit={handleSubmit} className="grid gap-4 py-2">
           <div className="grid gap-1.5">
-            <Label htmlFor="companyName">Company Name <span className="text-destructive">*</span> </Label>
+            <Label htmlFor="companyName">
+              Company Name <span className="text-destructive">*</span>{" "}
+            </Label>
             <Input
               id="companyName"
               placeholder="e.g. Manila Industrial Fasteners"
@@ -140,36 +149,53 @@ export function SupplierModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
-              <Label htmlFor="email">Email<span className="text-destructive">*</span> </Label>
+              <Label htmlFor="leadTimeDays">Delivery Lead Time (Days)</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="supplier@example.com"
-                value={formData.email}
+                id="leadTimeDays"
+                type="number"
+                min="0"
+                placeholder="0"
+                value={formData.leadTimeDays === 0 ? "" : formData.leadTimeDays}
                 onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
+                  setFormData({
+                    ...formData,
+                    leadTimeDays:
+                      e.target.value === "" ? 0 : parseInt(e.target.value, 10),
+                  })
                 }
               />
-              {errors.email && (
-                <p className="text-xs text-destructive">{errors.email}</p>
+              {errors.leadTimeDays && (
+                <p className="text-xs text-destructive">
+                  {errors.leadTimeDays}
+                </p>
               )}
             </div>
 
             <div className="grid gap-1.5">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                placeholder="+63 912 345 6789"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-              />
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={formData.status || "ACTIVE"}
+                onValueChange={(val) => {
+                  if (val) setFormData({ ...formData, status: val });
+                }}
+              >
+                <SelectTrigger id="status" className="w-full h-9">
+                  <SelectValue placeholder="Select status">
+                    {formData.status === "INACTIVE" ? "Inactive" : "Active"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="INACTIVE">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="address">Address <span className="text-destructive">*</span></Label>
+            <Label htmlFor="address">
+              Address <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="address"
               placeholder="e.g. Building 4, Metro Industrial Park"

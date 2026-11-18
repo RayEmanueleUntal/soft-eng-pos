@@ -14,6 +14,8 @@ export interface FetchDeliveriesParams {
   poId?: number;
   startDate?: string;
   endDate?: string;
+  sortBy?: "delivery_date";
+  sortOrder?: "asc" | "desc";
 }
 
 /**
@@ -30,6 +32,8 @@ export async function fetchDeliveries(
       ...(params.poId ? { poId: params.poId } : {}),
       ...(params.startDate ? { startDate: params.startDate } : {}),
       ...(params.endDate ? { endDate: params.endDate } : {}),
+      ...(params.sortBy ? { sortBy: params.sortBy } : {}),
+      ...(params.sortOrder ? { sortOrder: params.sortOrder } : {}),
     },
   });
   return response.data;

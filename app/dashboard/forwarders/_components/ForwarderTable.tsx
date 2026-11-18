@@ -9,7 +9,7 @@ import { Forwarder } from "./types";
 import { Button } from "@/components/ui/button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { SortKey } from "@/components/ui/sort-select";
-import { sortItems } from "@/components/ui/sort-items";
+import { sortItems } from "@/lib/utils/sort";
 
 interface ForwarderTableProps {
   data: Forwarder[];
@@ -31,28 +31,10 @@ export function ForwarderTable({
   totalPages,
   total,
   pageSize,
-  sort = "DEFAULT",
   onPageChange,
   onEdit,
   onDelete,
 }: ForwarderTableProps) {
-  const sortedData = React.useMemo(() => {
-    if (sort === "DEFAULT") return data;
-
-    return [...data].sort((a, b) => {
-      const aName = (a.company_name ?? (a as any).companyName ?? "").trim();
-      const bName = (b.company_name ?? (b as any).companyName ?? "").trim();
-
-      if (sort === "NAME_ASC") {
-        return aName.localeCompare(bName, undefined, { sensitivity: "base" });
-      }
-      if (sort === "NAME_DESC") {
-        return bName.localeCompare(aName, undefined, { sensitivity: "base" });
-      }
-      return 0;
-    });
-  }, [data, sort]);
-
   return (
     <div className="space-y-4">
       {/*info subheading */}
@@ -71,7 +53,9 @@ export function ForwarderTable({
           <thead>
             <tr className="bg-[#F1F5F9] border-b border-border text-[11px] font-mono uppercase tracking-wider text-[#475569]">
               <th className="py-2.5 px-4 font-semibold">Company Name</th>
-              <th className="py-2.5 px-4 font-semibold">Tracking Contact Info</th>
+              <th className="py-2.5 px-4 font-semibold">
+                Tracking Contact Info
+              </th>
               <th className="py-2.5 px-4 font-semibold">Status</th>
               <th className="py-2.5 px-4 font-semibold">Created Date</th>
               <th className="py-2.5 px-4 font-semibold text-right">Actions</th>
@@ -80,21 +64,27 @@ export function ForwarderTable({
           <tbody className="divide-y divide-border text-xs">
             {loading ? (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-muted-foreground">
+                <td
+                  colSpan={5}
+                  className="py-12 text-center text-muted-foreground"
+                >
                   <div className="flex justify-center items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin text-[#0060B2]" />
                     <span>Loading forwarders...</span>
                   </div>
                 </td>
               </tr>
-            ) : sortedData.length === 0 ? (
+            ) : data.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-muted-foreground">
+                <td
+                  colSpan={5}
+                  className="py-12 text-center text-muted-foreground"
+                >
                   No forwarders found matching your criteria.
                 </td>
               </tr>
             ) : (
-              sortedData.map((item) => (
+              data.map((item) => (
                 <tr
                   key={item.id}
                   className="hover:bg-[#F8FAFC] transition-colors h-[36px]"
