@@ -43,7 +43,7 @@ function formatPaymentMethod(method: PaymentMethod): string {
     case "CASH":
       return "Cash";
     case "GCASH":
-      return "GCash";
+      return "InstaPay";
     case "CREDIT":
       return "Credit";
     default:
@@ -74,7 +74,7 @@ function PaymentDetails({ payment }: { payment: ReceiptPayment }) {
   if (payment.payment_method === "GCASH" && payment.reference_number) {
     return (
       <>
-        <ReceiptRow label="GCash ref" value={payment.reference_number} />
+        <ReceiptRow label="InstaPay ref" value={payment.reference_number} />
       </>
     );
   }

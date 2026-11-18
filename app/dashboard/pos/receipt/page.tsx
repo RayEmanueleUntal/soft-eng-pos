@@ -227,7 +227,9 @@ export default function TransactionHistoryPage() {
                           variant={getBadgeVariant(tx.paymentMethod)}
                           className="rounded-[2px] font-mono text-[11px] font-semibold uppercase"
                         >
-                          {tx.paymentMethod}
+                          {tx.paymentMethod === "GCASH"
+                            ? "INSTAPAY"
+                            : tx.paymentMethod}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-semibold text-xs tabular-nums text-foreground">
@@ -258,7 +260,7 @@ export default function TransactionHistoryPage() {
           totalPages={totalPages}
           totalItems={total}
           pageSize={PAGE_SIZE}
-          itemLabel="receipts"
+          itemLabel="invoices"
           loading={loading}
           onPageChange={setPage}
         />
