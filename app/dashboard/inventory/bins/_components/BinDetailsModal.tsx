@@ -1,8 +1,8 @@
 // components/inventory/bin/BinDetailsModal.tsx
 "use client";
 
+import * as React from "react";
 import { MapPin, Layers } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { BinLocation } from "@/lib/bin-locations/bin-locations";
 import { BinProductsModal } from "./BinProductsModal";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 interface BinDetailsModalProps {
   bin: BinLocation | null;
@@ -24,22 +25,33 @@ export function BinDetailsModal({
   open,
   onOpenChange,
 }: BinDetailsModalProps) {
+  const [page, setPage] = React.useState(1);
+  const [total, setTotal] = React.useState(0);
+  const [loading, setLoading] = React.useState(false);
+  const pageSize = 15;
+
+  React.useEffect(() => {
+    setPage(1);
+    setTotal(0);
+  }, [bin?.id]);
+
   if (!bin) return null;
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl w-full max-h-[85vh] overflow-y-auto border-[#CBD5E1] rounded-sm p-5 bg-white shadow-md">
-        <DialogHeader className="border-b border-[#E2E8F0] pb-3">
+      <DialogContent className="sm:max-w-5xl w-full max-h-[90vh] flex flex-col border-[#CBD5E1] rounded-sm p-5 bg-white shadow-md">
+        <DialogHeader className="border-b border-[#E2E8F0] pb-3 shrink-0">
           <DialogTitle className="font-['Space_Grotesk'] text-base font-bold text-[#0F172A] flex items-center gap-2">
             <MapPin className="h-4 w-4 text-[#0060B2]" />
             Bin Location Metadata
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2 text-xs font-['Inter'] min-w-0">
+        <div className="space-y-4 py-2 text-xs font-['Inter'] min-w-0 flex-1 overflow-y-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-3 rounded-sm space-y-2">
-
               <div className="flex justify-between items-center">
                 <span className="text-[#727783] font-medium">
                   Aisle Number:
@@ -71,17 +83,26 @@ export function BinDetailsModal({
           </div>
 
           {/* Assigned Products Table */}
-          <BinProductsModal bin={bin} />
+          <BinProductsModal
+            bin={bin}
+            page={page}
+            pageSize={pageSize}
+            onTotalChange={setTotal}
+            onLoadingChange={setLoading}
+          />
         </div>
 
-        <DialogFooter className="pt-2 border-t border-[#E2E8F0]">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="h-8 text-xs border-[#CBD5E1] text-[#0F172A] hover:bg-[#F1F5F9] rounded-sm w-full sm:w-auto"
-          >
-            Close
-          </Button>
+        <DialogFooter className="pt-2 border-t border-[#E2E8F0] shrink-0">
+          <TablePagination
+            className="w-full"
+            page={page}
+            totalPages={totalPages}
+            totalItems={total}
+            pageSize={pageSize}
+            itemLabel="products"
+            loading={loading}
+            onPageChange={setPage}
+          />
         </DialogFooter>
       </DialogContent>
     </Dialog>

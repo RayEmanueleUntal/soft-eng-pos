@@ -106,7 +106,7 @@ export function InventoryTable({
               )}
               {showActions && (
                 <TableHead className={`${HEAD_CLASS} text-center w-16`}>
-                  Edit
+                  Edit ROP
                 </TableHead>
               )}
             </TableRow>
@@ -266,7 +266,7 @@ export function InventoryTable({
                               <DropdownMenuItem
                                 onClick={() => setActive({ type: "rop", item })}
                               >
-                                Edit ROP
+                                Edit 
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>

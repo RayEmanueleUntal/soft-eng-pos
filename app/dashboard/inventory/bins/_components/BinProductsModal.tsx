@@ -17,46 +17,51 @@ import { getErrorMessage } from "@/lib/utils";
 
 interface BinProductItem {
   id: number;
-  name: string;
   sku?: string | null;
+  name: string;
   categoryId?: number | null;
   category_name?: string | null;
-  category?: { id: number; name?: string; categoryName?: string } | null;
   size_dimensions?: string | null;
   thread_type?: string | null;
   material_grade?: string | null;
   current_quantity: number;
-  binLocationId?: number | null;
   binId?: number | null;
   bin_aisle_number?: string | null;
   bin_shelf_location?: string | null;
 }
 
-interface BinProductsModalProps {
-  bin: BinLocation;
+interface ProductsResponse {
+  data: BinProductItem[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
-const PAGE_LIMIT = 100;
+interface BinProductsModalProps {
+  bin: BinLocation;
+  page: number;
+  pageSize: number;
+  onTotalChange: (total: number) => void;
+  onLoadingChange: (loading: boolean) => void;
+}
+
 const CACHE_TTL_MS = 5 * 60_000;
-const SESSION_CACHE_KEY = "pos_bin_catalog_cache_v1";
+const SESSION_CACHE_KEY = "pos_bin_catalog_cache_v3";
 
 interface CatalogCache {
   products: BinProductItem[];
-  categories: Record<number, string>;
   fetchedAt: number;
 }
 
 let memoryCache: CatalogCache | null = null;
-let inFlightFetch: Promise<{
-  products: BinProductItem[];
-  categories: Record<number, string>;
-}> | null = null;
+let preferredLimit = 1000; // Automatically drops to 100 if backend DTO caps limit
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-function readCache(): CatalogCache | null {
+function readCache(): BinProductItem[] | null {
   if (memoryCache && Date.now() - memoryCache.fetchedAt < CACHE_TTL_MS) {
-    return memoryCache;
+    return memoryCache.products;
   }
   if (typeof window !== "undefined") {
     try {
@@ -65,7 +70,7 @@ function readCache(): CatalogCache | null {
         const parsed: CatalogCache = JSON.parse(raw);
         if (Date.now() - parsed.fetchedAt < CACHE_TTL_MS) {
           memoryCache = parsed;
-          return parsed;
+          return parsed.products;
         }
       }
     } catch {
@@ -75,212 +80,163 @@ function readCache(): CatalogCache | null {
   return null;
 }
 
-function writeCache(data: CatalogCache) {
-  memoryCache = data;
+function writeCache(products: BinProductItem[]) {
+  const entry: CatalogCache = { products, fetchedAt: Date.now() };
+  memoryCache = entry;
   if (typeof window !== "undefined") {
     try {
-      sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(data));
+      sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(entry));
     } catch {
       // Ignore storage errors
     }
   }
 }
 
-async function fetchWithRetry<T>(
-  requestFn: () => Promise<T>,
-  retries = 3,
-): Promise<T> {
-  for (let attempt = 0; attempt <= retries; attempt++) {
+export function invalidateBinCatalogCache() {
+  memoryCache = null;
+  if (typeof window !== "undefined") {
     try {
-      return await requestFn();
-    } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response
-        ?.status;
-      if (status === 429 && attempt < retries) {
-        await sleep(3000 * (attempt + 1));
-        continue;
-      }
-      throw err;
+      sessionStorage.removeItem(SESSION_CACHE_KEY);
+    } catch {
+      // Ignore storage errors
     }
   }
-  throw new Error("Too many requests. Please wait a moment and try again.");
 }
 
-async function fetchCatalogWithCache(): Promise<{
-  products: BinProductItem[];
-  categories: Record<number, string>;
-}> {
-  const existing = readCache();
-  if (existing) {
-    return {
-      products: existing.products,
-      categories: existing.categories,
-    };
-  }
-
-  if (inFlightFetch) {
-    return inFlightFetch;
-  }
-
-  inFlightFetch = (async () => {
-    try {
-      // Only pass allowed query params (page & limit)
-      const firstRes = await fetchWithRetry(() =>
-        apiClient.get("/products", {
-          params: { page: 1, limit: PAGE_LIMIT },
-        }),
-      );
-
-      const firstItems: BinProductItem[] = Array.isArray(firstRes.data)
-        ? firstRes.data
-        : Array.isArray(firstRes.data?.data)
-          ? firstRes.data.data
-          : [];
-
-      const meta = firstRes.data?.meta;
-      const totalPages =
-        typeof meta?.totalPages === "number"
-          ? meta.totalPages
-          : typeof meta?.total === "number"
-            ? Math.ceil(meta.total / PAGE_LIMIT)
-            : 1;
-
-      const allProducts = [...firstItems];
-
-      for (let page = 2; page <= totalPages; page++) {
-        await sleep(1200);
-        const res = await fetchWithRetry(() =>
-          apiClient.get("/products", {
-            params: { page, limit: PAGE_LIMIT },
-          }),
-        );
-        const pageItems: BinProductItem[] = Array.isArray(res.data?.data)
-          ? res.data.data
-          : [];
-        allProducts.push(...pageItems);
-      }
-
-      const needsCategoryLookup = allProducts.some(
-        (p) =>
-          p.categoryId &&
-          !p.category_name &&
-          !p.category?.name &&
-          !p.category?.categoryName,
-      );
-
-      const catMap: Record<number, string> = {};
-      if (needsCategoryLookup) {
-        await sleep(1200);
-        const categoriesRes = await fetchWithRetry(() =>
-          apiClient.get<{ id: number; name?: string; categoryName?: string }[]>(
-            "/product-categories",
-          ),
-        ).catch(() => ({ data: [] }));
-
-        if (Array.isArray(categoriesRes.data)) {
-          categoriesRes.data.forEach((c) => {
-            catMap[c.id] = c.name || c.categoryName || `Category #${c.id}`;
-          });
-        }
-      }
-
-      writeCache({
-        products: allProducts,
-        categories: catMap,
-        fetchedAt: Date.now(),
+async function fetchProductsPage(page: number) {
+  try {
+    return await apiClient.get<ProductsResponse>("/products", {
+      params: { page, limit: preferredLimit },
+    });
+  } catch (err: unknown) {
+    const status = (err as { response?: { status?: number } })?.response
+      ?.status;
+    // If DTO has @Max(100) on limit, fall back to 100 once and remember it
+    if (status === 400 && preferredLimit > 100) {
+      preferredLimit = 100;
+      return await apiClient.get<ProductsResponse>("/products", {
+        params: { page, limit: 100 },
       });
-
-      return { products: allProducts, categories: catMap };
-    } finally {
-      inFlightFetch = null;
     }
-  })();
-
-  return inFlightFetch;
+    throw err;
+  }
 }
 
-export function BinProductsModal({ bin }: BinProductsModalProps) {
+export function BinProductsModal({
+  bin,
+  page,
+  pageSize,
+  onTotalChange,
+  onLoadingChange,
+}: BinProductsModalProps) {
   const [products, setProducts] = React.useState<BinProductItem[]>([]);
-  const [categories, setCategories] = React.useState<Record<number, string>>({});
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Inside useEffect in BinProductsModal.tsx:
-React.useEffect(() => {
-  let active = true;
-  setLoading(true);
-  setError(null);
-  setProducts([]); // Reset on bin change
+  React.useEffect(() => {
+    let active = true;
 
-  const matchesBin = (item: BinProductItem) => {
-    const itemBinId = item.binLocationId ?? item.binId;
-    if (itemBinId !== undefined && itemBinId !== null) {
-      return Number(itemBinId) === Number(bin.id);
-    }
-    return (
-      (item.bin_aisle_number ?? "").trim().toLowerCase() ===
-        bin.aisle_number.trim().toLowerCase() &&
-      (item.bin_shelf_location ?? "").trim().toLowerCase() ===
-        bin.shelf_location.trim().toLowerCase()
-    );
-  };
+    const matchesBin = (item: BinProductItem) => {
+      if (item.binId !== undefined && item.binId !== null) {
+        return Number(item.binId) === Number(bin.id);
+      }
+      return (
+        (item.bin_aisle_number ?? "").trim().toLowerCase() ===
+          bin.aisle_number.trim().toLowerCase() &&
+        (item.bin_shelf_location ?? "").trim().toLowerCase() ===
+          bin.shelf_location.trim().toLowerCase()
+      );
+    };
 
-  const loadProgressively = async () => {
-    try {
-      // 1. Fetch page 1 immediately
-      const firstRes = await apiClient.get("/products", {
-        params: { page: 1, limit: 100 },
-      });
-      if (!active) return;
+    async function load() {
+      setError(null);
 
-      const firstItems: BinProductItem[] = Array.isArray(firstRes.data?.data)
-        ? firstRes.data.data
-        : Array.isArray(firstRes.data)
-          ? firstRes.data
-          : [];
+      // 1. Instant hit if cached
+      const cached = readCache();
+      if (cached) {
+        const filtered = cached.filter(matchesBin);
+        setProducts(filtered);
+        onTotalChange(filtered.length);
+        setLoading(false);
+        onLoadingChange(false);
+        return;
+      }
 
-      // Immediately show matches from page 1 and stop full-screen spinner
-      setProducts(firstItems.filter(matchesBin));
-      setLoading(false);
+      setLoading(true);
+      onLoadingChange(true);
 
-      const meta = firstRes.data?.meta;
-      const totalPages =
-        typeof meta?.totalPages === "number"
-          ? meta.totalPages
-          : typeof meta?.total === "number"
-            ? Math.ceil(meta.total / 100)
-            : 1;
-
-      // 2. Append matches from remaining pages in the background
-      for (let page = 2; page <= totalPages; page++) {
-        if (!active) return;
-        await new Promise((r) => setTimeout(r, 150));
-        const res = await apiClient.get("/products", {
-          params: { page, limit: 100 },
-        });
+      try {
+        const firstRes = await fetchProductsPage(1);
         if (!active) return;
 
-        const pageItems: BinProductItem[] = Array.isArray(res.data?.data)
-          ? res.data.data
-          : [];
-        const matched = pageItems.filter(matchesBin);
-        if (matched.length > 0) {
-          setProducts((prev) => [...prev, ...matched]);
+        const firstItems = firstRes.data?.data ?? [];
+        const totalPages = firstRes.data?.meta?.totalPages ?? 1;
+        const allProducts = [...firstItems];
+
+        // Show matches from batch 1 immediately
+        const initialMatches = allProducts.filter(matchesBin);
+        setProducts(initialMatches);
+        onTotalChange(initialMatches.length);
+        if (initialMatches.length > 0 || totalPages === 1) {
+          setLoading(false);
+          onLoadingChange(false);
+        }
+
+        // Fetch remaining pages in small parallel batches of 4 (fast + stays well below 100 req/60s)
+        const BATCH_SIZE = 4;
+        for (let p = 2; p <= totalPages; p += BATCH_SIZE) {
+          if (!active) return;
+          const batchPages = Array.from(
+            { length: Math.min(BATCH_SIZE, totalPages - p + 1) },
+            (_, idx) => p + idx,
+          );
+
+          const responses = await Promise.all(
+            batchPages.map((pageNum) => fetchProductsPage(pageNum)),
+          );
+          if (!active) return;
+
+          for (const res of responses) {
+            allProducts.push(...(res.data?.data ?? []));
+          }
+
+          const updatedMatches = allProducts.filter(matchesBin);
+          setProducts(updatedMatches);
+          onTotalChange(updatedMatches.length);
+          if (updatedMatches.length > 0) {
+            setLoading(false);
+            onLoadingChange(false);
+          }
+        }
+
+        writeCache(allProducts);
+      } catch (err: unknown) {
+        if (active) {
+          setError(
+            getErrorMessage(err, "Failed to load products for this bin."),
+          );
+          setProducts([]);
+          onTotalChange(0);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+          onLoadingChange(false);
         }
       }
-    } catch (err: unknown) {
-      if (active) {
-        setError(getErrorMessage(err, "Failed to load products for this bin."));
-        setLoading(false);
-      }
     }
-  };
 
-  loadProgressively();
-  return () => {
-    active = false;
-  };
-}, [bin.id, bin.aisle_number, bin.shelf_location]);
+    load();
+    return () => {
+      active = false;
+    };
+  }, [bin.id, bin.aisle_number, bin.shelf_location]);
+
+  // Slice to 15 rows for the active page
+  const paginatedProducts = React.useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return products.slice(start, start + pageSize);
+  }, [products, page, pageSize]);
 
   return (
     <div className="space-y-2 min-w-0">
@@ -305,7 +261,7 @@ React.useEffect(() => {
           No products are currently assigned to this bin location.
         </div>
       ) : (
-        <div className="max-h-[400px] overflow-auto rounded-md border border-border">
+        <div className="max-h-[480px] overflow-auto rounded-md border border-border">
           <Table>
             <TableHeader className="bg-muted/95 sticky top-0 z-10">
               <TableRow>
@@ -324,20 +280,15 @@ React.useEffect(() => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products.map((item) => {
+              {paginatedProducts.map((item) => {
                 const categoryLabel =
                   item.category_name ||
-                  item.category?.name ||
-                  item.category?.categoryName ||
-                  (item.categoryId
-                    ? categories[item.categoryId] ||
-                      `Category #${item.categoryId}`
-                    : "-");
+                  (item.categoryId ? `Category #${item.categoryId}` : "-");
 
                 return (
                   <TableRow key={item.id} className="text-xs">
                     {/* Product Name & SKU */}
-                    <TableCell className="align-top py-3 whitespace-normal max-w-[220px]">
+                    <TableCell className="align-top py-3 whitespace-normal max-w-[240px]">
                       <div className="flex flex-col">
                         <span className="font-medium text-xs text-foreground break-words">
                           {item.name}
@@ -360,7 +311,7 @@ React.useEffect(() => {
                     </TableCell>
 
                     {/* Specifications (Size, Thread, Material) */}
-                    <TableCell className="align-top py-3 whitespace-normal max-w-[200px]">
+                    <TableCell className="align-top py-3 whitespace-normal max-w-[220px]">
                       <div className="space-y-0.5 text-xs">
                         <div>
                           <span className="text-muted-foreground">Size:</span>{" "}
