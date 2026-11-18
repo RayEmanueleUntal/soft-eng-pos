@@ -269,9 +269,6 @@ export function BinProductsModal({
                   Product
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  Category
-                </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider">
                   Specifications
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-right font-mono">
@@ -297,17 +294,16 @@ export function BinProductsModal({
                           {item.sku ?? "-"}
                         </span>
                       </div>
-                    </TableCell>
+                      <div className="mt-2">
+                        {categoryLabel !== "-" ? (
+                            <span className="inline-flex items-center rounded-md bg-muted border border-border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground break-words">
+                            {categoryLabel}
+                            </span>
+                        ) : (
+                            <span className="text-muted-foreground">-</span>
+                        )}
+                      </div>
 
-                    {/* Category Badge */}
-                    <TableCell className="align-top py-3 whitespace-normal max-w-[160px]">
-                      {categoryLabel !== "-" ? (
-                        <span className="inline-flex items-center rounded-md bg-muted border border-border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground break-words">
-                          {categoryLabel}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
                     </TableCell>
 
                     {/* Specifications (Size, Thread, Material) */}

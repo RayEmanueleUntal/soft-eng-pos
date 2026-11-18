@@ -45,7 +45,7 @@ export function BinDetailsModal({
         <DialogHeader className="border-b border-[#E2E8F0] pb-3 shrink-0">
           <DialogTitle className="font-['Space_Grotesk'] text-base font-bold text-[#0F172A] flex items-center gap-2">
             <MapPin className="h-4 w-4 text-[#0060B2]" />
-            Bin Location Metadata
+            Bin Location Details
           </DialogTitle>
         </DialogHeader>
 

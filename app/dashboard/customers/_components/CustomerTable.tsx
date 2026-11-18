@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Table,
   TableBody,
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { CheckCircle2, CreditCard, MoreVertical, Plus, X } from "lucide-react";
+import { CheckCircle2, CreditCard, MoreVertical, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +27,8 @@ import {
   EMPTY_CUSTOMER_FILTERS,
 } from "@/lib/customers/types";
 import { formatPeso, getErrorMessage } from "@/lib/utils";
+import { SortKey } from "@/components/ui/sort-select";
+import { sortItems } from "@/components/ui/sort-items";
 
 import { CustomerFilterBar } from "./CustomerFilterBar";
 import { CustomerPaymentModal } from "./CustomerPaymentModal";
@@ -47,6 +49,7 @@ export function CustomerTable() {
   const [filters, setFilters] = useState<CustomerFilters>({
     ...EMPTY_CUSTOMER_FILTERS,
   });
+  const [sort, setSort] = useState<SortKey>("DEFAULT");
   const [total, setTotal] = useState(0);
 
   const [page, setPage] = useState(1);
@@ -128,6 +131,16 @@ export function CustomerTable() {
     return () => clearTimeout(timeout);
   }, [paymentNotice]);
 
+  const sortedCustomers = useMemo(
+    () =>
+      sortItems(customers, sort, {
+        getName: (c) => c.name,
+        getDate: (c) => (c as any).created_at ?? (c as any).createdAt ?? 0,
+        getId: (c) => c.id,
+      }),
+    [customers, sort],
+  );
+
   const handleFiltersChange = (nextFilters: CustomerFilters) => {
     setFilters(nextFilters);
     setPage(1);
@@ -179,6 +192,11 @@ export function CustomerTable() {
       <CustomerFilterBar
         filters={filters}
         onFiltersChange={handleFiltersChange}
+        sort={sort}
+        onSortChange={(nextSort) => {
+          setSort(nextSort);
+          setPage(1);
+        }}
         onOpenAddModal={() => setIsAddOpen(true)}
       />
 
@@ -269,7 +287,7 @@ export function CustomerTable() {
                   Loading customers...
                 </TableCell>
               </TableRow>
-            ) : customers.length === 0 ? (
+            ) : sortedCustomers.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={7}
@@ -279,7 +297,7 @@ export function CustomerTable() {
                 </TableCell>
               </TableRow>
             ) : (
-              customers.map((customer) => (
+              sortedCustomers.map((customer) => (
                 <TableRow key={customer.id}>
                   <TableCell className="max-w-[220px] font-medium text-foreground whitespace-normal break-words">
                     {customer.name}

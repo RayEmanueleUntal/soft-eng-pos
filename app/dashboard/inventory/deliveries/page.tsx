@@ -5,12 +5,14 @@ import { DeliveryHistoryTable } from "./_components/DeliveryHistoryTable";
 import { ReceiveDeliveryModal } from "./_components/ReceiveDeliveryModal";
 import { DeliveryDetailViewModal } from "./_components/DeliveryDetailViewModal";
 import { Button } from "@/components/ui/button";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
+import { SortSelect, SortKey } from "@/components/ui/sort-select";
 import { fetchDeliveries } from "@/lib/inventory/delivery-api";
 import { DeliveryRecord } from "@/lib/inventory/delivery-types";
 import { useCurrentRole } from "@/lib/auth/use-current-role";
 import { canManageStock } from "@/lib/auth/permissions";
 import { getErrorMessage } from "@/lib/utils";
-import { AlertTriangle, CheckCircle2, RefreshCw } from "lucide-react";
+import { AlertTriangle, CheckCircle2, RefreshCw, X } from "lucide-react";
 import { PageHeader } from "@/components/ui/pageheader";
 
 export default function DeliveriesPage() {
@@ -22,6 +24,11 @@ export default function DeliveriesPage() {
     message: string;
     isPartial: boolean;
   } | null>(null);
+
+  // Filters & Sort
+  const [sort, setSort] = React.useState<SortKey>("DEFAULT");
+  const [startDate, setStartDate] = React.useState("");
+  const [endDate, setEndDate] = React.useState("");
 
   // Pagination
   const [page, setPage] = React.useState(1);
@@ -63,12 +70,78 @@ export default function DeliveriesPage() {
     loadDeliveries();
   }, [loadDeliveries]);
 
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setPage(1);
+  }, [sort, startDate, endDate]);
+
   // Auto-dismiss success banner after 4 seconds
   React.useEffect(() => {
     if (!successBanner) return;
     const timer = setTimeout(() => setSuccessBanner(null), 4000);
     return () => clearTimeout(timer);
   }, [successBanner]);
+
+  const displayedDeliveries = React.useMemo(() => {
+    const startTs = startDate
+      ? new Date(`${startDate}T00:00:00`).getTime()
+      : null;
+    const endTs = endDate ? new Date(`${endDate}T23:59:59.999`).getTime() : null;
+
+    const filtered = deliveries.filter((d) => {
+      const rawDate =
+        (d as any).delivery_date ??
+        (d as any).received_at ??
+        (d as any).created_at ??
+        (d as any).createdAt;
+      if (!rawDate) return !startTs && !endTs;
+      const ts = new Date(rawDate).getTime();
+      if (Number.isNaN(ts)) return true;
+      if (startTs !== null && ts < startTs) return false;
+      if (endTs !== null && ts > endTs) return false;
+      return true;
+    });
+
+    if (sort === "DEFAULT") return filtered;
+
+    return [...filtered].sort((a, b) => {
+      const aTime = new Date(
+        (a as any).delivery_date ??
+          (a as any).received_at ??
+          (a as any).created_at ??
+          (a as any).createdAt ??
+          0,
+      ).getTime();
+      const bTime = new Date(
+        (b as any).delivery_date ??
+          (b as any).received_at ??
+          (b as any).created_at ??
+          (b as any).createdAt ??
+          0,
+      ).getTime();
+
+      switch (sort) {
+        case "DATE_ASC":
+          return aTime - bTime;
+        case "DATE_DESC":
+          return bTime - aTime;
+        case "ID_ASC":
+          return Number(a.id) - Number(b.id);
+        case "ID_DESC":
+          return Number(b.id) - Number(a.id);
+        default:
+          return 0;
+      }
+    });
+  }, [deliveries, startDate, endDate, sort]);
+
+  const hasActiveFilters = Boolean(startDate || endDate || sort !== "DEFAULT");
+
+  const handleClearFilters = () => {
+    setSort("DEFAULT");
+    setStartDate("");
+    setEndDate("");
+  };
 
   const handleViewDetails = (deliveryId: number) => {
     setSelectedDeliveryId(deliveryId);
@@ -87,7 +160,7 @@ export default function DeliveriesPage() {
 
       {/* Main Content Card Container */}
       <div className="bg-card p-6 rounded-lg shadow-sm border border-border space-y-6">
-        {/* Actions Bar: Refresh on the left, Receive Delivery on the right */}
+        {/* Actions & Filter Bar: Sort -> Date Range -> Refresh on the left, Receive Delivery on the right */}
         <div className="space-y-3">
           {successBanner && (
             <div
@@ -128,19 +201,51 @@ export default function DeliveriesPage() {
             </div>
           )}
 
-          <div className="flex items-center justify-between gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadDeliveries}
-              disabled={loading}
-              className="rounded-md gap-1.5 text-xs h-9 hover:bg-muted"
-            >
-              <RefreshCw
-                className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="flex flex-wrap items-end gap-2.5">
+              <SortSelect
+                value={sort}
+                onChange={setSort}
+                showDefaultOption
+                options={["DATE_DESC", "DATE_ASC"]}
+                triggerClassName="w-[170px] !h-9 text-xs rounded-[2px]"
               />
-              Refresh
-            </Button>
+
+              <DateRangeFilter
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+                inputClassName="h-9 w-[135px]"
+              />
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={loadDeliveries}
+                disabled={loading}
+                className="rounded-[2px] gap-1.5 text-xs h-9 hover:bg-muted shrink-0"
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
+                />
+                Refresh
+              </Button>
+
+              {hasActiveFilters && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearFilters}
+                  className="h-9 px-2.5 text-xs rounded-[2px] text-muted-foreground hover:text-foreground shrink-0"
+                >
+                  <X className="h-3.5 w-3.5 mr-1" />
+                  Clear
+                </Button>
+              )}
+            </div>
 
             {canManageStock(role) && (
               <div className="ml-auto">
@@ -165,12 +270,12 @@ export default function DeliveriesPage() {
 
         {/* Deliveries Table */}
         <DeliveryHistoryTable
-          deliveries={deliveries}
+          deliveries={displayedDeliveries}
           loading={loading}
           onViewDetails={handleViewDetails}
           page={page}
-          totalPages={totalPages}
-          total={total}
+          totalPages={hasActiveFilters ? 1 : totalPages}
+          total={hasActiveFilters ? displayedDeliveries.length : total}
           pageSize={limit}
           onPageChange={(newPage) => setPage(newPage)}
         />

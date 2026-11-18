@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import { PurchaseOrder } from "@/lib/inventory/delivery-types";
 import { fetchPurchaseOrders } from "@/lib/inventory/delivery-api";
 import { formatPeso, getErrorMessage } from "@/lib/utils";
@@ -61,40 +61,15 @@ export function POSelectList({ onSelectPO, actionSlot }: POSelectListProps) {
   return (
     <div className="space-y-4 font-sans">
       {/* Date range filter */}
-      <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-        <div className="space-y-1.5 flex-1">
-          <label
-            htmlFor="po-start-date"
-            className="text-xs font-medium text-muted-foreground uppercase tracking-wider"
-          >
-            From
-          </label>
-          <Input
-            id="po-start-date"
-            type="date"
-            value={startDate}
-            max={endDate || undefined}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="h-9 text-sm font-mono"
-          />
-        </div>
-        <div className="space-y-1.5 flex-1">
-          <label
-            htmlFor="po-end-date"
-            className="text-xs font-medium text-muted-foreground uppercase tracking-wider"
-          >
-            To
-          </label>
-          <Input
-            id="po-end-date"
-            type="date"
-            value={endDate}
-            min={startDate || undefined}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="h-9 text-sm font-mono"
-          />
-        </div>
-        <div className="flex gap-2">
+      <div className="flex flex-wrap items-end gap-2.5">
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+          inputClassName="h-9 w-[140px]"
+        />
+        <div className="flex items-center gap-2">
           {hasFilter && (
             <Button
               type="button"

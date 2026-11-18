@@ -106,7 +106,7 @@ export function InventoryTable({
               )}
               {showActions && (
                 <TableHead className={`${HEAD_CLASS} text-center w-16`}>
-                  Edit ROP
+                  Edit 
                 </TableHead>
               )}
             </TableRow>
