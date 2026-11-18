@@ -165,6 +165,31 @@ apiClient.interceptors.response.use(
   },
 );
 
+export function getApiErrorMessage(
+  err: unknown,
+  fallback = "An unexpected error occurred.",
+): string {
+  const axiosErr = err as AxiosError<{
+    message?: string | string[];
+    details?: {
+      message?: string | string[];
+    };
+  }>;
+
+  const data = axiosErr.response?.data;
+  const rawMessage = data?.details?.message ?? data?.message;
+
+  if (Array.isArray(rawMessage)) {
+    return rawMessage.join(", ");
+  }
+
+  if (typeof rawMessage === "string" && rawMessage.trim().length > 0) {
+    return rawMessage;
+  }
+
+  return axiosErr.message || fallback;
+}
+
 function handleLogoutRedirect() {
   if (typeof window !== "undefined") {
     localStorage.removeItem("access_token");
