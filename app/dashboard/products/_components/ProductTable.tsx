@@ -416,12 +416,6 @@ export function ProductTable() {
               ))
             )}
           </TableBody>
-
-          <TableCaption>
-            {loading
-              ? "Loading product catalog..."
-              : `Showing ${products.length} of ${total} products`}
-          </TableCaption>
         </Table>
       </div>
 
