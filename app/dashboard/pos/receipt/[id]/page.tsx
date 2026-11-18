@@ -11,7 +11,7 @@ import { PrintableInvoice } from "./_components/PrintableInvoice";
 import { ReceiptSummaryCard } from "./_components/ReceiptSummaryCard";
 import { RefundModal } from "./_components/return/RefundModal";
 import { ExchangeModal } from "./_components/return/ExchangeModal";
-import { fetchReceiptApi, type Receipt } from "@/lib/pos";
+import { fetchReceiptApi, ItemCondition, type Receipt } from "@/lib/pos";
 import { getApprovalRequests } from "@/lib/approval/approval-api";
 import { ArrowLeft, Printer, Loader2, AlertCircle } from "lucide-react";
 import { getErrorMessage } from "@/lib/utils";
@@ -19,9 +19,7 @@ import { getErrorMessage } from "@/lib/utils";
 /** Prefers the backend invoice_number, then INV-{transactionId}. */
 function getInvoiceHeading(receipt: Receipt | null, routeId: string): string {
   if (!receipt) return `INV-${routeId}`;
-  return (
-    receipt.invoice_number || `INV-${receipt.transactionId ?? routeId}`
-  );
+  return receipt.invoice_number || `INV-${receipt.transactionId ?? routeId}`;
 }
 
 /** Reads credit-cancellation aliases from a pending return breakdown. */
@@ -54,178 +52,48 @@ export default function ReceiptPage() {
       setLoading(true);
       setError(null);
 
-      // Fetch base receipt from API
-      const receiptData = await fetchReceiptApi(id);
+      const [receiptResult, approvalsResult] = await Promise.allSettled([
+        fetchReceiptApi(id),
+        getApprovalRequests(),
+      ]);
 
-      // Check approvals to see if there are pending or approved returns/exchanges
+      if (receiptResult.status === "rejected") {
+        throw receiptResult.reason;
+      }
+
+      const receiptData = receiptResult.value;
       let pendingFound = false;
-      let pendingBreakdown: any = null;
-      try {
-        const approvals = await getApprovalRequests();
-        const txId = receiptData.transactionId;
-        const invNum = receiptData.invoice_number;
+      let breakdown: Record<string, unknown> | null = null;
 
-        const parsePayload = (raw: any) => {
-          if (!raw) return {};
-          if (typeof raw === "string") {
-            try {
-              return JSON.parse(raw);
-            } catch {
-              return {};
-            }
+      if (approvalsResult.status === "fulfilled") {
+        const txId = Number(receiptData.transactionId);
+        const pendingReq = approvalsResult.value.find((req) => {
+          if (
+            req.status !== "PENDING" ||
+            (req.type !== "REFUND_TRANSACTION" &&
+              req.type !== "EXCHANGE_TRANSACTION")
+          ) {
+            return false;
           }
-          return raw;
-        };
-
-        const relevant = approvals.filter((req) => {
-          const p = parsePayload(req.payload);
-          const reqTxId = p?.transactionId ?? p?.transaction_id;
-          const reqInv = p?.invoice_number ?? p?.invoiceNumber;
-          const matchesTx =
-            reqTxId !== undefined &&
-            (reqTxId === txId ||
-              String(reqTxId) === String(txId) ||
-              Number(reqTxId) === Number(txId));
-          const matchesInv =
-            invNum &&
-            reqInv &&
-            (reqInv === invNum ||
-              String(reqInv).trim() === String(invNum).trim());
-          return matchesTx || matchesInv;
+          const p =
+            typeof req.payload === "string"
+              ? JSON.parse(req.payload)
+              : (req.payload ?? {});
+          return Number(p.transactionId ?? p.transaction_id) === txId;
         });
 
-        const pendingReq = relevant.find(
-          (req) =>
-            req.status === "PENDING" &&
-            (req.type === "REFUND_TRANSACTION" ||
-              req.type === "EXCHANGE_TRANSACTION"),
-        );
-        pendingFound = !!pendingReq;
         if (pendingReq) {
-          const p = parsePayload(pendingReq.payload);
-          pendingBreakdown = p.paymentBreakdown || p.payment_breakdown || null;
+          pendingFound = true;
+          const p =
+            typeof pendingReq.payload === "string"
+              ? JSON.parse(pendingReq.payload)
+              : (pendingReq.payload ?? {});
+          breakdown = p.paymentBreakdown ?? p.payment_breakdown ?? null;
         }
-
-        // Merge any approved returns/exchanges if not already present on receiptData
-        const approvedRefunds = relevant.filter(
-          (req) =>
-            req.status === "APPROVED" && req.type === "REFUND_TRANSACTION",
-        );
-        const approvedExchanges = relevant.filter(
-          (req) =>
-            req.status === "APPROVED" && req.type === "EXCHANGE_TRANSACTION",
-        );
-
-        if (
-          approvedRefunds.length > 0 &&
-          (!receiptData.returns || receiptData.returns.length === 0)
-        ) {
-          receiptData.returns = approvedRefunds.map((req, idx) => {
-            const p = parsePayload(req.payload);
-            const line = Array.isArray(p.items) ? p.items[0] : undefined;
-            const item = receiptData.items.find(
-              (it) =>
-                it.productId ===
-                (p.productId ?? p.product_id ?? line?.productId ?? line?.product_id),
-            );
-            const qty =
-              (p.quantity ??
-                line?.requestedQuantity ??
-                line?.quantity) ||
-              1;
-            const unitPrice = item ? item.applied_price : 0;
-            const refundAmount =
-              p.refundAmount ??
-              p.refund_amount ??
-              (Array.isArray(p.items) && p.items[0]?.refundAmount) ??
-              unitPrice * qty;
-
-            return {
-              id: typeof req.id === "number" ? req.id : idx + 1,
-              productId:
-                p.productId ??
-                p.product_id ??
-                line?.productId ??
-                line?.product_id ??
-                item?.productId ??
-                0,
-              product_name:
-                p.productName ||
-                p.product_name ||
-                line?.productName ||
-                line?.product_name ||
-                item?.product_name ||
-                "Returned Item",
-              quantity: qty,
-              date: req.updatedAt || req.createdAt || new Date().toISOString(),
-              defect_reason:
-                p.reason ||
-                p.defect_reason ||
-                line?.reason ||
-                "Return",
-              refund_amount: refundAmount,
-              processed_by_staff: String(
-                req.reviewedById || req.requestedById || "Staff",
-              ),
-              pricing_uom:
-                line?.unitOfMeasure ||
-                line?.unit_of_measure ||
-                line?.uom ||
-                item?.pricing_uom ||
-                item?.unit_of_measure,
-            };
-          });
-
-          // Mark already_returned_qty on corresponding receipt items
-          approvedRefunds.forEach((req) => {
-            const p = parsePayload(req.payload);
-            const line = Array.isArray(p.items) ? p.items[0] : undefined;
-            const pId =
-              p.productId ?? p.product_id ?? line?.productId ?? line?.product_id;
-            const it = receiptData.items.find((item) => item.productId === pId);
-            if (it) {
-              it.already_returned_qty =
-                (it.already_returned_qty || 0) +
-                (p.quantity ?? line?.requestedQuantity ?? line?.quantity ?? 1);
-            }
-          });
-        }
-
-        if (
-          approvedExchanges.length > 0 &&
-          (!receiptData.exchanges || receiptData.exchanges.length === 0)
-        ) {
-          receiptData.exchanges = approvedExchanges.map((req, idx) => {
-            const p = parsePayload(req.payload);
-            const item = receiptData.items.find(
-              (it) => it.productId === (p.productId ?? p.product_id),
-            );
-            return {
-              id: typeof req.id === "number" ? req.id : idx + 1,
-              productId:
-                p.newProductId ??
-                p.new_product_id ??
-                p.productId ??
-                p.product_id ??
-                0,
-              product_name:
-                p.newProductName ||
-                p.new_product_name ||
-                item?.product_name ||
-                "Exchanged Item",
-              quantity: p.newQuantity || p.new_quantity || p.quantity || 1,
-              date: req.updatedAt || req.createdAt || new Date().toISOString(),
-              price_difference: p.price_difference ?? p.priceDifference ?? 0,
-              is_within_7_days: true,
-            };
-          });
-        }
-      } catch (approvalErr) {
-        console.warn("Could not load approvals:", approvalErr);
       }
 
       setHasPendingApproval(pendingFound);
-      setPendingBreakdown(pendingBreakdown);
+      setPendingBreakdown(breakdown);
       setReceipt(receiptData);
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Receipt not found"));
@@ -413,7 +281,7 @@ export default function ReceiptPage() {
             )}
 
             {/* Printable Invoice or Rich Receipt Summary Display */}
-            <div className="mb-6 flex justify-center">
+            {/* <div className="mb-6 flex justify-center">
               {(receipt.returns && receipt.returns.length > 0) ||
               (receipt.exchanges && receipt.exchanges.length > 0) ? (
                 <div className="w-full max-w-lg bg-card border border-input rounded-[4px] p-4 shadow-[0px_2px_0px_rgba(15,23,42,0.06)]">
@@ -422,6 +290,12 @@ export default function ReceiptPage() {
               ) : (
                 <PrintableInvoice receipt={receipt} />
               )}
+            </div> */}
+            {/* Receipt Summary Display */}
+            <div className="mb-6 flex justify-center">
+              <div className="w-full max-w-lg bg-card border border-input rounded-[4px] p-4 shadow-[0px_2px_0px_rgba(15,23,42,0.06)]">
+                <ReceiptSummaryCard receipt={receipt} />
+              </div>
             </div>
 
             {/* Action Buttons */}

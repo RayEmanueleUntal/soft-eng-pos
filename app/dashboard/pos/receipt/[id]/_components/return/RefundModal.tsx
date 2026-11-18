@@ -1,8 +1,7 @@
 "use client";
 
-// Cashier refund request modal: check remaining invoice lines, then submit one POST.
-// Posts CreateRefundDto.items[] to POST /returns/refund without a uom property (API rejects it).
-// Select all remaining checks every unfinished line; UoM is stored in the reason text.
+// Cashier refund request modal: pools receipt lines by productId in Base UoM,
+// accounts for prior returns and exchanges, and posts CreateRefundDto to POST /returns/refund.
 
 import { useState, useMemo, useEffect } from "react";
 import {
@@ -28,51 +27,14 @@ import { AlertCircle, Loader2 } from "lucide-react";
 import { getErrorMessage } from "@/lib/utils";
 import {
   ItemCondition,
+  type UnitOfMeasure,
   type Receipt,
-  type ReceiptItem,
   type CreateRefundDto,
   type CreateRefundItemDto,
   type ReturnResponse,
   processRefund,
   usePosCatalog,
 } from "@/lib/pos";
-
-/** Remaining refundable qty for a receipt line (item flag vs recorded returns). */
-function remainingForItem(item: ReceiptItem, receipt: Receipt): number {
-  const fromItem = item.already_returned_qty ?? 0;
-  const fromReceiptReturns =
-    receipt.returns
-      ?.filter((r) => r.productId === item.productId)
-      .reduce((sum, r) => sum + (r.quantity || 0), 0) ?? 0;
-  const already = Math.max(fromItem, fromReceiptReturns);
-  return Math.max(0, item.quantity - already);
-}
-
-/** Purchased selling UoM for a line, used in the reason string. */
-function purchasedUomFor(item: ReceiptItem): string {
-  return (item.unit_of_measure || item.pricing_uom || "PCS")
-    .toString()
-    .toUpperCase();
-}
-
-/** Purchased UoM plus catalog base UoM for a line. */
-function allowedUomsFor(
-  item: ReceiptItem,
-  products: { id: string | number; base_uom?: string | null }[],
-): string[] {
-  const purchasedUom = purchasedUomFor(item);
-  const catalogProduct = products.find(
-    (p) => Number(p.id) === Number(item.productId),
-  );
-  const baseUom = (
-    item.base_uom ||
-    catalogProduct?.base_uom ||
-    purchasedUom
-  )
-    .toString()
-    .toUpperCase();
-  return Array.from(new Set([purchasedUom, baseUom])).filter(Boolean);
-}
 
 interface RefundModalProps {
   open: boolean;
@@ -90,53 +52,156 @@ export function RefundModal({
   const { products } = usePosCatalog();
 
   const [checked, setChecked] = useState<Record<number, boolean>>({});
-  const [qtyByIndex, setQtyByIndex] = useState<Record<number, string>>({});
-  const [uomByIndex, setUomByIndex] = useState<Record<number, string>>({});
+  const [qtyByProduct, setQtyByProduct] = useState<Record<number, string>>({});
+  const [uomByProduct, setUomByProduct] = useState<Record<number, string>>({});
   const [condition, setCondition] = useState<ItemCondition | null>(null);
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const remainingIndexes = useMemo(
-    () =>
-      receipt.items
-        .map((item, index) => ({ item, index }))
-        .filter(({ item }) => remainingForItem(item, receipt) > 0)
-        .map(({ index }) => index),
-    [receipt],
+  // Pool receipt lines by productId into a single Base UoM refundable balance
+  const pooledItems = useMemo(() => {
+    const grouped = new Map<
+      number,
+      {
+        productId: number;
+        productName: string;
+        totalPurchasedBase: number;
+        purchasedUoms: Set<string>;
+        baseUom: string;
+        uomConversions: Record<string, number>;
+      }
+    >();
+
+    for (const item of receipt.items) {
+      if (!item.productId) continue;
+      const pid = Number(item.productId);
+      const conv = Number(item.uom_conversion_factor) || 1;
+      const lineBase =
+        item.base_quantity_deducted !== undefined
+          ? Number(item.base_quantity_deducted)
+          : (item.quantity ?? 0) * conv;
+
+      const purchasedUom = (item.unit_of_measure || item.pricing_uom || "")
+        .toString()
+        .trim()
+        .toUpperCase();
+
+      const catalogProduct = products.find((p) => Number(p.id) === pid) ?? null;
+
+      // Never hardcode "PCS" — resolve from item, catalog, or the purchased UoM itself
+      const baseUom = (
+        item.base_uom ||
+        catalogProduct?.base_uom ||
+        purchasedUom
+      )
+        .toString()
+        .trim()
+        .toUpperCase();
+
+      const existing = grouped.get(pid);
+      if (existing) {
+        existing.totalPurchasedBase += lineBase;
+        if (purchasedUom) {
+          existing.purchasedUoms.add(purchasedUom);
+          existing.uomConversions[purchasedUom] = conv;
+        }
+        if (!existing.baseUom && baseUom) {
+          existing.baseUom = baseUom;
+          existing.uomConversions[baseUom] = 1;
+        }
+      } else {
+        const conversions: Record<string, number> = {};
+        if (baseUom) conversions[baseUom] = 1;
+        if (purchasedUom) conversions[purchasedUom] = conv;
+
+        grouped.set(pid, {
+          productId: pid,
+          productName: item.product_name,
+          totalPurchasedBase: lineBase,
+          purchasedUoms: new Set(purchasedUom ? [purchasedUom] : []),
+          baseUom,
+          uomConversions: conversions,
+        });
+      }
+    }
+
+    return Array.from(grouped.values()).map((entry) => {
+      const returnedBase =
+        receipt.returns
+          ?.filter((r) => Number(r.productId) === entry.productId)
+          .reduce((sum, r) => sum + Number(r.quantity || 0), 0) ?? 0;
+
+      const exchangedBase =
+        receipt.exchanges
+          ?.filter((e) => Number(e.productId) === entry.productId)
+          .reduce((sum, e) => sum + Number(e.quantity || 0), 0) ?? 0;
+
+      const remainingBase = Math.max(
+        0,
+        Number(
+          (entry.totalPurchasedBase - returnedBase - exchangedBase).toFixed(3),
+        ),
+      );
+
+      const allowedUoms = Array.from(
+        new Set([entry.baseUom, ...entry.purchasedUoms]),
+      ).filter(Boolean);
+
+      const resolvedBaseUom = entry.baseUom || allowedUoms[0] || "";
+
+      return {
+        productId: entry.productId,
+        productName: entry.productName,
+        totalPurchasedBase: Number(entry.totalPurchasedBase.toFixed(3)),
+        remainingBase,
+        baseUom: resolvedBaseUom,
+        allowedUoms,
+        uomConversions: entry.uomConversions,
+      };
+    });
+  }, [receipt.items, receipt.returns, receipt.exchanges, products]);
+
+  const remainingProducts = useMemo(
+    () => pooledItems.filter((item) => item.remainingBase > 0),
+    [pooledItems],
   );
 
-  const selectedIndexes = remainingIndexes.filter((index) => checked[index]);
+  const selectedProductIds = useMemo(
+    () =>
+      remainingProducts
+        .filter((item) => checked[item.productId])
+        .map((item) => item.productId),
+    [remainingProducts, checked],
+  );
+
   const allRemainingSelected =
-    remainingIndexes.length > 0 &&
-    remainingIndexes.every((index) => checked[index]);
+    remainingProducts.length > 0 &&
+    remainingProducts.every((item) => checked[item.productId]);
 
-  const invoiceLabel =
-    receipt.invoice_number || `INV-${receipt.transactionId}`;
+  const invoiceLabel = receipt.invoice_number || `INV-${receipt.transactionId}`;
 
-  /** Seeds qty/UoM maps when the modal opens; leaves checkboxes empty. */
+  /** Seeds default Base UoM qty/UoM maps when the modal opens. */
   useEffect(() => {
     if (!open) return;
     const nextQty: Record<number, string> = {};
     const nextUom: Record<number, string> = {};
-    receipt.items.forEach((item, index) => {
-      const remaining = remainingForItem(item, receipt);
-      if (remaining <= 0) return;
-      nextQty[index] = String(remaining);
-      nextUom[index] = purchasedUomFor(item);
+    remainingProducts.forEach((item) => {
+      nextQty[item.productId] = String(item.remainingBase);
+      nextUom[item.productId] = item.baseUom;
     });
-    setQtyByIndex(nextQty);
-    setUomByIndex(nextUom);
+    setQtyByProduct(nextQty);
+    setUomByProduct(nextUom);
     setChecked({});
     setCondition(null);
     setReason("");
     setError(null);
-  }, [open, receipt]);
+  }, [open, remainingProducts]);
 
   const resetForm = () => {
     setChecked({});
-    setQtyByIndex({});
-    setUomByIndex({});
+    setQtyByProduct({});
+    setUomByProduct({});
     setCondition(null);
     setReason("");
     setError(null);
@@ -148,32 +213,50 @@ export function RefundModal({
     onOpenChange(false);
   };
 
-  /** Checks or clears every remaining line. */
   const handleToggleSelectAll = () => {
     if (allRemainingSelected) {
       setChecked({});
       return;
     }
     const next: Record<number, boolean> = {};
-    remainingIndexes.forEach((index) => {
-      next[index] = true;
+    remainingProducts.forEach((item) => {
+      next[item.productId] = true;
     });
     setChecked(next);
   };
 
-  /** Toggles one remaining line and keeps its default remaining qty. */
-  const handleToggleLine = (index: number) => {
-    setChecked((prev) => ({ ...prev, [index]: !prev[index] }));
+  const handleToggleProduct = (productId: number) => {
+    setChecked((prev) => ({ ...prev, [productId]: !prev[productId] }));
+  };
+
+  const handleUomChange = (
+    productId: number,
+    newUom: string,
+    remainingBase: number,
+    uomConversions: Record<string, number>,
+  ) => {
+    setUomByProduct((prev) => ({ ...prev, [productId]: newUom }));
+    const conv = uomConversions[newUom] ?? 1;
+    const maxForUom = Number((remainingBase / conv).toFixed(3));
+    setQtyByProduct((prev) => {
+      const currentQty = Number(prev[productId] || 0);
+      if (currentQty > maxForUom) {
+        return { ...prev, [productId]: String(maxForUom) };
+      }
+      return prev;
+    });
   };
 
   const handleSubmit = async () => {
-    if (selectedIndexes.length === 0) {
+    if (selectedProductIds.length === 0) {
       setError("Select at least one item to return.");
       return;
     }
 
     if (!condition) {
-      setError("Please select an item condition (Defective or Change of Mind).");
+      setError(
+        "Please select an item condition (Defective or Change of Mind).",
+      );
       return;
     }
 
@@ -183,36 +266,37 @@ export function RefundModal({
     }
 
     const items: CreateRefundItemDto[] = [];
-    for (const index of selectedIndexes) {
-      const item = receipt.items[index];
-      const remaining = remainingForItem(item, receipt);
-      const qty = Number(qtyByIndex[index]);
-      const uom = (uomByIndex[index] || purchasedUomFor(item)).toUpperCase();
+    for (const pid of selectedProductIds) {
+      const meta = remainingProducts.find((m) => m.productId === pid);
+      if (!meta) continue;
 
-      if (!item?.productId) {
-        setError("A selected line is missing a product id.");
-        return;
-      }
+      const qty = Number(qtyByProduct[pid]);
+      const uom = (uomByProduct[pid] || meta.baseUom).toUpperCase();
+      const conv = meta.uomConversions[uom] ?? 1;
+      const requestedBase = Number((qty * conv).toFixed(3));
+      const maxForChosenUom = Number((meta.remainingBase / conv).toFixed(3));
+
       if (isNaN(qty) || qty <= 0) {
-        setError(`Quantity for ${item.product_name} must be greater than 0.`);
-        return;
-      }
-      if (qty > remaining) {
-        setError(
-          `Quantity for ${item.product_name} cannot exceed remaining ${remaining} ${uom}.`,
-        );
+        setError(`Quantity for ${meta.productName} must be greater than 0.`);
         return;
       }
       if (!uom) {
-        setError(`Select a unit of measure for ${item.product_name}.`);
+        setError(`Select a unit of measure for ${meta.productName}.`);
+        return;
+      }
+      if (requestedBase > meta.remainingBase) {
+        setError(
+          `Quantity for ${meta.productName} cannot exceed remaining ${maxForChosenUom} ${uom} (${meta.remainingBase} ${meta.baseUom}).`,
+        );
         return;
       }
 
       items.push({
-        productId: Number(item.productId),
+        productId: meta.productId,
         quantity: qty,
+        unit_of_measure: uom as UnitOfMeasure,
         condition,
-        reason: `${reason.trim()} (UoM: ${uom})`,
+        reason: reason.trim(),
       });
     }
 
@@ -235,7 +319,7 @@ export function RefundModal({
   };
 
   const canSubmit =
-    selectedIndexes.length > 0 &&
+    selectedProductIds.length > 0 &&
     !!condition &&
     reason.trim().length >= 5 &&
     !isSubmitting;
@@ -266,7 +350,7 @@ export function RefundModal({
               <Label className="text-xs font-medium">
                 Items to return <span className="text-destructive">*</span>
               </Label>
-              {remainingIndexes.length > 0 && (
+              {remainingProducts.length > 0 && (
                 <Button
                   type="button"
                   variant="outline"
@@ -281,39 +365,38 @@ export function RefundModal({
               )}
             </div>
 
-            {remainingIndexes.length === 0 ? (
+            {remainingProducts.length === 0 ? (
               <p className="text-xs text-muted-foreground border border-input rounded-[4px] p-2.5">
                 Nothing left to refund on this invoice.
               </p>
             ) : (
               <div className="border border-input rounded-[4px] divide-y divide-border">
-                {remainingIndexes.map((index) => {
-                  const item = receipt.items[index];
-                  const remaining = remainingForItem(item, receipt);
-                  const uoms = allowedUomsFor(item, products);
-                  const isChecked = !!checked[index];
-                  const lineUom = uomByIndex[index] || purchasedUomFor(item);
+                {remainingProducts.map((meta) => {
+                  const isChecked = !!checked[meta.productId];
+                  const selectedUom =
+                    uomByProduct[meta.productId] || meta.baseUom;
+                  const activeConv = meta.uomConversions[selectedUom] ?? 1;
+                  const maxForChosenUom = Number(
+                    (meta.remainingBase / activeConv).toFixed(3),
+                  );
 
                   return (
-                    <div
-                      key={`${item.productId ?? "line"}-${index}`}
-                      className="p-2.5 space-y-2"
-                    >
+                    <div key={meta.productId} className="p-2.5 space-y-2">
                       <label className="flex items-start gap-2 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={isChecked}
-                          onChange={() => handleToggleLine(index)}
+                          onChange={() => handleToggleProduct(meta.productId)}
                           disabled={isSubmitting}
                           className="mt-0.5 rounded-[2px] border-input"
                         />
                         <span className="min-w-0 flex-1">
                           <span className="block text-xs font-medium text-foreground leading-tight">
-                            {item.product_name}
+                            {meta.productName}
                           </span>
                           <span className="block text-[10px] font-mono text-muted-foreground">
-                            {remaining} / {item.quantity}{" "}
-                            {purchasedUomFor(item)} remaining
+                            {meta.remainingBase} / {meta.totalPurchasedBase}{" "}
+                            {meta.baseUom} remaining
                           </span>
                         </span>
                       </label>
@@ -321,23 +404,28 @@ export function RefundModal({
                       {isChecked && (
                         <div className="grid grid-cols-2 gap-2 pl-6">
                           <div className="space-y-1">
-                            <Label
-                              htmlFor={`qty-${index}`}
-                              className="text-[10px] font-medium"
-                            >
-                              Qty
-                            </Label>
+                            <div className="flex items-center justify-between">
+                              <Label
+                                htmlFor={`qty-${meta.productId}`}
+                                className="text-[10px] font-medium"
+                              >
+                                Qty
+                              </Label>
+                              <span className="text-[10px] font-mono text-muted-foreground">
+                                Max {maxForChosenUom} {selectedUom}
+                              </span>
+                            </div>
                             <Input
-                              id={`qty-${index}`}
+                              id={`qty-${meta.productId}`}
                               type="number"
-                              min="0.01"
+                              min="0.001"
                               step="any"
-                              max={remaining}
-                              value={qtyByIndex[index] ?? ""}
+                              max={maxForChosenUom}
+                              value={qtyByProduct[meta.productId] ?? ""}
                               onChange={(e) =>
-                                setQtyByIndex((prev) => ({
+                                setQtyByProduct((prev) => ({
                                   ...prev,
-                                  [index]: e.target.value,
+                                  [meta.productId]: e.target.value,
                                 }))
                               }
                               disabled={isSubmitting}
@@ -346,40 +434,49 @@ export function RefundModal({
                           </div>
                           <div className="space-y-1">
                             <Label
-                              htmlFor={`uom-${index}`}
+                              htmlFor={`uom-${meta.productId}`}
                               className="text-[10px] font-medium"
                             >
                               UoM
                             </Label>
                             <Select
-                              value={lineUom}
+                              value={selectedUom}
                               onValueChange={(val) =>
-                                setUomByIndex((prev) => ({
-                                  ...prev,
-                                  [index]: val ?? purchasedUomFor(item),
-                                }))
+                                handleUomChange(
+                                  meta.productId,
+                                  val ?? meta.baseUom,
+                                  meta.remainingBase,
+                                  meta.uomConversions,
+                                )
                               }
-                              disabled={isSubmitting || uoms.length === 0}
+                              disabled={
+                                isSubmitting || meta.allowedUoms.length === 0
+                              }
                             >
                               <SelectTrigger
-                                id={`uom-${index}`}
+                                id={`uom-${meta.productId}`}
                                 className="w-full rounded-[4px] text-xs h-8 font-mono"
                               >
-                                <SelectValue>{lineUom}</SelectValue>
+                                <SelectValue>{selectedUom}</SelectValue>
                               </SelectTrigger>
                               <SelectContent>
-                                {uoms.map((uom) => (
-                                  <SelectItem
-                                    key={uom}
-                                    value={uom}
-                                    className="text-xs font-mono"
-                                  >
-                                    {uom}
-                                    {uom === purchasedUomFor(item)
-                                      ? " (Purchased)"
-                                      : " (Base)"}
-                                  </SelectItem>
-                                ))}
+                                {meta.allowedUoms.map((uom) => {
+                                  const conv = meta.uomConversions[uom] ?? 1;
+                                  const tag =
+                                    uom === meta.baseUom
+                                      ? " (Base)"
+                                      : ` (1 ${uom} = ${conv} ${meta.baseUom})`;
+                                  return (
+                                    <SelectItem
+                                      key={uom}
+                                      value={uom}
+                                      className="text-xs font-mono"
+                                    >
+                                      {uom}
+                                      {tag}
+                                    </SelectItem>
+                                  );
+                                })}
                               </SelectContent>
                             </Select>
                           </div>
@@ -396,10 +493,12 @@ export function RefundModal({
             <Label htmlFor="condition" className="text-xs font-medium">
               Item Condition <span className="text-destructive">*</span>
             </Label>
-            <Select
-              value={condition || ""}
-              onValueChange={(value) => setCondition(value as ItemCondition)}
-              disabled={remainingIndexes.length === 0}
+            <Select<string>
+              value={condition ?? null}
+              onValueChange={(value) =>
+                setCondition((value as ItemCondition) || null)
+              }
+              disabled={remainingProducts.length === 0}
             >
               <SelectTrigger
                 id="condition"
@@ -433,7 +532,7 @@ export function RefundModal({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Describe the defect or reason for the refund request..."
-              disabled={remainingIndexes.length === 0}
+              disabled={remainingProducts.length === 0}
               className="rounded-[4px] text-xs min-h-[70px]"
               maxLength={500}
             />
@@ -444,9 +543,9 @@ export function RefundModal({
         </div>
 
         <p className="shrink-0 text-[10px] text-muted-foreground font-sans">
-          {selectedIndexes.length === 0
-            ? "Check one or more lines, or Select all remaining."
-            : `Submitting ${selectedIndexes.length} line(s) for ${invoiceLabel}.`}
+          {selectedProductIds.length === 0
+            ? "Check one or more items, or Select all remaining."
+            : `Submitting ${selectedProductIds.length} item(s) for ${invoiceLabel}.`}
         </p>
 
         <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card pt-3">

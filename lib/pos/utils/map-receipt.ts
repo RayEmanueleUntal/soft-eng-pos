@@ -2,16 +2,17 @@
 // Coerces Prisma Decimal/string amounts so print and detail views do not show ₱0.00.
 // Lookups accept snake_case and camelCase aliases from the live Swagger DTO.
 
-import type {
-  PaymentMethod,
-  Receipt,
-  ReceiptExchange,
-  ReceiptItem,
-  ReceiptPayment,
-  ReceiptReturn,
-  ReceiptShipment,
-  TransactionStatus,
-  TransactionType,
+import {
+  ItemCondition,
+  type PaymentMethod,
+  type Receipt,
+  type ReceiptExchange,
+  type ReceiptItem,
+  type ReceiptPayment,
+  type ReceiptReturn,
+  type ReceiptShipment,
+  type TransactionStatus,
+  type TransactionType,
 } from "../types/pos-types";
 
 type Json = Record<string, unknown>;
@@ -43,7 +44,10 @@ export function toMoney(value: unknown): number {
       const parsed = withToNumber.toNumber();
       if (Number.isFinite(parsed)) return parsed;
     }
-    if (typeof obj.valueOf === "function" && obj.valueOf !== Object.prototype.valueOf) {
+    if (
+      typeof obj.valueOf === "function" &&
+      obj.valueOf !== Object.prototype.valueOf
+    ) {
       const parsed = Number(obj.valueOf());
       if (Number.isFinite(parsed)) return parsed;
     }
@@ -98,20 +102,25 @@ function mapItem(rawValue: unknown): ReceiptItem {
     product?.base_uom,
     product?.baseUom,
   );
+  const uomConversionFactor = toMoney(
+    pick(raw, "uom_conversion_factor", "uomConversionFactor"),
+  );
+  const baseQuantityDeducted = toMoney(
+    pick(raw, "base_quantity_deducted", "baseQuantityDeducted"),
+  );
 
   return {
     productId: toMoney(pick(raw, "productId", "product_id", "id")) || undefined,
     product_name:
-      toText(pick(raw, "product_name", "productName"), product?.name) ||
-      "Item",
+      toText(pick(raw, "product_name", "productName"), product?.name) || "Item",
     quantity,
     applied_price: applied,
     subtotal: subtotal || applied * quantity,
-    discounted_price: toMoney(
-      pick(raw, "discounted_price", "discountedPrice"),
-    ),
+    discounted_price: toMoney(pick(raw, "discounted_price", "discountedPrice")),
     net_price: net,
     pricing_uom: uom || undefined,
+    uom_conversion_factor: uomConversionFactor || undefined,
+    base_quantity_deducted: baseQuantityDeducted || undefined,
     unit_of_measure: uom || undefined,
     base_uom: baseUom || undefined,
     already_returned_qty: toMoney(
@@ -123,7 +132,13 @@ function mapItem(rawValue: unknown): ReceiptItem {
 function mapReturn(rawValue: unknown, items: ReceiptItem[]): ReceiptReturn {
   const raw = asRecord(rawValue) ?? {};
   const product = asRecord(pick(raw, "product"));
-  const staff = pick(raw, "processed_by_staff", "processedBy", "staff", "processed_by");
+  const staff = pick(
+    raw,
+    "processed_by_staff",
+    "processedBy",
+    "staff",
+    "processed_by",
+  );
   const productId = toMoney(pick(raw, "productId", "product_id"));
   const matched = items.find((item) => item.productId === productId);
   const quantity = toMoney(pick(raw, "quantity", "qty")) || 1;
@@ -134,6 +149,13 @@ function mapReturn(rawValue: unknown, items: ReceiptItem[]): ReceiptReturn {
   const refund = toMoney(
     pick(raw, "refund_amount", "refundAmount", "amount", "total_refund"),
   );
+  const rawCondition = toText(
+    pick(raw, "condition", "item_condition"),
+  ).toUpperCase();
+  const condition: ItemCondition =
+    rawCondition === "CHANGE_OF_MIND"
+      ? ItemCondition.CHANGE_OF_MIND
+      : ItemCondition.DEFECTIVE;
 
   return {
     id: toMoney(pick(raw, "id")) || 0,
@@ -143,12 +165,12 @@ function mapReturn(rawValue: unknown, items: ReceiptItem[]): ReceiptReturn {
       matched?.product_name ||
       "Returned Item",
     quantity,
-    date: toText(pick(raw, "date", "createdAt", "created_at", "updatedAt")) ||
+    date:
+      toText(pick(raw, "date", "createdAt", "created_at", "updatedAt")) ||
       new Date().toISOString(),
+    condition,
     defect_reason:
-      toText(
-        pick(raw, "defect_reason", "defectReason", "reason", "item_condition"),
-      ) || "Return",
+      toText(pick(raw, "defect_reason", "defectReason", "reason")) || "Return",
     refund_amount: refund || unit * quantity,
     processed_by_staff: toText(staff) || "Staff",
     pricing_uom:
@@ -161,6 +183,13 @@ function mapReturn(rawValue: unknown, items: ReceiptItem[]): ReceiptReturn {
 function mapExchange(rawValue: unknown, items: ReceiptItem[]): ReceiptExchange {
   const raw = asRecord(rawValue) ?? {};
   const product = asRecord(pick(raw, "product"));
+  const staff = pick(
+    raw,
+    "processed_by_staff",
+    "processedBy",
+    "staff",
+    "processed_by",
+  );
   const productId = toMoney(pick(raw, "productId", "product_id"));
   const matched = items.find((item) => item.productId === productId);
 
@@ -172,14 +201,11 @@ function mapExchange(rawValue: unknown, items: ReceiptItem[]): ReceiptExchange {
       matched?.product_name ||
       "Exchanged Item",
     quantity: toMoney(pick(raw, "quantity", "qty")) || 1,
-    date: toText(pick(raw, "date", "createdAt", "created_at")) ||
+    date:
+      toText(pick(raw, "date", "createdAt", "created_at")) ||
       new Date().toISOString(),
-    price_difference: toMoney(
-      pick(raw, "price_difference", "priceDifference", "difference"),
-    ),
-    is_within_7_days: Boolean(
-      pick(raw, "is_within_7_days", "isWithin7Days") ?? true,
-    ),
+    staffId: toMoney(pick(raw, "staffId", "staff_id")) || 0,
+    processed_by_staff: toText(staff) || "Staff",
   };
 }
 
@@ -189,9 +215,8 @@ function mapPayment(rawValue: unknown): ReceiptPayment {
   const gcash = asRecord(pick(raw, "gCashPayment", "gcash_payment"));
 
   return {
-    payment_method: (toText(
-      pick(raw, "payment_method", "paymentMethod"),
-    ) || "CASH") as PaymentMethod,
+    payment_method: (toText(pick(raw, "payment_method", "paymentMethod")) ||
+      "CASH") as PaymentMethod,
     amount_paid: toMoney(pick(raw, "amount_paid", "amountPaid", "amount")),
     cash_tendered: toMoney(
       pick(raw, "cash_tendered", "cashTendered") ?? cash?.cash_tendered,
@@ -244,12 +269,12 @@ export function mapReceiptPayload(payload: unknown): Receipt {
   const items = asList(pick(raw, "items", "line_items")).map(mapItem);
 
   return {
-    transactionId: toMoney(
-      pick(raw, "transactionId", "transaction_id", "id"),
-    ),
+    transactionId: toMoney(pick(raw, "transactionId", "transaction_id", "id")),
     invoice_number:
       toText(pick(raw, "invoice_number", "invoiceNumber")) || null,
-    date: (pick(raw, "date", "createdAt") as string | Date) || new Date().toISOString(),
+    date:
+      (pick(raw, "date", "createdAt") as string | Date) ||
+      new Date().toISOString(),
     grand_total: toMoney(pick(raw, "grand_total", "grandTotal", "total")),
     discount_total: toMoney(pick(raw, "discount_total", "discountTotal")),
     order_discount: toMoney(pick(raw, "order_discount", "orderDiscount")),

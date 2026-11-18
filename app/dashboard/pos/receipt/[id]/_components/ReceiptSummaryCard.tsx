@@ -9,8 +9,6 @@ import {
   type ReceiptReturn,
   type ReceiptExchange,
   computeTotalRefunds,
-  computeTotalExchangeDifference,
-  computeAdjustedTotal,
   hasAdjustments,
   getReceiptDisplayStatus,
 } from "@/lib/pos";
@@ -39,29 +37,32 @@ function formatPaymentMethod(method: PaymentMethod): string {
   }
 }
 
-/** Formats an exchange price_difference for display. */
-function formatPriceDifference(diff: number): string {
-  if (diff === 0) return "Even swap";
-  if (diff > 0) return `+${formatPeso(diff)} top-up`;
-  return `${formatPeso(diff)}`;
-}
-
-export function ReceiptSummaryCard({ receipt, className }: ReceiptSummaryCardProps) {
+export function ReceiptSummaryCard({
+  receipt,
+  className,
+}: ReceiptSummaryCardProps) {
   const primaryPayment = receipt.payments[0];
   const displayStatus = getReceiptDisplayStatus(receipt);
   const showAdjustments = hasAdjustments(receipt);
   const totalRefunds = computeTotalRefunds(receipt);
-  const totalExchangeDiff = computeTotalExchangeDifference(receipt);
-  const adjustedTotal = computeAdjustedTotal(receipt);
+  const adjustedNetTotal = Math.max(
+    0,
+    Number((receipt.grand_total - totalRefunds).toFixed(2)),
+  );
 
   return (
     <div className={`space-y-4 max-w-lg mx-auto ${className || ""}`}>
       {/* Header Badges */}
       <div className="flex items-center justify-between pb-2 border-b border-border">
         <div className="flex items-center gap-2">
-          <span className="text-foreground font-heading font-bold text-lg">Transaction Summary</span>
+          <span className="text-foreground font-heading font-bold text-lg">
+            Transaction Summary
+          </span>
           {displayStatus === "FULL_REFUND" && (
-            <Badge variant="destructive" className="text-[11px] font-mono font-semibold rounded-[2px]">
+            <Badge
+              variant="destructive"
+              className="text-[11px] font-mono font-semibold rounded-[2px]"
+            >
               FULLY REFUNDED
             </Badge>
           )}
@@ -70,7 +71,7 @@ export function ReceiptSummaryCard({ receipt, className }: ReceiptSummaryCardPro
               variant="destructive"
               className="text-[11px] font-mono font-semibold rounded-[2px] bg-destructive/10 text-destructive border border-destructive/30"
             >
-              PARTIAL RETURN
+              PARTIAL REFUND
             </Badge>
           )}
           {displayStatus === "HAS_EXCHANGES" && (
@@ -93,7 +94,9 @@ export function ReceiptSummaryCard({ receipt, className }: ReceiptSummaryCardPro
           <span className="text-muted-foreground">Total</span>
           <span
             className={` font-bold ${
-              showAdjustments ? "line-through text-muted-foreground" : "text-primary"
+              showAdjustments
+                ? "line-through text-muted-foreground"
+                : "text-primary"
             }`}
           >
             {formatPeso(receipt.grand_total)}
@@ -102,10 +105,12 @@ export function ReceiptSummaryCard({ receipt, className }: ReceiptSummaryCardPro
         {showAdjustments && (
           <div className="flex justify-between gap-3">
             <span className="text-muted-foreground font-medium">
-              {displayStatus === "FULL_REFUND" ? "FULLY REFUNDED" : "Adjusted Net Total"}
+              {displayStatus === "FULL_REFUND"
+                ? "FULLY REFUNDED"
+                : "Adjusted Net Total"}
             </span>
-            <span className="font-mono font-bold text-primary tabular-nums">
-              {formatPeso(displayStatus === "FULL_REFUND" ? 0 : adjustedTotal)}
+            <span className="font-bold text-primary">
+              {formatPeso(adjustedNetTotal)}
             </span>
           </div>
         )}
@@ -136,9 +141,14 @@ export function ReceiptSummaryCard({ receipt, className }: ReceiptSummaryCardPro
           Items
         </p>
         {receipt.items.map((item, idx) => (
-          <div key={idx} className="flex justify-between gap-2 items-start py-1 border-b border-border/40 last:border-0">
+          <div
+            key={idx}
+            className="flex justify-between gap-2 items-start py-1 border-b border-border/40 last:border-0"
+          >
             <div className="min-w-0">
-              <span className="text-foreground font-medium">{item.product_name}</span>
+              <span className="text-foreground font-medium">
+                {item.product_name}
+              </span>
               {(item.already_returned_qty ?? 0) > 0 && (
                 <span className="ml-1.5 text-[11px] font-mono text-destructive">
                   ({item.already_returned_qty} returned)
@@ -151,7 +161,8 @@ export function ReceiptSummaryCard({ receipt, className }: ReceiptSummaryCardPro
               )}
             </div>
             <span className=" text-foreground shrink-0 tabular-nums">
-              {item.quantity} {item.pricing_uom ? item.pricing_uom : ""} × {formatPeso(item.applied_price)}
+              {item.quantity} {item.pricing_uom ? item.pricing_uom : ""} ×{" "}
+              {formatPeso(item.applied_price)}
             </span>
           </div>
         ))}
@@ -166,9 +177,14 @@ export function ReceiptSummaryCard({ receipt, className }: ReceiptSummaryCardPro
             </p>
           </div>
           {receipt.returns.map((ret: ReceiptReturn) => (
-            <div key={ret.id} className="border-t border-destructive/10 pt-2 space-y-1">
+            <div
+              key={ret.id}
+              className="border-t border-destructive/10 pt-2 space-y-1"
+            >
               <div className="flex justify-between gap-2">
-                <span className="font-medium text-foreground">{ret.product_name}</span>
+                <span className="font-medium text-foreground">
+                  {ret.product_name}
+                </span>
                 <span className="font-mono font-bold text-destructive shrink-0">
                   −{formatPeso(Number(ret.refund_amount) || 0)}
                 </span>
@@ -176,9 +192,16 @@ export function ReceiptSummaryCard({ receipt, className }: ReceiptSummaryCardPro
               <div className="flex justify-between gap-2 text-xs text-muted-foreground">
                 <span>
                   Qty: {ret.quantity}
-                  {ret.pricing_uom ? ` ${ret.pricing_uom}` : ""} · {ret.defect_reason}
+                  {/* {ret.pricing_uom ? ` ${ret.pricing_uom}` : ""} ·{" "} */}
+                  {" · "}
+                  {ret.condition === "CHANGE_OF_MIND"
+                    ? "Change of Mind"
+                    : "Defective"}{" "}
+                  · {ret.defect_reason}
                 </span>
-                <span className="font-mono shrink-0">{formatReceiptDate(ret.date)}</span>
+                <span className="font-mono shrink-0">
+                  {formatReceiptDate(ret.date)}
+                </span>
               </div>
               <p className="text-xs text-muted-foreground">
                 Processed by: {ret.processed_by_staff}
@@ -205,39 +228,31 @@ export function ReceiptSummaryCard({ receipt, className }: ReceiptSummaryCardPro
             </p>
           </div>
           {receipt.exchanges.map((exc: ReceiptExchange) => (
-            <div key={exc.id} className="border-t border-amber-200 pt-2 space-y-1">
+            <div
+              key={exc.id}
+              className="border-t border-amber-200 pt-2 space-y-1"
+            >
               <div className="flex justify-between gap-2">
-                <span className="font-medium text-foreground">{exc.product_name}</span>
+                <span className="font-medium text-foreground">
+                  {exc.product_name}
+                </span>
                 <span className="font-mono font-bold text-amber-800 shrink-0">
-                  {formatPriceDifference(exc.price_difference)}
+                  1:1 Replacement
                 </span>
               </div>
               <div className="flex justify-between gap-2 text-xs text-muted-foreground">
-                <span>
-                  Qty: {exc.quantity}
-                  {exc.is_within_7_days && (
-                    <Badge className="ml-1.5 text-[10px] font-mono rounded-[2px] bg-primary/10 text-primary border-0 px-1 py-0">
-                      Within 7 days
-                    </Badge>
-                  )}
+                <span>Qty: {exc.quantity}</span>
+                <span className="font-mono shrink-0">
+                  {formatReceiptDate(exc.date)}
                 </span>
-                <span className="font-mono shrink-0">{formatReceiptDate(exc.date)}</span>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Processed by: {exc.processed_by_staff}
+              </p>
             </div>
           ))}
-          {totalExchangeDiff !== 0 && (
-            <div className="border-t border-amber-300/40 pt-2 flex justify-between gap-2 font-medium">
-              <span className="text-amber-800 text-xs uppercase tracking-wider">
-                Net Exchange Diff
-              </span>
-              <span className="font-mono font-bold text-amber-800">
-                {formatPriceDifference(totalExchangeDiff)}
-              </span>
-            </div>
-          )}
         </div>
       )}
     </div>
   );
 }
-
