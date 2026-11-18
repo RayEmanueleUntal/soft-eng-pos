@@ -47,7 +47,11 @@ export default function ReceiptPage() {
       let pendingFound = false;
       let pendingBreakdown: any = null;
       try {
-        const approvals = await getApprovalRequests();
+        const [refundApprovals, exchangeApprovals] = await Promise.all([
+          getApprovalRequests({ type: "REFUND_TRANSACTION" }),
+          getApprovalRequests({ type: "EXCHANGE_TRANSACTION" }),
+        ]);
+        const approvals = [...refundApprovals, ...exchangeApprovals];
         const txId = receiptData.transactionId;
         const invNum = receiptData.invoice_number;
 

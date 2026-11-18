@@ -18,9 +18,15 @@ export interface ReviewApprovalRequestDto {
   rejectionReason?: string;
 }
 
-// GET /approval - Fetch live requests from NestJS / PostgreSQL
-export async function getApprovalRequests(): Promise<ApprovalRequestResponseDto[]> {
-  const response = await apiClient.get<ApprovalRequestResponseDto[]>('/approval');
+// GET /approval - Fetch live requests from NestJS / PostgreSQL.
+// Optional status/type filters are supported by the backend query params.
+export async function getApprovalRequests(filters?: {
+  status?: ApprovalStatus;
+  type?: string;
+}): Promise<ApprovalRequestResponseDto[]> {
+  const response = await apiClient.get<ApprovalRequestResponseDto[]>('/approval', {
+    params: filters,
+  });
   return response.data;
 }
 

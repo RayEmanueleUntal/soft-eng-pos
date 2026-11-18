@@ -51,6 +51,7 @@ export default function ExpensesPage() {
   );
 
   const rangeInvalid = isInvalidDateRange(filters);
+  const requestIdRef = React.useRef(0);
 
   // Auto-dismiss success notice after 4 seconds
   React.useEffect(() => {
@@ -68,6 +69,7 @@ export default function ExpensesPage() {
 
   // Loads the current page of expenses for the active filters.
   const loadExpenses = React.useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     if (rangeInvalid) {
       setExpenses([]);
       setTotal(0);
@@ -91,14 +93,16 @@ export default function ExpensesPage() {
           ? new Date(`${filters.endDate}T23:59:59.999`).toISOString()
           : undefined,
       });
+      if (requestId !== requestIdRef.current) return;
       setExpenses(response.data);
       setTotal(response.total);
       setTotalPages(response.totalPages);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       setError(getErrorMessage(err, "Failed to load expenses."));
       setExpenses([]);
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }, [page, filters, rangeInvalid]);
 

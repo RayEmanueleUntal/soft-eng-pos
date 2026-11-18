@@ -53,6 +53,8 @@ const PAGE_SIZE = 15;
 export default function ApprovalRequestsPage() {
   const [requests, setRequests] = useState<ApprovalRequestResponseDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [page, setPage] = useState(1);
@@ -74,8 +76,14 @@ export default function ApprovalRequestsPage() {
     try {
       const data = await getApprovalRequests();
       setRequests(data);
+      setLoadError(null);
     } catch (error) {
       console.error("Failed to load approval requests:", error);
+      setLoadError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load approval requests.",
+      );
     } finally {
       setLoading(false);
     }
@@ -137,6 +145,7 @@ export default function ApprovalRequestsPage() {
   const handleConfirmApprove = async () => {
     if (!approvingRequest) return;
     setSubmitting(true);
+    setActionError(null);
     try {
       const updated = await approveApprovalRequest(approvingRequest.id);
       // Update local state with real backend response
@@ -146,7 +155,9 @@ export default function ApprovalRequestsPage() {
       setApprovingRequest(null);
       setIsDetailsOpen(false);
     } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to approve request.");
+      setActionError(
+        err?.response?.data?.message || "Failed to approve request.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -155,6 +166,7 @@ export default function ApprovalRequestsPage() {
   const handleConfirmReject = async () => {
     if (!rejectingRequest) return;
     setSubmitting(true);
+    setActionError(null);
     try {
       const updated = await rejectApprovalRequest(rejectingRequest.id, {
         rejectionReason: rejectionReasonInput,
@@ -167,7 +179,9 @@ export default function ApprovalRequestsPage() {
       setRejectionReasonInput("");
       setIsDetailsOpen(false);
     } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to reject request.");
+      setActionError(
+        err?.response?.data?.message || "Failed to reject request.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -263,6 +277,21 @@ export default function ApprovalRequestsPage() {
           <XCircle className="w-8 h-8 text-rose-500/40 shrink-0" />
         </Card>
       </div>
+
+      {actionError && (
+        <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span className="flex-1 break-words">{actionError}</span>
+          <button
+            type="button"
+            className="text-red-500 hover:text-red-700"
+            onClick={() => setActionError(null)}
+            aria-label="Dismiss error"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Filter & Search Bar */}
       <Card className="p-4">
@@ -567,6 +596,12 @@ export default function ApprovalRequestsPage() {
               ? This action will execute the associated system override.
             </DialogDescription>
           </DialogHeader>
+          {actionError && (
+            <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span className="break-words">{actionError}</span>
+            </div>
+          )}
           <DialogFooter className="gap-2">
             <Button
               variant="outline"
@@ -602,6 +637,13 @@ export default function ApprovalRequestsPage() {
               .
             </DialogDescription>
           </DialogHeader>
+
+          {actionError && (
+            <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span className="break-words">{actionError}</span>
+            </div>
+          )}
 
           <div className="space-y-2 py-2">
             <label className="text-xs font-semibold text-muted-foreground">
