@@ -32,6 +32,8 @@ export async function getCustomers(
   if (contactNumber) query.contact_number = contactNumber;
   if (params.type) query.type = params.type;
   if (companyName) query.company_name = companyName;
+  if (params.sortBy) query.sortBy = params.sortBy;
+  if (params.sortOrder) query.sortOrder = params.sortOrder;
 
   const response = await apiClient.get<CustomerResponse>("/customers", {
     params: query,

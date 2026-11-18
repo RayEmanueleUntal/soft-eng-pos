@@ -24,12 +24,20 @@ export interface CustomerResponse {
   totalPages: number;
 }
 
+export type CustomerSortBy =
+  | "createdAt"
+  | "name"
+  | "credit_limit"
+  | "outstanding_balance";
+
 export interface CustomerFilters {
   search: string;
   name: string;
   contact_number: string;
   type: CustomerType | "";
   company_name: string;
+  sortBy?: CustomerSortBy;
+  sortOrder?: "asc" | "desc";
 }
 
 export const EMPTY_CUSTOMER_FILTERS: CustomerFilters = {
@@ -38,6 +46,8 @@ export const EMPTY_CUSTOMER_FILTERS: CustomerFilters = {
   contact_number: "",
   type: "",
   company_name: "",
+  sortBy: undefined,
+  sortOrder: undefined,
 };
 
 export interface CustomerPayload {

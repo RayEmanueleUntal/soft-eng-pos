@@ -105,8 +105,8 @@ export function ProductSearch({
               <SelectValue placeholder="All Categories">
                 {categoriesLoading
                   ? "Loading..."
-                  : categories.find((c) => String(c.id) === categoryId)?.name ??
-                    "All Categories"}
+                  : (categories.find((c) => String(c.id) === categoryId)
+                      ?.name ?? "All Categories")}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -156,13 +156,13 @@ export function ProductSearch({
         />
 
         {/* Date Range */}
-        <DateRangeFilter
+        {/* <DateRangeFilter
           startDate={startDate}
           endDate={endDate}
           onStartDateChange={onStartDateChange}
           onEndDateChange={onEndDateChange}
           inputClassName="h-9 w-[135px]"
-        />
+        /> */}
 
         {/* Add Product Button Slot (Furthest Right) */}
         {actionSlot && <div className="ml-auto shrink-0">{actionSlot}</div>}

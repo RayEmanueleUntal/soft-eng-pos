@@ -19,8 +19,6 @@ import {
 } from "@/lib/inventory/useInventory";
 import { PageHeader } from "@/components/ui/pageheader";
 import { TablePagination } from "@/components/ui/table-pagination";
-import { SortKey } from "@/components/ui/sort-select";
-import { sortItems } from "@/components/ui/sort-items";
 
 // Lists inventory with filters, status tabs, pagination and role-aware row actions.
 export default function InventoryPage() {
@@ -40,8 +38,6 @@ export default function InventoryPage() {
   } = useInventory();
 
   const role = useCurrentRole();
-  const [statusTab, setStatusTab] = React.useState<StatusTab>("all");
-  const [sort, setSort] = React.useState<SortKey>("DEFAULT");
 
   const categoryOptions = React.useMemo(
     () =>
@@ -54,20 +50,13 @@ export default function InventoryPage() {
 
   // Filter by status tab first, then apply the active sort order.
   const visibleInventory = React.useMemo(() => {
-    const filtered =
-      statusTab === "all"
-        ? inventory
-        : inventory.filter((item) => {
-            const wanted = statusTab === "low" ? "low-stock" : "adequate-stock";
-            return getStockStatus(item) === wanted;
-          });
-
-    return sortItems(filtered, sort, {
-      getName: (item) => item.name,
-      getStock: (item) => Number(item.current_quantity),
-      getId: (item) => item.id,
-    });
-  }, [inventory, statusTab, sort]);
+    if (filters.status === "adequate") {
+      return inventory.filter(
+        (item) => getStockStatus(item) === "adequate-stock",
+      );
+    }
+    return inventory;
+  }, [inventory, filters.status]);
 
   return (
     <div className="flex-1 space-y-6">
@@ -91,13 +80,13 @@ export default function InventoryPage() {
           category={filters.category}
           setCategory={(v) => setFilter("category", v)}
           categories={categoryOptions}
-          status={statusTab}
-          setStatus={setStatusTab}
-          sort={sort}
-          setSort={setSort}
+          status={filters.status}
+          setStatus={(v) => setFilter("status", v)}
+          sort={filters.sort}
+          setSort={(v) => setFilter("sort", v)}
         />
 
-        {statusTab !== "all" && !loading && !error && (
+        {filters.status === "adequate" && !loading && !error && (
           <p className="font-mono text-xs text-muted-foreground">
             {visibleInventory.length} of {inventory.length} items on this page
           </p>
@@ -119,7 +108,9 @@ export default function InventoryPage() {
             <InventoryTable
               inventory={visibleInventory}
               totalRecords={
-                statusTab === "all" ? totalRecords : visibleInventory.length
+                filters.status === "adequate"
+                  ? visibleInventory.length
+                  : totalRecords
               }
               categories={categories}
               onRefresh={refetch}

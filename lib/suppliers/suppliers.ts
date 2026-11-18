@@ -64,6 +64,8 @@ export async function fetchSuppliers(params?: {
   limit?: number;
   search?: string;
   status?: string;
+  sort_by?: "name" | "lead_time_days";
+  sort_order?: "asc" | "desc";
 }): Promise<{ data: Supplier[]; total: number; totalPages: number }> {
   let isActiveParam: boolean | undefined = undefined;
   if (params?.status === "ACTIVE" || params?.status === "true") {
@@ -80,6 +82,8 @@ export async function fetchSuppliers(params?: {
         limit: params?.limit || 10,
         search: params?.search || undefined,
         is_active: isActiveParam,
+        sort_by: params?.sort_by,
+        sort_order: params?.sort_order,
       },
     },
   );
@@ -138,11 +142,15 @@ export async function updateSupplier(
     payload.lead_time_days = Number(data.leadTimeDays) || 0;
   if (data.status !== undefined) payload.is_active = data.status === "ACTIVE";
 
-  const response = await apiClient.patch<Supplier>(`/suppliers/${id}`, payload, {
-    headers: {
-      "Idempotency-Key": crypto.randomUUID(),
+  const response = await apiClient.patch<Supplier>(
+    `/suppliers/${id}`,
+    payload,
+    {
+      headers: {
+        "Idempotency-Key": crypto.randomUUID(),
+      },
     },
-  });
+  );
   return mapSupplier(response.data);
 }
 

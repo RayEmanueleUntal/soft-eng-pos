@@ -4,7 +4,13 @@
 "use client";
 
 import * as React from "react";
-import { Search, AlertCircle, CheckCircle2, Plus, RefreshCw } from "lucide-react";
+import {
+  Search,
+  AlertCircle,
+  CheckCircle2,
+  Plus,
+  RefreshCw,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -17,7 +23,6 @@ import { canCreatePO, canManagePOStatus } from "@/lib/auth/permissions";
 import { useCurrentRole } from "@/lib/auth/use-current-role";
 import { fetchPurchaseOrderList } from "@/lib/inventory/purchase-order-api";
 import {
-  PO_STATUSES,
   POStatus,
   PurchaseOrderDto,
 } from "@/lib/inventory/purchase-order-types";
@@ -26,7 +31,8 @@ import { CancelPurchaseOrderDialog } from "./_components/CancelPurchaseOrderDial
 import { CreatePurchaseOrderModal } from "./_components/CreatePurchaseOrderModal";
 import { PurchaseOrderTable } from "./_components/PurchaseOrderTable";
 import { PageHeader } from "@/components/ui/pageheader";
-import { Label } from "@/components/ui/label";
+import { SortKey } from "@/components/ui/sort-select";
+import { mapPurchaseOrderSortKeyToApiParams } from "@/lib/utils/sort";
 
 const PAGE_LIMIT = 15;
 
@@ -42,6 +48,9 @@ export default function PurchaseOrdersPage() {
   const [statusFilter, setStatusFilter] = React.useState<POStatus | "ALL">(
     "ALL",
   );
+  const [startDate, setStartDate] = React.useState("");
+  const [endDate, setEndDate] = React.useState("");
+  const [sort, setSort] = React.useState<SortKey>("DEFAULT");
 
   const [createOpen, setCreateOpen] = React.useState(false);
   const [cancelTarget, setCancelTarget] =
@@ -52,10 +61,16 @@ export default function PurchaseOrdersPage() {
     setLoading(true);
     setError(null);
     try {
+      const { sortBy, sortOrder } = mapPurchaseOrderSortKeyToApiParams(sort);
+
       const response = await fetchPurchaseOrderList({
         page,
         limit: PAGE_LIMIT,
         status: statusFilter === "ALL" ? undefined : statusFilter,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        sortBy,
+        sortOrder,
       });
       setOrders(response.data);
       setTotal(response.total);
@@ -66,7 +81,7 @@ export default function PurchaseOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter]);
+  }, [page, statusFilter, startDate, endDate, sort]);
 
   React.useEffect(() => {
     loadOrders();
@@ -82,7 +97,7 @@ export default function PurchaseOrdersPage() {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(null), 4000);
     return () => clearTimeout(timer);
-  }, [notice]);  
+  }, [notice]);
 
   // Closes the create dialog, announces the new PO (green) and reloads the list.
   const handleCreated = (order: PurchaseOrderDto) => {
@@ -104,17 +119,16 @@ export default function PurchaseOrdersPage() {
     });
     loadOrders();
   };
-  
 
   return (
     <div className="flex-1 space-y-6 font-sans">
       <div className="shrink-0 mt-4 mb-4 flex justify-between">
-          {/* Header Bar */}
-          <PageHeader
-            header="Purchase Orders"
-            subheader="Create orders from low-stock items, inspect line items and track their status."
-          />
-        </div>
+        {/* Header Bar */}
+        <PageHeader
+          header="Purchase Orders"
+          subheader="Create orders from low-stock items, inspect line items and track their status."
+        />
+      </div>
 
       <div className="space-y-6 rounded-lg border border-border bg-card p-6 shadow-sm">
         {notice && (
@@ -162,6 +176,21 @@ export default function PurchaseOrdersPage() {
           statusFilter={statusFilter}
           onStatusFilterChange={(val) => {
             setStatusFilter(val);
+            setPage(1);
+          }}
+          startDate={startDate}
+          onStartDateChange={(val) => {
+            setStartDate(val);
+            setPage(1);
+          }}
+          endDate={endDate}
+          onEndDateChange={(val) => {
+            setEndDate(val);
+            setPage(1);
+          }}
+          sort={sort}
+          onSortChange={(val) => {
+            setSort(val);
             setPage(1);
           }}
           onRefresh={loadOrders}

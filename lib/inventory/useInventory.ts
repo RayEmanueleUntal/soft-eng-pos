@@ -5,6 +5,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import { apiClient } from "@/lib/api";
 import { InventoryItem, InventoryResponse, ProductCategory } from "./types";
+import { mapSortKeyToApiParams, SortKey } from "@/lib/utils/sort";
+
+export type StockStatusFilter = "all" | "low" | "adequate";
 
 export interface InventoryFilters {
   search: string;
@@ -12,13 +15,15 @@ export interface InventoryFilters {
   threadType: string | null;
   material: string | null;
   category: string | null;
+  status: StockStatusFilter;
+  sort: SortKey;
 }
 
 interface InventoryResult {
   key: string;
   inventory: InventoryItem[];
   totalPages: number;
-  totalRecords: number; 
+  totalRecords: number;
   error: string | null;
 }
 
@@ -28,7 +33,9 @@ const POLL_INTERVAL_MS = 30000;
 // Provides inventory data, filters, pagination state and a silent refetch function.
 export function useInventory() {
   const [categories, setCategories] = useState<Record<number, string>>({});
-  const [allCategoriesList, setAllCategoriesList] = useState<ProductCategory[]>([]);
+  const [allCategoriesList, setAllCategoriesList] = useState<ProductCategory[]>(
+    [],
+  );
 
   const [filters, setFilters] = useState<InventoryFilters>({
     search: "",
@@ -36,6 +43,8 @@ export function useInventory() {
     threadType: null,
     material: null,
     category: null,
+    status: "all",
+    sort: "DEFAULT",
   });
 
   const [debouncedSearch, setDebouncedSearch] = useState(filters.search);
@@ -50,6 +59,8 @@ export function useInventory() {
     filters.threadType,
     filters.material,
     filters.category,
+    filters.status,
+    filters.sort,
     page,
   ].join("|");
 
@@ -68,7 +79,9 @@ export function useInventory() {
 
     const fetchCategories = async () => {
       try {
-        const response = await apiClient.get<ProductCategory[]>("/product-categories");
+        const response = await apiClient.get<ProductCategory[]>(
+          "/product-categories",
+        );
         if (mounted && Array.isArray(response.data)) {
           setAllCategoriesList(response.data);
           const catMap: Record<number, string> = {};
@@ -96,6 +109,8 @@ export function useInventory() {
       const controller = new AbortController();
       fetchController.current = controller;
 
+      const { sortBy, sortOrder } = mapSortKeyToApiParams(filters.sort);
+
       return apiClient
         .get<InventoryResponse>("/products", {
           params: {
@@ -104,6 +119,9 @@ export function useInventory() {
             thread: filters.threadType || undefined,
             material: filters.material || undefined,
             categoryId: filters.category ? Number(filters.category) : undefined,
+            belowRop: filters.status === "low" ? true : undefined,
+            sortBy,
+            sortOrder,
             page,
             limit: INVENTORY_PAGE_LIMIT,
           },
@@ -167,7 +185,10 @@ export function useInventory() {
   }, [refetch]);
 
   // Updates one filter and returns to page 1 (search resets the page after its debounce).
-  const setFilter = (key: keyof InventoryFilters, value: string | null) => {
+  const setFilter = <K extends keyof InventoryFilters>(
+    key: K,
+    value: InventoryFilters[K],
+  ) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
     if (key !== "search") {
       setPage(1);
@@ -185,7 +206,7 @@ export function useInventory() {
     page,
     setPage,
     totalPages: current?.totalPages ?? 1,
-    totalRecords: current?.totalRecords ?? 0, 
+    totalRecords: current?.totalRecords ?? 0,
     loading: current === null,
     error: current?.error ?? null,
     refetch,

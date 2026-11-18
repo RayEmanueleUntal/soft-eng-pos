@@ -4,7 +4,14 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, ChevronRight, Plus, RefreshCw, X, XCircle } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Plus,
+  RefreshCw,
+  X,
+  XCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import { SortSelect, SortKey } from "@/components/ui/sort-select";
@@ -113,47 +120,6 @@ export function PurchaseOrderTable({
           .toLowerCase()
           .replace(/_/g, " ")
           .replace(/\b\w/g, (char) => char.toUpperCase());
-
-  const displayedOrders = React.useMemo(() => {
-    const startTs = startDate
-      ? new Date(`${startDate}T00:00:00`).getTime()
-      : null;
-    const endTs = endDate ? new Date(`${endDate}T23:59:59.999`).getTime() : null;
-
-    const filtered = orders.filter((order) => {
-      if (!order.order_date) return !startTs && !endTs;
-      const ts = new Date(order.order_date).getTime();
-      if (Number.isNaN(ts)) return true;
-      if (startTs !== null && ts < startTs) return false;
-      if (endTs !== null && ts > endTs) return false;
-      return true;
-    });
-
-    if (sort === "DEFAULT") return filtered;
-
-    return [...filtered].sort((a, b) => {
-      switch (sort) {
-        case "DATE_ASC":
-          return (
-            new Date(a.order_date).getTime() - new Date(b.order_date).getTime()
-          );
-        case "DATE_DESC":
-          return (
-            new Date(b.order_date).getTime() - new Date(a.order_date).getTime()
-          );
-        case "TOTAL_COST_ASC":
-          return Number(a.grand_total) - Number(b.grand_total);
-        case "TOTAL_COST_DESC":
-          return Number(b.grand_total) - Number(a.grand_total);
-        case "NAME_ASC":
-          return (a.supplierName || "").localeCompare(b.supplierName || "");
-        case "NAME_DESC":
-          return (b.supplierName || "").localeCompare(a.supplierName || "");
-        default:
-          return 0;
-      }
-    });
-  }, [orders, startDate, endDate, sort]);
 
   const hasClientFilter = Boolean(startDate || endDate || sort !== "DEFAULT");
 
@@ -279,7 +245,7 @@ export function PurchaseOrderTable({
           Purchase Order History
         </h2>
         <span className="text-xs font-mono text-muted-foreground tabular-nums">
-          Total records: {startDate || endDate ? displayedOrders.length : total}
+          Total records: {total}
         </span>
       </div>
 
@@ -309,18 +275,18 @@ export function PurchaseOrderTable({
                   Loading purchase orders...
                 </TableCell>
               </TableRow>
-            ) : displayedOrders.length === 0 ? (
+            ) : orders.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={COLUMN_COUNT}
                   className="py-12 text-center text-sm text-muted-foreground"
                 >
-                  No purchase orders found. Use &quot;New Purchase Order&quot; to
-                  create one.
+                  No purchase orders found. Use &quot;New Purchase Order&quot;
+                  to create one.
                 </TableCell>
               </TableRow>
             ) : (
-              displayedOrders.map((order) => {
+              orders.map((order) => {
                 const expanded = expandedIds.has(order.id);
                 return (
                   <React.Fragment key={order.id}>

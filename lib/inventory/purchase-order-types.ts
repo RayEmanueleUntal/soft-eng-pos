@@ -52,6 +52,8 @@ export interface FetchPurchaseOrderListParams {
   supplierId?: number;
   startDate?: string;
   endDate?: string;
+  sortBy?: "order_date" | "grand_total" | "supplier" | "id";
+  sortOrder?: "asc" | "desc";
 }
 
 // Minimal shape of GET /deliveries needed to total received base units per product.

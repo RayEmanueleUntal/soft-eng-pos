@@ -28,12 +28,14 @@ import {
 } from "@/lib/customers/types";
 import { formatPeso, getErrorMessage } from "@/lib/utils";
 import { SortKey } from "@/components/ui/sort-select";
-import { sortItems } from "@/components/ui/sort-items";
+import { sortItems } from "@/lib/utils/sort";
 
 import { CustomerFilterBar } from "./CustomerFilterBar";
 import { CustomerPaymentModal } from "./CustomerPaymentModal";
 import { AddCustomerModal } from "@/components/customers/AddCustomerModal";
 import { TablePagination } from "@/components/ui/table-pagination";
+
+import { mapCustomerSortKeyToApiParams } from "@/lib/utils/sort";
 
 const CUSTOMER_PAGE_LIMIT = 15;
 
@@ -71,6 +73,16 @@ export function CustomerTable() {
   );
 
   const requestSequence = useRef(0);
+  const [debouncedSearch, setDebouncedSearch] = useState(filters.search);
+
+  // Only debounce the search input
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(filters.search);
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [filters.search]);
 
   const loadCustomers = useCallback(async () => {
     const requestId = ++requestSequence.current;
@@ -79,8 +91,12 @@ export function CustomerTable() {
       setLoading(true);
       setError("");
 
+      const sortParams = mapCustomerSortKeyToApiParams(sort);
+
       const result = await getCustomers({
         ...filters,
+        search: debouncedSearch,
+        ...sortParams,
         page,
         limit: CUSTOMER_PAGE_LIMIT,
       });
@@ -101,14 +117,19 @@ export function CustomerTable() {
         setLoading(false);
       }
     }
-  }, [filters, page]);
+  }, [
+    debouncedSearch,
+    filters.type,
+    filters.name,
+    filters.contact_number,
+    filters.company_name,
+    sort,
+    page,
+  ]);
 
+  // Fetch immediately whenever loadCustomers dependencies update
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      void loadCustomers();
-    }, 300);
-
-    return () => clearTimeout(timeout);
+    void loadCustomers();
   }, [loadCustomers]);
 
   useEffect(() => {
@@ -130,16 +151,6 @@ export function CustomerTable() {
 
     return () => clearTimeout(timeout);
   }, [paymentNotice]);
-
-  const sortedCustomers = useMemo(
-    () =>
-      sortItems(customers, sort, {
-        getName: (c) => c.name,
-        getDate: (c) => (c as any).created_at ?? (c as any).createdAt ?? 0,
-        getId: (c) => c.id,
-      }),
-    [customers, sort],
-  );
 
   const handleFiltersChange = (nextFilters: CustomerFilters) => {
     setFilters(nextFilters);
@@ -277,8 +288,14 @@ export function CustomerTable() {
             </TableRow>
           </TableHeader>
 
-          <TableBody>
-            {loading ? (
+          <TableBody
+            className={
+              loading && customers.length > 0
+                ? "pointer-events-none opacity-50 transition-opacity"
+                : ""
+            }
+          >
+            {loading && customers.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={7}
@@ -287,7 +304,7 @@ export function CustomerTable() {
                   Loading customers...
                 </TableCell>
               </TableRow>
-            ) : sortedCustomers.length === 0 ? (
+            ) : customers.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={7}
@@ -297,7 +314,7 @@ export function CustomerTable() {
                 </TableCell>
               </TableRow>
             ) : (
-              sortedCustomers.map((customer) => (
+              customers.map((customer) => (
                 <TableRow key={customer.id}>
                   <TableCell className="max-w-[220px] font-medium text-foreground whitespace-normal break-words">
                     {customer.name}
@@ -404,9 +421,7 @@ export function CustomerTable() {
         onClose={() => setIsAddOpen(false)}
         onSuccess={(savedCustomer) => {
           setIsAddOpen(false);
-          setSuccessMsg(
-            `Customer "${savedCustomer.name}" added successfully.`,
-          );
+          setSuccessMsg(`Customer "${savedCustomer.name}" added successfully.`);
           void loadCustomers();
         }}
       />

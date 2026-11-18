@@ -12,10 +12,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import {
-  InventoryItem,
-  StockMovementResponseDto,
-} from "@/lib/inventory/types";
+import { InventoryItem, StockMovementResponseDto } from "@/lib/inventory/types";
 import { StockMovementResponse } from "@/lib/inventory/stock-movement-api";
 import { StockAdjustmentModal } from "@/components/inventory/StockAdjustmentModal";
 import { Button } from "@/components/ui/button";
@@ -38,7 +35,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SortSelect, SortKey } from "@/components/ui/sort-select";
-import { sortItems } from "@/components/ui/sort-items";
 import { DateRangeFilter } from "@/components/ui/date-range-filter";
 
 interface CategoryOption {
@@ -64,6 +60,8 @@ interface StockMovementHistoryTableProps {
   onStartDateChange: (value: string) => void;
   endDate: string;
   onEndDateChange: (value: string) => void;
+  sortKey: SortKey;
+  onSortKeyChange: (value: SortKey) => void;
   hasActiveFilters: boolean;
   onResetFilters: () => void;
   onRefresh: () => void;
@@ -125,24 +123,15 @@ export function StockMovementHistoryTable({
   onStartDateChange,
   endDate,
   onEndDateChange,
+  sortKey,
+  onSortKeyChange,
   hasActiveFilters,
   onResetFilters,
   onRefresh,
   onAdjustmentSuccess,
 }: StockMovementHistoryTableProps) {
-  const [sortOrder, setSortOrder] = React.useState<SortKey>("DEFAULT");
-  const [selectedReason, setSelectedReason] = React.useState<string | null>(null);
-
-  // 3. Replace manual if/else sorting with sortItems()
-  const displayedMovements = React.useMemo(
-    () =>
-      sortItems(movements, sortOrder, {
-        getName: (log) => log.product?.name ?? `Product #${log.productId}`,
-        getStock: (log) => log.quantity_changed,
-        getDate: (log) => log.date,
-        getId: (log) => log.id,
-      }),
-    [movements, sortOrder],
+  const [selectedReason, setSelectedReason] = React.useState<string | null>(
+    null,
   );
 
   return (
@@ -236,13 +225,13 @@ export function StockMovementHistoryTable({
           startDate={startDate}
           endDate={endDate}
           onStartDateChange={onStartDateChange} // or setStartDate if this component owns useState
-          onEndDateChange={onEndDateChange}     // or setEndDate if this component owns useState
+          onEndDateChange={onEndDateChange} // or setEndDate if this component owns useState
           inputClassName="h-9 w-[135px]"
         />
 
         <SortSelect
-          value={sortOrder}
-          onChange={setSortOrder}
+          value={sortKey}
+          onChange={onSortKeyChange}
           options={[
             "NAME_ASC",
             "NAME_DESC",
@@ -264,14 +253,11 @@ export function StockMovementHistoryTable({
           triggerClassName="!h-8 w-[125px]"
         />
 
-        {(hasActiveFilters || sortOrder !== "DEFAULT") && (
+        {hasActiveFilters && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              setSortOrder("DEFAULT");
-              onResetFilters();
-            }}
+            onClick={onResetFilters}
             className="h-8 px-2 text-xs rounded-[2px] text-muted-foreground hover:text-foreground"
           >
             <X className="h-3.5 w-3.5 mr-1" />
@@ -333,7 +319,7 @@ export function StockMovementHistoryTable({
                   Loading stock movements...
                 </TableCell>
               </TableRow>
-            ) : displayedMovements.length === 0 ? (
+            ) : movements.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={7}
@@ -343,10 +329,11 @@ export function StockMovementHistoryTable({
                 </TableCell>
               </TableRow>
             ) : (
-              displayedMovements.map((log) => {
+              movements.map((log) => {
                 const productName =
                   log.product?.name ?? `Product #${log.productId}`;
                 const productSku = log.product?.sku ?? null;
+                const baseUom = log.product?.base_uom ?? log.current_uom;
 
                 // Staff name resolution priority:
                 // 1. Staff map (from /staff-users/{id})
@@ -412,9 +399,14 @@ export function StockMovementHistoryTable({
                       {log.quantity_changed >= 0
                         ? `+${log.quantity_changed}`
                         : log.quantity_changed}{" "}
-                      {log.current_uom}
+                      {baseUom}
+                      {log.current_uom && log.current_uom !== baseUom && (
+                        <span className="block text-[10px] font-normal text-muted-foreground">
+                          via {log.current_uom}
+                        </span>
+                      )}
                     </TableCell>
-                                        
+
                     {/* before/after */}
                     <TableCell className="text-right font-mono tabular-nums text-xs text-muted-foreground">
                       {log.previous_quantity} → {log.new_quantity}
@@ -466,7 +458,7 @@ export function StockMovementHistoryTable({
               {selectedReason}
             </div>
           </DialogContent>
-        </Dialog>        
+        </Dialog>
       </div>
     </div>
   );

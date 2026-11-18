@@ -12,25 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-
-export type SortKey =
-  | "DEFAULT"
-  | "NAME_ASC"
-  | "NAME_DESC"
-  | "STOCK_ASC"
-  | "STOCK_DESC"
-  | "RETAIL_DESC"
-  | "RETAIL_ASC"
-  | "COST_DESC"
-  | "COST_ASC"
-  | "WHOLESALE_DESC"
-  | "WHOLESALE_ASC"
-  | "TOTAL_COST_DESC"
-  | "TOTAL_COST_ASC"
-  | "DATE_DESC"
-  | "DATE_ASC"
-  | "ID_ASC"
-  | "ID_DESC";
+import { SortKey } from "@/lib/utils/sort";
+export type { SortKey };
 
 export interface SortOptionConfig {
   /** Compact label shown inside the trigger button */
@@ -43,10 +26,32 @@ export const SORT_OPTION_CATALOG: Record<SortKey, SortOptionConfig> = {
   DEFAULT: { shortLabel: "Default Sort", menuLabel: "Default Sort" },
   NAME_ASC: { shortLabel: "A-Z", menuLabel: "Alphabetical A-Z" },
   NAME_DESC: { shortLabel: "Z-A", menuLabel: "Alphabetical Z-A" },
+  CREDIT_LIMIT_ASC: {
+    shortLabel: "Limit Low-High",
+    menuLabel: "Credit Limit Low to High",
+  },
+  CREDIT_LIMIT_DESC: {
+    shortLabel: "Limit High-Low",
+    menuLabel: "Credit Limit High to Low",
+  },
+  OUTSTANDING_ASC: {
+    shortLabel: "Balance Low-High",
+    menuLabel: "Outstanding Low to High",
+  },
+  OUTSTANDING_DESC: {
+    shortLabel: "Balance High-Low",
+    menuLabel: "Outstanding High to Low",
+  },
   STOCK_ASC: { shortLabel: "Stock Low-High", menuLabel: "Stock Low to High" },
   STOCK_DESC: { shortLabel: "Stock High-Low", menuLabel: "Stock High to Low" },
-  RETAIL_DESC: { shortLabel: "Retail High-Low", menuLabel: "Retail High to Low" },
-  RETAIL_ASC: { shortLabel: "Retail Low-High", menuLabel: "Retail Low to High" },
+  RETAIL_DESC: {
+    shortLabel: "Retail High-Low",
+    menuLabel: "Retail High to Low",
+  },
+  RETAIL_ASC: {
+    shortLabel: "Retail Low-High",
+    menuLabel: "Retail Low to High",
+  },
   COST_DESC: { shortLabel: "Cost High-Low", menuLabel: "Cost High to Low" },
   COST_ASC: { shortLabel: "Cost Low-High", menuLabel: "Cost Low to High" },
   WHOLESALE_DESC: {
