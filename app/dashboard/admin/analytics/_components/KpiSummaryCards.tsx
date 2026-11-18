@@ -21,19 +21,19 @@ interface KpiCardProps {
 
 function KpiCard({ label, value, badge, badgeVariant = "secondary", hint }: KpiCardProps) {
   return (
-    <Card size="sm" className="gap-1">
+    <Card size="sm" className="border-border border border-primary/25 bg-primary/10 text-primary shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
       <CardContent className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {label}
           </p>
           {badge && (
-            <Badge variant={badgeVariant} className=" text-[10px]">
+            <Badge variant={badgeVariant} className="bg-primary text-[10px] text-amber-50 rounded-lg">
               {badge}
             </Badge>
           )}
         </div>
-        <p className=" text-xl font-semibold tabular-nums tracking-tight">
+        <p className=" text-xl font-bold tabular-nums tracking-tight">
           {value}
         </p>
         {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}

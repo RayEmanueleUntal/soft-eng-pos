@@ -147,11 +147,11 @@ export function InventoryVelocityTab({
       )}
 
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader className="">
           <CardTitle className="text-sm">Fast-Moving Items</CardTitle>
         </CardHeader>
-        <CardContent className="px-0">
-          <div className="overflow-x-auto">
+        <CardContent className="">
+          <div className="rounded-md border bg-card overflow-x-auto">
             <Table>
               <TableHeader className="bg-muted/50">
                 <TableRow>
@@ -214,7 +214,7 @@ export function InventoryVelocityTab({
       </Card>
 
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader className="">
           <CardTitle className="text-sm">
             Slow-Moving / Dead Stock{" "}
             <span className="ml-1 text-xs font-normal text-muted-foreground">
@@ -222,8 +222,8 @@ export function InventoryVelocityTab({
             </span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="px-0">
-          <div className="overflow-x-auto">
+        <CardContent className="">
+          <div className="rounded-md border bg-card overflow-x-auto">
             <Table>
               <TableHeader className="bg-muted/50">
                 <TableRow>
