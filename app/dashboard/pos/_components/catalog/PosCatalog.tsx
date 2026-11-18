@@ -1,7 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AlertCircle, Loader2, PackageSearch, RefreshCw, SearchIcon } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  Boxes,
+  Folder,
+  FolderOpen,
+  Loader2,
+  PackageSearch,
+  RefreshCw,
+  SearchIcon,
+  X,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
