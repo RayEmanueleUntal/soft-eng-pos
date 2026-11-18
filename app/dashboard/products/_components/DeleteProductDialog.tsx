@@ -82,7 +82,7 @@ export function DeleteProductDialog({
 
         <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2.5 text-sm">
           This action cannot be undone. Products with existing transaction
-          history cannot be deleted by the backend.
+          history cannot be deleted in the database.
         </div>
 
         {error && (

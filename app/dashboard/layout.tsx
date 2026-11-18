@@ -143,10 +143,12 @@ const navigation: NavItem[] = [
         name: "Approval Requests",
         href: "/dashboard/admin/approval-requests",
       },
+      /*
       {
         name: "System Settings",
         href: "/dashboard/admin/system-settings",
       },
+      */
     ],
   },
 ];
