@@ -37,21 +37,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-type MovementSortOrder =
-  | "DEFAULT"
-  | "NAME_ASC"
-  | "NAME_DESC"
-  | "QTY_DESC"
-  | "QTY_ASC";
-
-const SORT_LABELS: Record<MovementSortOrder, string> = {
-  DEFAULT: "Default Sort",
-  NAME_ASC: "A-Z",
-  NAME_DESC: "Z-A",
-  QTY_DESC: "High to Low",
-  QTY_ASC: "Low to High",
-};
+import { SortSelect, SortKey } from "@/components/ui/sort-select";
+import { sortItems } from "@/components/ui/sort-items";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 
 interface CategoryOption {
   id: number | string;
@@ -99,7 +87,6 @@ const MOVEMENT_TYPE_LABELS: Record<string, string> = {
   RETURN: "Return",
 };
 
-// Picks a badge style for a movement type.
 function badgeVariant(type: StockMovementResponseDto["type"]): BadgeVariant {
   if (type === "IN") return "default";
   if (type === "OUT") return "destructive";
@@ -107,7 +94,6 @@ function badgeVariant(type: StockMovementResponseDto["type"]): BadgeVariant {
   return "outline";
 }
 
-// Formats an ISO date as a short local date and time.
 function formatDate(value: string): string {
   try {
     return new Date(value).toLocaleString([], {
@@ -144,30 +130,20 @@ export function StockMovementHistoryTable({
   onRefresh,
   onAdjustmentSuccess,
 }: StockMovementHistoryTableProps) {
-  const [sortOrder, setSortOrder] = React.useState<MovementSortOrder>("DEFAULT");
+  const [sortOrder, setSortOrder] = React.useState<SortKey>("DEFAULT");
   const [selectedReason, setSelectedReason] = React.useState<string | null>(null);
 
-  const displayedMovements = React.useMemo(() => {
-    const list = [...movements];
-    if (sortOrder === "NAME_ASC") {
-      list.sort((a, b) =>
-        (a.product?.name ?? `Product #${a.productId}`).localeCompare(
-          b.product?.name ?? `Product #${b.productId}`,
-        ),
-      );
-    } else if (sortOrder === "NAME_DESC") {
-      list.sort((a, b) =>
-        (b.product?.name ?? `Product #${b.productId}`).localeCompare(
-          a.product?.name ?? `Product #${a.productId}`,
-        ),
-      );
-    } else if (sortOrder === "QTY_ASC") {
-      list.sort((a, b) => a.quantity_changed - b.quantity_changed);
-    } else if (sortOrder === "QTY_DESC") {
-      list.sort((a, b) => b.quantity_changed - a.quantity_changed);
-    }
-    return list;
-  }, [movements, sortOrder]);
+  // 3. Replace manual if/else sorting with sortItems()
+  const displayedMovements = React.useMemo(
+    () =>
+      sortItems(movements, sortOrder, {
+        getName: (log) => log.product?.name ?? `Product #${log.productId}`,
+        getStock: (log) => log.quantity_changed,
+        getDate: (log) => log.date,
+        getId: (log) => log.id,
+      }),
+    [movements, sortOrder],
+  );
 
   return (
     <div className="space-y-4">
@@ -256,56 +232,37 @@ export function StockMovementHistoryTable({
           </div>
         )}
 
-        <div className="flex flex-col gap-2">
-          <Label>Date Range</Label>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground">From:</span>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => onStartDateChange(e.target.value)}
-              className="h-8 w-[125px] text-xs rounded-[2px] font-mono"
-            />
-            <span className="text-xs text-muted-foreground">To:</span>
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => onEndDateChange(e.target.value)}
-              className="h-8 w-[125px] text-xs rounded-[2px] font-mono"
-            />
-          </div>
-        </div>
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={onStartDateChange} // or setStartDate if this component owns useState
+          onEndDateChange={onEndDateChange}     // or setEndDate if this component owns useState
+          inputClassName="h-9 w-[135px]"
+        />
 
-        <div className="flex flex-col gap-2">
-          <Label>Sort</Label>
-          <Select
-            value={sortOrder}
-            onValueChange={(val) =>
-              setSortOrder((val ?? "DEFAULT") as MovementSortOrder)
-            }
-          >
-            <SelectTrigger className="!h-8 w-[125px] text-xs rounded-[2px] justify-start gap-2 [&>svg:last-child]:hidden">
-              <ArrowUpDown className="h-3.5 w-2.5 shrink-0 text-muted-foreground" />
-              <SelectValue placeholder="Filters">
-                {SORT_LABELS[sortOrder] ?? "Filters"}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent alignItemWithTrigger={false}>
-              <SelectItem value="NAME_ASC" className="text-xs">
-                Alphabetical A-Z
-              </SelectItem>
-              <SelectItem value="NAME_DESC" className="text-xs">
-                Alphabetical Z-A
-              </SelectItem>
-              <SelectItem value="QTY_DESC" className="text-xs">
-                Qty Adj High to Low
-              </SelectItem>
-              <SelectItem value="QTY_ASC" className="text-xs">
-                Qty Adj Low to High
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <SortSelect
+          value={sortOrder}
+          onChange={setSortOrder}
+          options={[
+            "NAME_ASC",
+            "NAME_DESC",
+            "STOCK_DESC",
+            "STOCK_ASC",
+            "DATE_DESC",
+            "DATE_ASC",
+          ]}
+          labelOverrides={{
+            STOCK_DESC: {
+              shortLabel: "High to Low",
+              menuLabel: "Qty Adj High to Low",
+            },
+            STOCK_ASC: {
+              shortLabel: "Low to High",
+              menuLabel: "Qty Adj Low to High",
+            },
+          }}
+          triggerClassName="!h-8 w-[125px]"
+        />
 
         {(hasActiveFilters || sortOrder !== "DEFAULT") && (
           <Button

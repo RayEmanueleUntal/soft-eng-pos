@@ -4,8 +4,10 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, ChevronRight, XCircle } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, RefreshCw, X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
+import { SortSelect, SortKey } from "@/components/ui/sort-select";
 import {
   Table,
   TableBody,
@@ -14,12 +16,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PurchaseOrderDto } from "@/lib/inventory/purchase-order-types";
+import {
+  PO_STATUSES,
+  PurchaseOrderDto,
+} from "@/lib/inventory/purchase-order-types";
 import { formatPeso } from "@/lib/utils";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { PurchaseOrderItemsDetail } from "./PurchaseOrderItemsDetail";
 import { PurchaseOrderStatusBadge } from "./PurchaseOrderStatusBadge";
-import { Plus, RefreshCw } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -28,9 +32,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  PO_STATUSES
-} from "@/lib/inventory/purchase-order-types";
 
 type POStatus = PurchaseOrderDto["po_status"];
 const COLUMN_COUNT = 9;
@@ -49,6 +50,12 @@ interface PurchaseOrderTableProps {
   // Filter & action props
   statusFilter: POStatus | "ALL";
   onStatusFilterChange: (status: POStatus | "ALL") => void;
+  startDate?: string;
+  onStartDateChange?: (value: string) => void;
+  endDate?: string;
+  onEndDateChange?: (value: string) => void;
+  sort?: SortKey;
+  onSortChange?: (value: SortKey) => void;
   onRefresh: () => void;
   canCreate: boolean;
   onOpenCreateModal: () => void;
@@ -67,11 +74,27 @@ export function PurchaseOrderTable({
   onCancelRequest,
   statusFilter,
   onStatusFilterChange,
+  startDate: externalStartDate,
+  onStartDateChange: externalOnStartDateChange,
+  endDate: externalEndDate,
+  onEndDateChange: externalOnEndDateChange,
+  sort: externalSort,
+  onSortChange: externalOnSortChange,
   onRefresh,
   canCreate,
   onOpenCreateModal,
 }: PurchaseOrderTableProps) {
   const [expandedIds, setExpandedIds] = React.useState<Set<number>>(new Set());
+  const [internalStartDate, setInternalStartDate] = React.useState("");
+  const [internalEndDate, setInternalEndDate] = React.useState("");
+  const [internalSort, setInternalSort] = React.useState<SortKey>("DEFAULT");
+
+  const startDate = externalStartDate ?? internalStartDate;
+  const onStartDateChange = externalOnStartDateChange ?? setInternalStartDate;
+  const endDate = externalEndDate ?? internalEndDate;
+  const onEndDateChange = externalOnEndDateChange ?? setInternalEndDate;
+  const sort = externalSort ?? internalSort;
+  const onSortChange = externalOnSortChange ?? setInternalSort;
 
   // Expands or collapses one row; several rows may stay open at once.
   const toggleRow = (id: number) => {
@@ -84,19 +107,62 @@ export function PurchaseOrderTable({
   };
 
   const formatStatusLabel = (status: string) =>
-  status === "ALL"
-    ? "All Status"
-    : status
-        .toLowerCase()
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (char) => char.toUpperCase());
+    status === "ALL"
+      ? "All Status"
+      : status
+          .toLowerCase()
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (char) => char.toUpperCase());
+
+  const displayedOrders = React.useMemo(() => {
+    const startTs = startDate
+      ? new Date(`${startDate}T00:00:00`).getTime()
+      : null;
+    const endTs = endDate ? new Date(`${endDate}T23:59:59.999`).getTime() : null;
+
+    const filtered = orders.filter((order) => {
+      if (!order.order_date) return !startTs && !endTs;
+      const ts = new Date(order.order_date).getTime();
+      if (Number.isNaN(ts)) return true;
+      if (startTs !== null && ts < startTs) return false;
+      if (endTs !== null && ts > endTs) return false;
+      return true;
+    });
+
+    if (sort === "DEFAULT") return filtered;
+
+    return [...filtered].sort((a, b) => {
+      switch (sort) {
+        case "DATE_ASC":
+          return (
+            new Date(a.order_date).getTime() - new Date(b.order_date).getTime()
+          );
+        case "DATE_DESC":
+          return (
+            new Date(b.order_date).getTime() - new Date(a.order_date).getTime()
+          );
+        case "TOTAL_COST_ASC":
+          return Number(a.grand_total) - Number(b.grand_total);
+        case "TOTAL_COST_DESC":
+          return Number(b.grand_total) - Number(a.grand_total);
+        case "NAME_ASC":
+          return (a.supplierName || "").localeCompare(b.supplierName || "");
+        case "NAME_DESC":
+          return (b.supplierName || "").localeCompare(a.supplierName || "");
+        default:
+          return 0;
+      }
+    });
+  }, [orders, startDate, endDate, sort]);
+
+  const hasClientFilter = Boolean(startDate || endDate || sort !== "DEFAULT");
 
   return (
     <div className="space-y-4">
-      <div className="grid items-end gap-3 md:grid-cols-2 lg:grid-cols-5">
-        {/* Status / Category + Refresh directly beside it */}
-        <div className="flex flex-wrap items-end gap-2 lg:col-span-3">
-          <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        {/* Status -> Date -> Sort -> Refresh */}
+        <div className="flex flex-wrap items-end gap-2.5">
+          <div className="flex flex-col gap-2 w-[220px]">
             <Label>Status</Label>
             <Select
               value={statusFilter}
@@ -104,7 +170,7 @@ export function PurchaseOrderTable({
                 onStatusFilterChange((value ?? "ALL") as POStatus | "ALL")
               }
             >
-              <SelectTrigger className="!h-9 w-full rounded-[4px] sm:w-56">
+              <SelectTrigger className="!h-9 w-full rounded-[4px] sm:w-44">
                 <SelectValue placeholder="All Status">
                   {(value: string) => formatStatusLabel(value)}
                 </SelectValue>
@@ -120,6 +186,49 @@ export function PurchaseOrderTable({
             </Select>
           </div>
 
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={onStartDateChange}
+            onEndDateChange={onEndDateChange}
+            inputClassName="h-9 w-[135px]"
+          />
+
+          <SortSelect
+            value={sort}
+            onChange={onSortChange}
+            showDefaultOption
+            options={[
+              "DATE_DESC",
+              "DATE_ASC",
+              "TOTAL_COST_ASC",
+              "TOTAL_COST_DESC",
+              "NAME_ASC",
+              "NAME_DESC",
+              "ID_DESC",
+              "ID_ASC",
+            ]}
+            labelOverrides={{
+              TOTAL_COST_DESC: {
+                shortLabel: "Total High-Low",
+                menuLabel: "Grand Total High to Low",
+              },
+              TOTAL_COST_ASC: {
+                shortLabel: "Total Low-High",
+                menuLabel: "Grand Total Low to High",
+              },
+              NAME_ASC: {
+                shortLabel: "Supplier A-Z",
+                menuLabel: "Supplier A-Z",
+              },
+              NAME_DESC: {
+                shortLabel: "Supplier Z-A",
+                menuLabel: "Supplier Z-A",
+              },
+            }}
+            triggerClassName="w-[170px] !h-9 text-xs rounded-[4px]"
+          />
+
           <Button
             variant="outline"
             size="sm"
@@ -132,11 +241,28 @@ export function PurchaseOrderTable({
             />
             Refresh
           </Button>
+
+          {hasClientFilter && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                onStartDateChange("");
+                onEndDateChange("");
+                onSortChange("DEFAULT");
+              }}
+              className="h-9 px-2.5 text-xs rounded-[4px] text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5 mr-1" />
+              Clear
+            </Button>
+          )}
         </div>
 
         {/* New Purchase Order Button (Furthest Right) */}
         {canCreate && (
-          <div className="lg:col-start-5 flex lg:justify-end">
+          <div className="ml-auto shrink-0">
             <Button
               onClick={onOpenCreateModal}
               className="h-9 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm"
@@ -150,10 +276,10 @@ export function PurchaseOrderTable({
       {/*info subheading */}
       <div className="flex items-center justify-between">
         <h2 className="text-[15px] font-heading font-semibold text-foreground">
-            Purchase Order History
+          Purchase Order History
         </h2>
         <span className="text-xs font-mono text-muted-foreground tabular-nums">
-          Total records: {total}
+          Total records: {startDate || endDate ? displayedOrders.length : total}
         </span>
       </div>
 
@@ -183,7 +309,7 @@ export function PurchaseOrderTable({
                   Loading purchase orders...
                 </TableCell>
               </TableRow>
-            ) : orders.length === 0 ? (
+            ) : displayedOrders.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={COLUMN_COUNT}
@@ -194,16 +320,16 @@ export function PurchaseOrderTable({
                 </TableCell>
               </TableRow>
             ) : (
-              orders.map((order) => {
+              displayedOrders.map((order) => {
                 const expanded = expandedIds.has(order.id);
                 return (
                   <React.Fragment key={order.id}>
-                  <TableRow
-                          className={`cursor-pointer text-xs transition-colors ${
-                            expanded ? "bg-muted/40 font-medium" : ""
-                          }`}
-                          onClick={() => toggleRow(order.id)}
-                        >
+                    <TableRow
+                      className={`cursor-pointer text-xs transition-colors ${
+                        expanded ? "bg-muted/40 font-medium" : ""
+                      }`}
+                      onClick={() => toggleRow(order.id)}
+                    >
                       <TableCell>
                         <Button
                           type="button"

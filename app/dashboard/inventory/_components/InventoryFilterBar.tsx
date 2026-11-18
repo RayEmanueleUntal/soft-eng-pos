@@ -13,11 +13,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { ArrowUpDown, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { SortSelect, SortKey } from "@/components/ui/sort-select";
 
 export type StatusTab = "all" | "low" | "adequate";
-export type SortOption = "default" | "az" | "za";
+export type SortOption = SortKey;
 
 interface CategoryOption {
   id: number;
@@ -47,12 +48,11 @@ interface InventoryFilterBarProps {
 
   sort: SortOption;
   setSort: (sort: SortOption) => void;
-
 }
 
 // Renders the filter inputs and reports every change to the parent page.
 export function InventoryFilterBar({
-search,
+  search,
   setSearch,
   size,
   setSize,
@@ -68,6 +68,10 @@ search,
   sort: externalSort,
   setSort: externalSetSort,
 }: InventoryFilterBarProps) {
+  const [internalSort, setInternalSort] = React.useState<SortOption>("DEFAULT");
+  const sort = externalSort ?? internalSort;
+  const setSort = externalSetSort ?? setInternalSort;
+
   // Resets every filter at once.
   const handleClearFilters = () => {
     setSearch("");
@@ -76,12 +80,8 @@ search,
     setMaterial(null);
     setCategory(null);
     setStatus("all");
-    setSort("default");
+    setSort("DEFAULT");
   };
-
-  const [internalSort, setInternalSort] = React.useState<SortOption>("default");
-  const sort = externalSort ?? internalSort;
-  const setSort = externalSetSort ?? setInternalSort;
 
   const areFiltersActive =
     Boolean(search) ||
@@ -90,12 +90,12 @@ search,
     Boolean(material) ||
     Boolean(category) ||
     status !== "all" ||
-    sort !== "default";
+    sort !== "DEFAULT";
 
   return (
     <div className="space-y-4">
       <div className="grid items-end gap-3 md:grid-cols-2 lg:grid-cols-5">
-        <div className="flex flex-col gap-2 lg:col-span-2">
+        <div className="space-y-2 lg:col-span-2">
           <Label>Search</Label>
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -103,7 +103,7 @@ search,
               placeholder="Search by name, description, or SKU..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="pl-8 h-9"
+              className="pl-9 h-9 text-sm font-sans focus-visible:ring-1 focus-visible:ring-primary"
             />
           </div>
         </div>
@@ -162,31 +162,18 @@ search,
           </Select>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <Label>Sort</Label>
-          <Select
-            value={sort}
-            onValueChange={(value) => setSort(value as SortOption)}
-          >
-            <SelectTrigger className="w-full !h-9 text-sm rounded-[2px]">
-              <div className="flex items-center gap-2">
-                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                <SelectValue placeholder="Sort by">
-                  {{
-                    default: "Default Sort",
-                    az: "Alphabetical A-Z",
-                    za: "Alphabetical Z-A",
-                  }[sort]}
-                </SelectValue>
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">Default Sort</SelectItem>
-              <SelectItem value="az">Alphabetical A-Z</SelectItem>
-              <SelectItem value="za">Alphabetical Z-A</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <SortSelect
+          value={sort}
+          onChange={setSort}
+          showDefaultOption
+          options={[
+            "NAME_ASC",
+            "NAME_DESC",
+            "STOCK_ASC",
+            "STOCK_DESC",
+          ]}
+          triggerClassName="w-full !h-9 text-sm rounded-[2px]"
+        />
       </div>
     </div>
   );

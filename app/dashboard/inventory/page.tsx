@@ -7,7 +7,6 @@ import * as React from "react";
 import {
   InventoryFilterBar,
   type StatusTab,
-  type SortOption,
 } from "@/app/dashboard/inventory/_components/InventoryFilterBar";
 import { InventoryTable } from "@/app/dashboard/inventory/_components/InventoryTable";
 import { Button } from "@/components/ui/button";
@@ -19,8 +18,9 @@ import {
   useInventory,
 } from "@/lib/inventory/useInventory";
 import { PageHeader } from "@/components/ui/pageheader";
-import { useState } from "react";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { SortKey } from "@/components/ui/sort-select";
+import { sortItems } from "@/components/ui/sort-items";
 
 // Lists inventory with filters, status tabs, pagination and role-aware row actions.
 export default function InventoryPage() {
@@ -41,7 +41,7 @@ export default function InventoryPage() {
 
   const role = useCurrentRole();
   const [statusTab, setStatusTab] = React.useState<StatusTab>("all");
-  const [sort, setSort] = useState<SortOption>("default");
+  const [sort, setSort] = React.useState<SortKey>("DEFAULT");
 
   const categoryOptions = React.useMemo(
     () =>
@@ -52,15 +52,22 @@ export default function InventoryPage() {
     [allCategoriesList],
   );
 
-  // Low-stock tabs and alphabetical sort apply to the rows on the current page.
+  // Filter by status tab first, then apply the active sort order.
   const visibleInventory = React.useMemo(() => {
-    if (statusTab === "all") {
-      return inventory;
-    }
+    const filtered =
+      statusTab === "all"
+        ? inventory
+        : inventory.filter((item) => {
+            const wanted = statusTab === "low" ? "low-stock" : "adequate-stock";
+            return getStockStatus(item) === wanted;
+          });
 
-    const wanted = statusTab === "low" ? "low-stock" : "adequate-stock";
-    return inventory.filter((item) => getStockStatus(item) === wanted);
-  }, [inventory, statusTab]);
+    return sortItems(filtered, sort, {
+      getName: (item) => item.name,
+      getStock: (item) => Number(item.current_quantity),
+      getId: (item) => item.id,
+    });
+  }, [inventory, statusTab, sort]);
 
   return (
     <div className="flex-1 space-y-6">
@@ -111,7 +118,9 @@ export default function InventoryPage() {
           <>
             <InventoryTable
               inventory={visibleInventory}
-              totalRecords={statusTab === "all" ? totalRecords : visibleInventory.length}
+              totalRecords={
+                statusTab === "all" ? totalRecords : visibleInventory.length
+              }
               categories={categories}
               onRefresh={refetch}
               canManageStock={canManageStock(role)}

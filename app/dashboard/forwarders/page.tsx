@@ -14,6 +14,7 @@ import { CreateForwarderModal } from "./_components/CreateForwarderModal";
 import { EditForwarderModal } from "./_components/EditForwarderModal";
 import { DeleteForwarderModal } from "./_components/DeleteForwarderModal";
 import { PageHeader } from "@/components/ui/pageheader";
+import { SortKey } from "@/components/ui/sort-select";
 
 export default function ForwardersPage() {
   const [forwarders, setForwarders] = useState<Forwarder[]>([]);
@@ -24,6 +25,7 @@ export default function ForwardersPage() {
   // Filters & Pagination
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sort, setSort] = useState<SortKey>("DEFAULT");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -89,6 +91,11 @@ export default function ForwardersPage() {
     setPage(1);
   };
 
+  const handleSortChange = (nextSort: SortKey) => {
+    setSort(nextSort);
+    setPage(1);
+  };
+
   return (
     <div className="flex-1 space-y-6">
       {/* Page Header */}
@@ -133,19 +140,22 @@ export default function ForwardersPage() {
           onSearchChange={handleSearchChange}
           statusFilter={statusFilter}
           onStatusFilterChange={handleStatusFilterChange}
+          sort={sort}
+          onSortChange={handleSortChange}
           onOpenCreateModal={() => setCreateModalOpen(true)}
         />
 
         <ForwarderTable
-          total={total}
           data={forwarders}
           loading={loading}
           currentPage={page}
           totalPages={totalPages}
+          total={total}
           pageSize={limit}
+          sort={sort}
           onPageChange={setPage}
-          onEdit={(forwarder) => setEditTarget(forwarder)}
-          onDelete={(forwarder) => setDeleteTarget(forwarder)}
+          onEdit={setEditTarget}
+          onDelete={setDeleteTarget}
         />
       </div>
 
