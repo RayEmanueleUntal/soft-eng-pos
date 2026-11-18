@@ -11,7 +11,6 @@ import {
   type ReceiptReturn,
   type ReceiptExchange,
   computeTotalRefunds,
-  computeTotalExchangeDifference,
   computeAdjustedTotal,
   hasAdjustments,
   getReceiptDisplayStatus,
@@ -50,13 +49,6 @@ function formatPaymentMethod(method: PaymentMethod): string {
     default:
       return method;
   }
-}
-
-/** Formats an exchange price_difference for thermal print display. */
-function formatPriceDifference(diff: number): string {
-  if (diff === 0) return "Even swap";
-  if (diff > 0) return `+${formatPeso(diff)}`;
-  return formatPeso(diff);
 }
 
 /** Renders payment-specific details below the payment method row. */
@@ -101,7 +93,12 @@ function ReceiptRow({
   bold?: boolean;
 }) {
   return (
-    <div className={cn("flex justify-between gap-2 tabular-nums", bold && "font-semibold ")}>
+    <div
+      className={cn(
+        "flex justify-between gap-2 tabular-nums",
+        bold && "font-semibold ",
+      )}
+    >
       <span>{label}</span>
       <span className="tabular-nums text-right">{value}</span>
     </div>
@@ -136,7 +133,6 @@ export function PrintableInvoice({
   const displayStatus = getReceiptDisplayStatus(receipt);
   const showAdjustments = hasAdjustments(receipt);
   const totalRefunds = computeTotalRefunds(receipt);
-  const totalExchangeDiff = computeTotalExchangeDifference(receipt);
   const adjustedTotal = computeAdjustedTotal(receipt);
 
   return (
@@ -250,9 +246,16 @@ export function PrintableInvoice({
                   {ret.product_name}
                 </p>
                 <ReceiptRow
-                  label={`Qty: ${ret.quantity}`}
-                  value={`Refund: ${formatPeso(ret.refund_amount)}`}
+                  label={`Qty: ${ret.quantity}${ret.pricing_uom ? ` ${ret.pricing_uom}` : ""}`}
+                  value={`Refund: ${formatPeso(Number(ret.refund_amount) || 0)}`}
                 />
+                <p className="text-[10px]">
+                  Condition:{" "}
+                  {ret.condition === "CHANGE_OF_MIND"
+                    ? "Change of Mind"
+                    : "Defective"}
+                </p>
+                <p className="text-[10px]">Reason: {ret.defect_reason}</p>
                 <p className="text-[10px]">Reason: {ret.defect_reason}</p>
                 <p className="text-[10px]">Staff: {ret.processed_by_staff}</p>
                 <p className="text-[10px]">
@@ -283,26 +286,14 @@ export function PrintableInvoice({
                 </p>
                 <ReceiptRow
                   label={`Qty: ${exc.quantity}`}
-                  value={`Diff: ${formatPriceDifference(exc.price_difference)}`}
+                  value="1:1 Replacement"
                 />
+                <p className="text-[10px]">Staff: {exc.processed_by_staff}</p>
                 <p className="text-[10px]">
                   Date: {formatReceiptDate(exc.date)}
                 </p>
-                {exc.is_within_7_days && (
-                  <p className="text-[10px]">[Within 7-day window]</p>
-                )}
               </div>
             ))}
-            {totalExchangeDiff !== 0 && (
-              <>
-                <ReceiptDivider />
-                <ReceiptRow
-                  label="Total Exchange Diff"
-                  value={formatPriceDifference(totalExchangeDiff)}
-                  bold
-                />
-              </>
-            )}
           </div>
         </>
       )}

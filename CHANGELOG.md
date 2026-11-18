@@ -34,5 +34,10 @@
 2026-11-06: Purchase Orders create form: shortened the line-items helper to one sentence.
 2026-11-06: Purchase Orders create form: Yes/No confirm after editing a conversion factor that differs from the product record.
 2026-11-06: Purchase Orders create form: dropped the Use default button; empty factor on blur restores the catalog lock.
+2026-11-18: Receipt GET maps Decimal amounts and include* flags so returns/print totals are not ₱0.00; pending ₱ aliases only.
+2026-11-18: Return rows show qty with UoM; full refunds use FULLY REFUNDED ₱0.00 on the on-screen summary.
+2026-11-18: Invoice page skips Sale Completed; refund-all remaining, INV- header, hide ₱0 credit, sticky footers, Open invoice.
+2026-11-18: Refund modal uses a line checklist plus Select all remaining; POST items omit uom so the API accepts bulk refunds.
+2026-11-18: Approval request dates use formatReceiptDate so the table and details match invoice timestamps.
 2026-11-18: Invoice history GET /transactions now sends search, page, and limit so list search and paging work.
 2026-11-18: Invoice list filter bar adds type and start/end dates; search placeholder is invoice # / receipt ID.

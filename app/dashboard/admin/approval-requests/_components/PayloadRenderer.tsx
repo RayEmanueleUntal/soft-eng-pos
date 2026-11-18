@@ -136,21 +136,21 @@ export const PayloadRenderer: React.FC<PayloadRendererProps> = ({ data, level = 
             <div className="p-2.5 rounded bg-background/80 border border-border">
               <span className="text-[11px] text-muted-foreground block font-medium">Credit Debt Cancellation</span>
               <span className="font-mono text-sm font-bold text-foreground tabular-nums">
-                ₱{Number(paymentBreakdown.creditDebtCancellation ?? paymentBreakdown.credit_debt_cancellation ?? paymentBreakdown.credit ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ₱{Number(paymentBreakdown.creditDebtCancellation ?? paymentBreakdown.credit_debt_cancellation ?? paymentBreakdown.creditDebtReduction ?? paymentBreakdown.credit_debt_reduction ?? paymentBreakdown.credit ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             <div className="p-2.5 rounded bg-background/80 border border-border">
               <span className="text-[11px] text-muted-foreground block font-medium">Cash Payout</span>
               <span className="font-mono text-sm font-bold text-foreground tabular-nums">
-                ₱{Number(paymentBreakdown.cashPayout ?? paymentBreakdown.cash_payout ?? paymentBreakdown.cash ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ₱{Number(paymentBreakdown.cashPayout ?? paymentBreakdown.cash_payout ?? paymentBreakdown.cashPayoutAmount ?? paymentBreakdown.cash_payout_amount ?? paymentBreakdown.cash ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
           </div>
-          {(paymentBreakdown.totalRefund !== undefined || paymentBreakdown.total_refund !== undefined) && (
+          {(paymentBreakdown.totalRefund !== undefined || paymentBreakdown.total_refund !== undefined || paymentBreakdown.totalRefundAmount !== undefined || paymentBreakdown.total_refund_amount !== undefined) && (
             <div className="flex justify-between items-center pt-1 border-t border-amber-500/20 text-xs">
               <span className="text-muted-foreground font-medium">Total Refund:</span>
               <span className="font-mono font-bold text-foreground tabular-nums">
-                ₱{Number(paymentBreakdown.totalRefund ?? paymentBreakdown.total_refund ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ₱{Number(paymentBreakdown.totalRefund ?? paymentBreakdown.total_refund ?? paymentBreakdown.totalRefundAmount ?? paymentBreakdown.total_refund_amount ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
           )}

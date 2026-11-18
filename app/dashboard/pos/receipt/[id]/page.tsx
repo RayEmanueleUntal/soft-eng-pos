@@ -1,25 +1,38 @@
 "use client";
 
+// Invoice detail for a completed POS sale: print, refund, and exchange without the checkout hop.
+// Loads GET receipt plus pending/approved return payloads so cashiers see live totals.
+// Refund and Exchange open classmate modals directly from this page footer.
+
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PrintableInvoice } from "./_components/PrintableInvoice";
-import { ReceiptModal } from "./_components/ReceiptModal";
 import { ReceiptSummaryCard } from "./_components/ReceiptSummaryCard";
 import { RefundModal } from "./_components/return/RefundModal";
 import { ExchangeModal } from "./_components/return/ExchangeModal";
-import {
-  fetchReceiptApi,
-  type Receipt,
-  type ReceiptReturn,
-  type ReceiptExchange,
-} from "@/lib/pos";
-import {
-  getApprovalRequests,
-  type ApprovalRequestResponseDto,
-} from "@/lib/approval/approval-api";
+import { fetchReceiptApi, ItemCondition, type Receipt } from "@/lib/pos";
+import { getApprovalRequests } from "@/lib/approval/approval-api";
 import { ArrowLeft, Printer, Loader2, AlertCircle } from "lucide-react";
 import { getErrorMessage } from "@/lib/utils";
+
+/** Prefers the backend invoice_number, then INV-{transactionId}. */
+function getInvoiceHeading(receipt: Receipt | null, routeId: string): string {
+  if (!receipt) return `INV-${routeId}`;
+  return receipt.invoice_number || `INV-${receipt.transactionId ?? routeId}`;
+}
+
+/** Reads credit-cancellation aliases from a pending return breakdown. */
+function getPendingCreditAmount(breakdown: Record<string, unknown>): number {
+  return Number(
+    breakdown.creditDebtCancellation ??
+      breakdown.credit_debt_cancellation ??
+      breakdown.creditDebtReduction ??
+      breakdown.credit_debt_reduction ??
+      breakdown.credit ??
+      0,
+  );
+}
 
 export default function ReceiptPage() {
   const params = useParams();
@@ -29,7 +42,6 @@ export default function ReceiptPage() {
   const [loading, setLoading] = useState(true);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const [refundModalOpen, setRefundModalOpen] = useState(false);
   const [exchangeModalOpen, setExchangeModalOpen] = useState(false);
   const [hasPendingApproval, setHasPendingApproval] = useState(false);
@@ -40,157 +52,48 @@ export default function ReceiptPage() {
       setLoading(true);
       setError(null);
 
-      // Fetch base receipt from API
-      const receiptData = await fetchReceiptApi(id);
+      const [receiptResult, approvalsResult] = await Promise.allSettled([
+        fetchReceiptApi(id),
+        getApprovalRequests(),
+      ]);
 
-      // Check approvals to see if there are pending or approved returns/exchanges
+      if (receiptResult.status === "rejected") {
+        throw receiptResult.reason;
+      }
+
+      const receiptData = receiptResult.value;
       let pendingFound = false;
-      let pendingBreakdown: any = null;
-      try {
-        const [refundApprovals, exchangeApprovals] = await Promise.all([
-          getApprovalRequests({ type: "REFUND_TRANSACTION" }),
-          getApprovalRequests({ type: "EXCHANGE_TRANSACTION" }),
-        ]);
-        const approvals = [...refundApprovals, ...exchangeApprovals];
-        const txId = receiptData.transactionId;
-        const invNum = receiptData.invoice_number;
+      let breakdown: Record<string, unknown> | null = null;
 
-        const parsePayload = (raw: any) => {
-          if (!raw) return {};
-          if (typeof raw === "string") {
-            try {
-              return JSON.parse(raw);
-            } catch {
-              return {};
-            }
+      if (approvalsResult.status === "fulfilled") {
+        const txId = Number(receiptData.transactionId);
+        const pendingReq = approvalsResult.value.find((req) => {
+          if (
+            req.status !== "PENDING" ||
+            (req.type !== "REFUND_TRANSACTION" &&
+              req.type !== "EXCHANGE_TRANSACTION")
+          ) {
+            return false;
           }
-          return raw;
-        };
-
-        const relevant = approvals.filter((req) => {
-          const p = parsePayload(req.payload);
-          const reqTxId = p?.transactionId ?? p?.transaction_id;
-          const reqInv = p?.invoice_number ?? p?.invoiceNumber;
-          const matchesTx =
-            reqTxId !== undefined &&
-            (reqTxId === txId ||
-              String(reqTxId) === String(txId) ||
-              Number(reqTxId) === Number(txId));
-          const matchesInv =
-            invNum &&
-            reqInv &&
-            (reqInv === invNum ||
-              String(reqInv).trim() === String(invNum).trim());
-          return matchesTx || matchesInv;
+          const p =
+            typeof req.payload === "string"
+              ? JSON.parse(req.payload)
+              : (req.payload ?? {});
+          return Number(p.transactionId ?? p.transaction_id) === txId;
         });
 
-        const pendingReq = relevant.find(
-          (req) =>
-            req.status === "PENDING" &&
-            (req.type === "REFUND_TRANSACTION" ||
-              req.type === "EXCHANGE_TRANSACTION"),
-        );
-        pendingFound = !!pendingReq;
         if (pendingReq) {
-          const p = parsePayload(pendingReq.payload);
-          pendingBreakdown = p.paymentBreakdown || p.payment_breakdown || null;
+          pendingFound = true;
+          const p =
+            typeof pendingReq.payload === "string"
+              ? JSON.parse(pendingReq.payload)
+              : (pendingReq.payload ?? {});
+          breakdown = p.paymentBreakdown ?? p.payment_breakdown ?? null;
         }
-
-        // Merge any approved returns/exchanges if not already present on receiptData
-        const approvedRefunds = relevant.filter(
-          (req) =>
-            req.status === "APPROVED" && req.type === "REFUND_TRANSACTION",
-        );
-        const approvedExchanges = relevant.filter(
-          (req) =>
-            req.status === "APPROVED" && req.type === "EXCHANGE_TRANSACTION",
-        );
-
-        if (
-          approvedRefunds.length > 0 &&
-          (!receiptData.returns || receiptData.returns.length === 0)
-        ) {
-          receiptData.returns = approvedRefunds.map((req, idx) => {
-            const p = parsePayload(req.payload);
-            const item = receiptData.items.find(
-              (it) => it.productId === (p.productId ?? p.product_id),
-            );
-            const qty =
-              (p.quantity ??
-                (Array.isArray(p.items) && p.items[0]?.quantity)) ||
-              1;
-            const unitPrice = item ? item.applied_price : 0;
-            const refundAmount =
-              p.refundAmount ??
-              p.refund_amount ??
-              (Array.isArray(p.items) && p.items[0]?.refundAmount) ??
-              unitPrice * qty;
-
-            return {
-              id: typeof req.id === "number" ? req.id : idx + 1,
-              productId: p.productId ?? p.product_id ?? item?.productId ?? 0,
-              product_name:
-                p.productName ||
-                p.product_name ||
-                item?.product_name ||
-                "Returned Item",
-              quantity: qty,
-              date: req.updatedAt || req.createdAt || new Date().toISOString(),
-              defect_reason: p.reason || p.defect_reason || "Return",
-              refund_amount: refundAmount,
-              processed_by_staff: String(
-                req.reviewedById || req.requestedById || "Staff",
-              ),
-            };
-          });
-
-          // Mark already_returned_qty on corresponding receipt items
-          approvedRefunds.forEach((req) => {
-            const p = parsePayload(req.payload);
-            const pId = p.productId ?? p.product_id;
-            const it = receiptData.items.find((item) => item.productId === pId);
-            if (it) {
-              it.already_returned_qty =
-                (it.already_returned_qty || 0) + (p.quantity || 1);
-            }
-          });
-        }
-
-        if (
-          approvedExchanges.length > 0 &&
-          (!receiptData.exchanges || receiptData.exchanges.length === 0)
-        ) {
-          receiptData.exchanges = approvedExchanges.map((req, idx) => {
-            const p = parsePayload(req.payload);
-            const item = receiptData.items.find(
-              (it) => it.productId === (p.productId ?? p.product_id),
-            );
-            return {
-              id: typeof req.id === "number" ? req.id : idx + 1,
-              productId:
-                p.newProductId ??
-                p.new_product_id ??
-                p.productId ??
-                p.product_id ??
-                0,
-              product_name:
-                p.newProductName ||
-                p.new_product_name ||
-                item?.product_name ||
-                "Exchanged Item",
-              quantity: p.newQuantity || p.new_quantity || p.quantity || 1,
-              date: req.updatedAt || req.createdAt || new Date().toISOString(),
-              price_difference: p.price_difference ?? p.priceDifference ?? 0,
-              is_within_7_days: true,
-            };
-          });
-        }
-      } catch (approvalErr) {
-        console.warn("Could not load approvals:", approvalErr);
       }
 
       setHasPendingApproval(pendingFound);
-      setPendingBreakdown(pendingBreakdown);
+      setPendingBreakdown(breakdown);
       setReceipt(receiptData);
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Receipt not found"));
@@ -236,7 +139,7 @@ export default function ReceiptPage() {
           </Button>
           <div className="h-6 w-px bg-border" />
           <h1 className="text-[24px] font-bold font-heading tracking-tight text-foreground">
-            Invoice #{id}
+            {getInvoiceHeading(receipt, id)}
           </h1>
         </div>
       </div>
@@ -308,24 +211,29 @@ export default function ReceiptPage() {
                     PENDING APPROVAL
                   </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <div className="rounded border border-amber-200 bg-white/80 p-2.5">
-                    <span className="text-muted-foreground block text-[11px] mb-1">
-                      Credit Debt Cancellation
-                    </span>
-                    <span className="font-mono text-sm font-bold text-foreground">
-                      ₱
-                      {Number(
-                        pendingBreakdown.creditDebtCancellation ??
-                          pendingBreakdown.credit_debt_cancellation ??
-                          pendingBreakdown.credit ??
-                          0,
-                      ).toLocaleString("en-PH", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
-                  </div>
+                <div
+                  className={`grid grid-cols-1 gap-3 pt-1 ${
+                    getPendingCreditAmount(pendingBreakdown) !== 0
+                      ? "sm:grid-cols-2"
+                      : ""
+                  }`}
+                >
+                  {getPendingCreditAmount(pendingBreakdown) !== 0 && (
+                    <div className="rounded border border-amber-200 bg-white/80 p-2.5">
+                      <span className="text-muted-foreground block text-[11px] mb-1">
+                        Credit Debt Cancellation
+                      </span>
+                      <span className="font-mono text-sm font-bold text-foreground">
+                        ₱
+                        {getPendingCreditAmount(
+                          pendingBreakdown,
+                        ).toLocaleString("en-PH", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                  )}
                   <div className="rounded border border-amber-200 bg-white/80 p-2.5">
                     <span className="text-muted-foreground block text-[11px] mb-1">
                       Cash Payout
@@ -335,6 +243,8 @@ export default function ReceiptPage() {
                       {Number(
                         pendingBreakdown.cashPayout ??
                           pendingBreakdown.cash_payout ??
+                          pendingBreakdown.cashPayoutAmount ??
+                          pendingBreakdown.cash_payout_amount ??
                           pendingBreakdown.cash ??
                           0,
                       ).toLocaleString("en-PH", {
@@ -345,7 +255,9 @@ export default function ReceiptPage() {
                   </div>
                 </div>
                 {(pendingBreakdown.totalRefund !== undefined ||
-                  pendingBreakdown.total_refund !== undefined) && (
+                  pendingBreakdown.total_refund !== undefined ||
+                  pendingBreakdown.totalRefundAmount !== undefined ||
+                  pendingBreakdown.total_refund_amount !== undefined) && (
                   <div className="flex justify-between pt-1 border-t border-amber-200 font-medium">
                     <span className="text-muted-foreground">
                       Total Refund Amount
@@ -355,6 +267,8 @@ export default function ReceiptPage() {
                       {Number(
                         pendingBreakdown.totalRefund ??
                           pendingBreakdown.total_refund ??
+                          pendingBreakdown.totalRefundAmount ??
+                          pendingBreakdown.total_refund_amount ??
                           0,
                       ).toLocaleString("en-PH", {
                         minimumFractionDigits: 2,
@@ -367,7 +281,7 @@ export default function ReceiptPage() {
             )}
 
             {/* Printable Invoice or Rich Receipt Summary Display */}
-            <div className="mb-6 flex justify-center">
+            {/* <div className="mb-6 flex justify-center">
               {(receipt.returns && receipt.returns.length > 0) ||
               (receipt.exchanges && receipt.exchanges.length > 0) ? (
                 <div className="w-full max-w-lg bg-card border border-input rounded-[4px] p-4 shadow-[0px_2px_0px_rgba(15,23,42,0.06)]">
@@ -376,6 +290,12 @@ export default function ReceiptPage() {
               ) : (
                 <PrintableInvoice receipt={receipt} />
               )}
+            </div> */}
+            {/* Receipt Summary Display */}
+            <div className="mb-6 flex justify-center">
+              <div className="w-full max-w-lg bg-card border border-input rounded-[4px] p-4 shadow-[0px_2px_0px_rgba(15,23,42,0.06)]">
+                <ReceiptSummaryCard receipt={receipt} />
+              </div>
             </div>
 
             {/* Action Buttons */}
@@ -390,10 +310,19 @@ export default function ReceiptPage() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => setSummaryModalOpen(true)}
+                onClick={() => setRefundModalOpen(true)}
+                disabled={hasPendingApproval}
                 className="rounded-[4px] text-xs border-input hover:bg-muted"
               >
-                Process Refund / Exchange
+                Refund
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setExchangeModalOpen(true)}
+                disabled={hasPendingApproval}
+                className="rounded-[4px] text-xs border-input hover:bg-muted"
+              >
+                Exchange
               </Button>
               <Button
                 onClick={handlePrint}
@@ -412,23 +341,8 @@ export default function ReceiptPage() {
         </div>
       )}
 
-      {/* Return Modals & Summary Modal */}
       {receipt && (
         <>
-          <ReceiptModal
-            open={summaryModalOpen}
-            onOpenChange={setSummaryModalOpen}
-            receipt={receipt}
-            onNewSale={() => router.push("/dashboard/pos")}
-            onProcessRefund={() => {
-              setSummaryModalOpen(false);
-              setRefundModalOpen(true);
-            }}
-            onProcessExchange={() => {
-              setSummaryModalOpen(false);
-              setExchangeModalOpen(true);
-            }}
-          />
           <RefundModal
             open={refundModalOpen}
             onOpenChange={setRefundModalOpen}

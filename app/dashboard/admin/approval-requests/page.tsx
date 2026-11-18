@@ -45,8 +45,47 @@ import {
   AlertCircle,
   FileCheck,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/pageheader";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { formatReceiptDate } from "@/lib/pos";
+
+/** Parses string or object approval payloads into a plain object. */
+function parseApprovalPayload(raw: unknown): Record<string, unknown> {
+  if (!raw) return {};
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object"
+        ? (parsed as Record<string, unknown>)
+        : {};
+    } catch {
+      return {};
+    }
+  }
+  if (typeof raw === "object") return raw as Record<string, unknown>;
+  return {};
+}
+
+/** Invoice label and receipt route id from a return/exchange payload. */
+function getApprovalInvoiceMeta(payload: Record<string, unknown>): {
+  invoiceLabel: string | null;
+  receiptPathId: string | null;
+} {
+  const invoiceNumber = payload.invoice_number ?? payload.invoiceNumber;
+  const transactionId = payload.transactionId ?? payload.transaction_id;
+  const invoiceLabel = invoiceNumber
+    ? String(invoiceNumber)
+    : transactionId != null && transactionId !== ""
+      ? `INV-${transactionId}`
+      : null;
+  const receiptPathId = invoiceNumber
+    ? String(invoiceNumber)
+    : transactionId != null && transactionId !== ""
+      ? String(transactionId)
+      : null;
+  return { invoiceLabel, receiptPathId };
+}
 
 const PAGE_SIZE = 15;
 
@@ -68,6 +107,7 @@ function formatDate(value: string): string {
 }
 
 export default function ApprovalRequestsPage() {
+  const router = useRouter();
   const [requests, setRequests] = useState<ApprovalRequestResponseDto[]>([]);
   const [staffMap, setStaffMap] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState<boolean>(true);
@@ -187,6 +227,10 @@ export default function ApprovalRequestsPage() {
 
   const totalPages = Math.max(1, Math.ceil(filteredRequests.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
+  const detailsInvoiceMeta = selectedRequest
+    ? getApprovalInvoiceMeta(parseApprovalPayload(selectedRequest.payload))
+    : { invoiceLabel: null, receiptPathId: null };
+
   const paginatedRequests = filteredRequests.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
