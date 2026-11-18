@@ -406,7 +406,7 @@ export function StaffTable() {
           Staff Profile List
         </h2>
         <span className="text-xs font-mono text-muted-foreground tabular-nums">
-          Total records:
+          Total records: {filteredStaff.length}
         </span>
       </div>
 
