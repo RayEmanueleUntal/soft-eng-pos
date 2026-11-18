@@ -70,7 +70,7 @@ interface PaymentTabItem {
 
 const PAYMENT_TABS: PaymentTabItem[] = [
   { id: "cash", label: "Cash", icon: Banknote },
-  { id: "gcash", label: "GCash", icon: QrCode },
+  { id: "gcash", label: "InstaPay", icon: QrCode },
   { id: "credit", label: "Credit (AR)", icon: CreditCard, wholesaleOnly: true },
 ];
 
@@ -132,6 +132,9 @@ export default function PaymentModal({
   const currentTab = availableTabs.some((t) => t.id === activeTab)
     ? activeTab
     : availableTabs[0]?.id || "cash";
+  const currentTabLabel =
+    availableTabs.find((t) => t.id === currentTab)?.label ??
+    currentTab.toUpperCase();
   const currentPayment = detailsMap[currentTab];
   const isPaymentValid = Boolean(currentPayment?.isValid);
   const currentAmount =
@@ -433,7 +436,7 @@ export default function PaymentModal({
                       variant="outline"
                       className="rounded-[2px] px-1.5 py-0 text-[10px] font-mono font-bold"
                     >
-                      {p.method}
+                      {p.method === "GCASH" ? "INSTAPAY" : p.method}
                     </Badge>
                     <div className="truncate">
                       <span className=" font-bold text-foreground">
@@ -544,7 +547,7 @@ export default function PaymentModal({
                 <Plus className="h-4 w-4" />
                 <span>
                   Add {currentAmount > 0 ? formatPeso(currentAmount) : ""}{" "}
-                  {currentTab.toUpperCase()} to Split
+                  {currentTabLabel} to Split
                 </span>
               </Button>
             )}

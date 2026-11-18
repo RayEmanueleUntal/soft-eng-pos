@@ -29,7 +29,7 @@ function formatPaymentMethod(method: PaymentMethod): string {
     case "CASH":
       return "Cash";
     case "GCASH":
-      return "GCash";
+      return "InstaPay";
     case "CREDIT":
       return "Credit";
     default:

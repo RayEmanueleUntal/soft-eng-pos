@@ -44,7 +44,7 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
   } else if (!isNotExceedingDue && amountDue !== undefined) {
     errorMessage = `GCash payment cannot exceed remaining due (₱${amountDue.toFixed(2)}).`;
   } else if (!isRefValid) {
-    errorMessage = "GCash Reference Number is required (at least 6 digits).";
+    errorMessage = "InstaPay Reference Number is required (at least 6 digits).";
   }
 
   const isValid = isAmountValid && isNotExceedingDue && isRefValid;
@@ -64,7 +64,7 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
       {/* Amount Field */}
       <div className="grid gap-1.5">
         <Label htmlFor="gcash-amount" className="font-sans text-xs font-semibold text-foreground">
-          Amount Paid via GCash (₱)
+          Amount Paid via InstaPay (₱)
         </Label>
         <Input
           id="gcash-amount"
@@ -89,7 +89,7 @@ export default function GCashPaymentForm({ amountDue, onPaymentChange }: GCashPa
       <div className="grid gap-1.5">
         <div className="flex justify-between items-center">
           <Label htmlFor="gcash-ref" className="font-sans text-xs font-semibold text-foreground">
-            GCash Reference Number <span className="text-destructive">*</span> 
+            InstaPay Reference Number <span className="text-destructive">*</span> 
           </Label>
           <span className="text-[11px] font-mono text-muted-foreground">From customer receipt</span>
         </div>

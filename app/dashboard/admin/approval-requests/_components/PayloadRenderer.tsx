@@ -17,6 +17,13 @@ function formatTitle(key: string): string {
     .trim();
 }
 
+function formatDisplayString(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed === 'GCASH') return 'INSTAPAY';
+  if (trimmed.toLowerCase() === 'gcash') return 'InstaPay';
+  return value;
+}
+
 function tryParseJson(value: string) {
   try {
     const parsed = JSON.parse(value);
@@ -55,7 +62,11 @@ export const PayloadRenderer: React.FC<PayloadRendererProps> = ({ data, level = 
     if (typeof data === 'number') {
       return <span className="font-mono text-sm text-foreground whitespace-nowrap">{data.toLocaleString()}</span>;
     }
-    return <span className="text-sm text-foreground break-words whitespace-pre-wrap">{String(data)}</span>;
+    return (
+      <span className="text-sm text-foreground break-words whitespace-pre-wrap">
+        {formatDisplayString(String(data))}
+      </span>
+    );
   }
 
   // Handle Arrays
@@ -103,7 +114,7 @@ export const PayloadRenderer: React.FC<PayloadRendererProps> = ({ data, level = 
       <div className="flex flex-wrap gap-1 mt-1">
         {data.map((item, idx) => (
           <Badge key={idx} variant="secondary" className="text-xs break-all">
-            {String(item)}
+            {formatDisplayString(String(item))}
           </Badge>
         ))}
       </div>
