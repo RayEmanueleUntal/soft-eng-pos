@@ -1,11 +1,10 @@
 // Historical POS receipt list for browsing completed sales and opening invoices.
-// Fetches paginated GET /transactions results with optional search.
+// Fetches paginated GET /transactions with search, type, and date-range filters.
 // Footer uses shared TablePagination at 15 receipts per page.
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -17,18 +16,23 @@ import {
 } from "@/components/ui/table";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { Badge } from "@/components/ui/badge";
-import { Search, Eye, RefreshCw, AlertCircle } from "lucide-react";
+import { Eye, AlertCircle } from "lucide-react";
 import { formatPeso, getErrorMessage } from "@/lib/utils";
 import { fetchTransactionsApi, type TransactionSummary } from "@/lib/pos";
 import { PageHeader } from "@/components/ui/pageheader";
-import { Label } from "@/components/ui/label";
+import {
+  EMPTY_INVOICE_FILTERS,
+  InvoiceFilterBar,
+  isInvalidInvoiceDateRange,
+  type InvoiceListFilters,
+} from "./_components/InvoiceFilterBar";
 
 const PAGE_SIZE = 15;
 
 export default function TransactionHistoryPage() {
   const router = useRouter();
   const [transactions, setTransactions] = useState<TransactionSummary[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState<InvoiceListFilters>(EMPTY_INVOICE_FILTERS);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -36,7 +40,17 @@ export default function TransactionHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const rangeInvalid = isInvalidInvoiceDateRange(filters);
+
   const loadTransactions = useCallback(async () => {
+    if (rangeInvalid) {
+      setTransactions([]);
+      setTotal(0);
+      setTotalPages(1);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -44,6 +58,13 @@ export default function TransactionHistoryPage() {
         page,
         limit: PAGE_SIZE,
         search: debouncedSearch,
+        transaction_type: filters.transactionType || undefined,
+        startDate: filters.startDate
+          ? new Date(`${filters.startDate}T00:00:00`).toISOString()
+          : undefined,
+        endDate: filters.endDate
+          ? new Date(`${filters.endDate}T23:59:59.999`).toISOString()
+          : undefined,
       });
       setTransactions(result.items);
       setTotal(result.total);
@@ -56,18 +77,30 @@ export default function TransactionHistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch]);
+  }, [
+    page,
+    debouncedSearch,
+    filters.transactionType,
+    filters.startDate,
+    filters.endDate,
+    rangeInvalid,
+  ]);
 
   const handleRefresh = useCallback(async () => {
     await loadTransactions();
   }, [loadTransactions]);
 
+  const handleFiltersChange = (next: InvoiceListFilters) => {
+    setFilters(next);
+    setPage(1);
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
+      setDebouncedSearch(filters.search);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [filters.search]);
 
   useEffect(() => {
     void loadTransactions();
@@ -100,36 +133,12 @@ export default function TransactionHistoryPage() {
 
       {/* Main Content Card (Search, Refresh, and Table) */}
       <div className="bg-card p-6 rounded-lg shadow-sm border border-border space-y-4">
-        {/* Toolbar matching InventoryFilterBar style */}
-        <div className="grid items-end gap-3 md:grid-cols-2 lg:grid-cols-5">
-          <div className="space-y-2 lg:col-span-2">
-            <Label>Search</Label>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by Invoice #, Receipt ID or Customer..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setPage(1);
-                }}
-                className="pl-9 h-9 text-sm font-sans focus-visible:ring-1 focus-visible:ring-primary"
-              />
-            </div>
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            className="h-9 w-fit gap-2 rounded-[4px] text-xs border-input hover:bg-muted font-sans"
-          >
-            <RefreshCw
-              className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`}
-            />{" "}
-            Refresh
-          </Button>
-        </div>
+        <InvoiceFilterBar
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          onRefresh={handleRefresh}
+          loading={loading}
+        />
 
         {/* Info subheading */}
         <div className="flex items-center justify-between">

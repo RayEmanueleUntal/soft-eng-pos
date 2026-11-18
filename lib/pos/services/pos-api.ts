@@ -547,12 +547,15 @@ function mapTransactionItem(item: BackendTransactionItem): TransactionSummary {
 }
 
 /**
- * Fetches historical POS transaction logs from backend (GET /transactions).
+ * Fetches paginated POS transaction logs (GET /transactions) with search and date filters.
  */
 export async function fetchTransactionsApi(options?: {
   page?: number;
   limit?: number;
   search?: string;
+  startDate?: string;
+  endDate?: string;
+  transaction_type?: string;
 }): Promise<TransactionListResult> {
   const page = options?.page ?? 1;
   const limit = options?.limit ?? 15;
@@ -565,6 +568,15 @@ export async function fetchTransactionsApi(options?: {
     };
     if (options?.search?.trim()) {
       params.search = options.search.trim();
+    }
+    if (options?.startDate?.trim()) {
+      params.startDate = options.startDate.trim();
+    }
+    if (options?.endDate?.trim()) {
+      params.endDate = options.endDate.trim();
+    }
+    if (options?.transaction_type?.trim()) {
+      params.transaction_type = options.transaction_type.trim();
     }
 
     const response = await apiClient.get<
