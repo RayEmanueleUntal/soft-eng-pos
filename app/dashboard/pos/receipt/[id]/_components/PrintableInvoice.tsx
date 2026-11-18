@@ -250,8 +250,8 @@ export function PrintableInvoice({
                   {ret.product_name}
                 </p>
                 <ReceiptRow
-                  label={`Qty: ${ret.quantity}`}
-                  value={`Refund: ${formatPeso(ret.refund_amount)}`}
+                  label={`Qty: ${ret.quantity}${ret.pricing_uom ? ` ${ret.pricing_uom}` : ""}`}
+                  value={`Refund: ${formatPeso(Number(ret.refund_amount) || 0)}`}
                 />
                 <p className="text-[10px]">Reason: {ret.defect_reason}</p>
                 <p className="text-[10px]">Staff: {ret.processed_by_staff}</p>

@@ -108,12 +108,16 @@ export default function ReceiptPage() {
         ) {
           receiptData.returns = approvedRefunds.map((req, idx) => {
             const p = parsePayload(req.payload);
+            const line = Array.isArray(p.items) ? p.items[0] : undefined;
             const item = receiptData.items.find(
-              (it) => it.productId === (p.productId ?? p.product_id),
+              (it) =>
+                it.productId ===
+                (p.productId ?? p.product_id ?? line?.productId ?? line?.product_id),
             );
             const qty =
               (p.quantity ??
-                (Array.isArray(p.items) && p.items[0]?.quantity)) ||
+                line?.requestedQuantity ??
+                line?.quantity) ||
               1;
             const unitPrice = item ? item.applied_price : 0;
             const refundAmount =
@@ -124,30 +128,51 @@ export default function ReceiptPage() {
 
             return {
               id: typeof req.id === "number" ? req.id : idx + 1,
-              productId: p.productId ?? p.product_id ?? item?.productId ?? 0,
+              productId:
+                p.productId ??
+                p.product_id ??
+                line?.productId ??
+                line?.product_id ??
+                item?.productId ??
+                0,
               product_name:
                 p.productName ||
                 p.product_name ||
+                line?.productName ||
+                line?.product_name ||
                 item?.product_name ||
                 "Returned Item",
               quantity: qty,
               date: req.updatedAt || req.createdAt || new Date().toISOString(),
-              defect_reason: p.reason || p.defect_reason || "Return",
+              defect_reason:
+                p.reason ||
+                p.defect_reason ||
+                line?.reason ||
+                "Return",
               refund_amount: refundAmount,
               processed_by_staff: String(
                 req.reviewedById || req.requestedById || "Staff",
               ),
+              pricing_uom:
+                line?.unitOfMeasure ||
+                line?.unit_of_measure ||
+                line?.uom ||
+                item?.pricing_uom ||
+                item?.unit_of_measure,
             };
           });
 
           // Mark already_returned_qty on corresponding receipt items
           approvedRefunds.forEach((req) => {
             const p = parsePayload(req.payload);
-            const pId = p.productId ?? p.product_id;
+            const line = Array.isArray(p.items) ? p.items[0] : undefined;
+            const pId =
+              p.productId ?? p.product_id ?? line?.productId ?? line?.product_id;
             const it = receiptData.items.find((item) => item.productId === pId);
             if (it) {
               it.already_returned_qty =
-                (it.already_returned_qty || 0) + (p.quantity || 1);
+                (it.already_returned_qty || 0) +
+                (p.quantity ?? line?.requestedQuantity ?? line?.quantity ?? 1);
             }
           });
         }
@@ -314,6 +339,8 @@ export default function ReceiptPage() {
                       {Number(
                         pendingBreakdown.creditDebtCancellation ??
                           pendingBreakdown.credit_debt_cancellation ??
+                          pendingBreakdown.creditDebtReduction ??
+                          pendingBreakdown.credit_debt_reduction ??
                           pendingBreakdown.credit ??
                           0,
                       ).toLocaleString("en-PH", {
@@ -331,6 +358,8 @@ export default function ReceiptPage() {
                       {Number(
                         pendingBreakdown.cashPayout ??
                           pendingBreakdown.cash_payout ??
+                          pendingBreakdown.cashPayoutAmount ??
+                          pendingBreakdown.cash_payout_amount ??
                           pendingBreakdown.cash ??
                           0,
                       ).toLocaleString("en-PH", {
@@ -341,7 +370,9 @@ export default function ReceiptPage() {
                   </div>
                 </div>
                 {(pendingBreakdown.totalRefund !== undefined ||
-                  pendingBreakdown.total_refund !== undefined) && (
+                  pendingBreakdown.total_refund !== undefined ||
+                  pendingBreakdown.totalRefundAmount !== undefined ||
+                  pendingBreakdown.total_refund_amount !== undefined) && (
                   <div className="flex justify-between pt-1 border-t border-amber-200 font-medium">
                     <span className="text-muted-foreground">
                       Total Refund Amount
@@ -351,6 +382,8 @@ export default function ReceiptPage() {
                       {Number(
                         pendingBreakdown.totalRefund ??
                           pendingBreakdown.total_refund ??
+                          pendingBreakdown.totalRefundAmount ??
+                          pendingBreakdown.total_refund_amount ??
                           0,
                       ).toLocaleString("en-PH", {
                         minimumFractionDigits: 2,

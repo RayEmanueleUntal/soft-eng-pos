@@ -9,5 +9,6 @@ export type * from "./types/pos-types";
 export * from "./utils/format-currency";
 export * from "./utils/store-config";
 export * from "./utils/receipt-helpers";
+export * from "./utils/map-receipt";
 
 export * from "./services/pos-api";

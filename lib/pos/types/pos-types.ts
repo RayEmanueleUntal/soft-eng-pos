@@ -297,6 +297,7 @@ export interface ReceiptReturn {
   defect_reason: string;
   refund_amount: number;
   processed_by_staff: string;
+  pricing_uom?: string;
 }
 
 export interface ReceiptExchange {

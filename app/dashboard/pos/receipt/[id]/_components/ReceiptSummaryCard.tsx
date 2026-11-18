@@ -101,9 +101,11 @@ export function ReceiptSummaryCard({ receipt, className }: ReceiptSummaryCardPro
         </div>
         {showAdjustments && (
           <div className="flex justify-between gap-3">
-            <span className="text-muted-foreground font-medium">Adjusted Net Total</span>
-            <span className=" font-bold text-primary">
-              {formatPeso(adjustedTotal)}
+            <span className="text-muted-foreground font-medium">
+              {displayStatus === "FULL_REFUND" ? "FULLY REFUNDED" : "Adjusted Net Total"}
+            </span>
+            <span className="font-mono font-bold text-primary tabular-nums">
+              {formatPeso(displayStatus === "FULL_REFUND" ? 0 : adjustedTotal)}
             </span>
           </div>
         )}
@@ -168,12 +170,13 @@ export function ReceiptSummaryCard({ receipt, className }: ReceiptSummaryCardPro
               <div className="flex justify-between gap-2">
                 <span className="font-medium text-foreground">{ret.product_name}</span>
                 <span className="font-mono font-bold text-destructive shrink-0">
-                  −{formatPeso(ret.refund_amount)}
+                  −{formatPeso(Number(ret.refund_amount) || 0)}
                 </span>
               </div>
               <div className="flex justify-between gap-2 text-xs text-muted-foreground">
                 <span>
-                  Qty: {ret.quantity} · {ret.defect_reason}
+                  Qty: {ret.quantity}
+                  {ret.pricing_uom ? ` ${ret.pricing_uom}` : ""} · {ret.defect_reason}
                 </span>
                 <span className="font-mono shrink-0">{formatReceiptDate(ret.date)}</span>
               </div>
