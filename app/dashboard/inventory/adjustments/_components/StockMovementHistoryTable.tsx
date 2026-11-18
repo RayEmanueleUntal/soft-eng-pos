@@ -74,7 +74,7 @@ interface StockMovementHistoryTableProps {
 }
 
 const HEAD_CLASS =
-  "text-foreground font-semibold font-mono text-[11px] uppercase tracking-wider";
+  "text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold";
 
 type BadgeVariant = "default" | "destructive" | "secondary" | "outline";
 
@@ -232,6 +232,7 @@ export function StockMovementHistoryTable({
           </div>
         )}
 
+
         <DateRangeFilter
           startDate={startDate}
           endDate={endDate}
@@ -306,10 +307,10 @@ export function StockMovementHistoryTable({
       </div>
 
       {/* Table */}
-      <div className="bg-card rounded-[4px] border border-border overflow-hidden">
+      <div className="overflow-x-auto rounded-[4px] border border-input bg-card shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
         <Table>
           <TableHeader>
-            <TableRow className="bg-[#F1F5F9] hover:bg-[#F1F5F9]">
+            <TableRow className="bg-muted hover:bg-muted border-b border-border">
               <TableHead className={HEAD_CLASS}>Date</TableHead>
               <TableHead className={HEAD_CLASS}>Product</TableHead>
               <TableHead className={HEAD_CLASS}>Type</TableHead>
@@ -366,16 +367,16 @@ export function StockMovementHistoryTable({
                 }
 
                 return (
-                  <TableRow key={log.id}>
+                  <TableRow key={log.id} className="h-[36px] border-b border-border hover:bg-accent hover:border-l-[2px] hover:border-l-primary transition-colors">
                     {/* date */}
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       {formatDate(log.date)}
                     </TableCell>
 
                     {/* product */}
-                    <TableCell>
+                    <TableCell className="whitespace-normal">
                       <div className="flex flex-col">
-                        <span className="font-medium text-xs text-foreground">
+                        <span className="font-medium text-xs text-foreground break-words">
                           {productName}
                         </span>
                         <span className="font-mono text-[11px] text-muted-foreground">

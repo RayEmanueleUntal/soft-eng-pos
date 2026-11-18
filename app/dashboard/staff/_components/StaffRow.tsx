@@ -31,7 +31,7 @@ export function StaffRow({
   };
 
   return (
-    <TableRow className="hover:bg-accent/40 border-b border-border transition-colors h-11">
+    <TableRow className="h-[36px] border-b border-border hover:bg-accent hover:border-l-[2px] hover:border-l-primary transition-colors">
       <TableCell className="font-sans font-medium text-foreground text-xs py-2.5">
         <div>
           <span>{member.first_name} {member.last_name}</span>

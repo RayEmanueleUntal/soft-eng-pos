@@ -235,7 +235,7 @@ export function ProductTable() {
         </span>
       </div>
 
-      <div className="rounded-lg border bg-background">
+      <div className="overflow-x-auto rounded-[4px] border border-input bg-card shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
         <Table>
           <TableHeader>
             <TableRow>
@@ -267,10 +267,10 @@ export function ProductTable() {
             ) : (
               products.map((product) => (
                 <TableRow key={product.id}>
-                  <TableCell className="align-top py-3">
+                  <TableCell className="align-top py-3 whitespace-normal">
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm text-foreground">
+                        <span className="font-semibold text-sm text-foreground break-words">
                           {product.name}
                         </span>
 
@@ -295,8 +295,8 @@ export function ProductTable() {
                       </div>
                   </TableCell>
 
-                  <TableCell className="align-top py-3">
-                    <div className="space-y-0.5 text-xs">
+                  <TableCell className="align-top py-3 whitespace-normal">
+                    <div className="space-y-0.5 text-xs break-words">
                       <div>
                         <span className="text-muted-foreground">Size:</span>{" "}
                         <span className="font-medium text-foreground">
