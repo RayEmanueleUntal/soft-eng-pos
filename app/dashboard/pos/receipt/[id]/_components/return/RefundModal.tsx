@@ -1,8 +1,8 @@
 "use client";
 
-// Cashier refund request modal for one SKU or every remaining line on an invoice.
-// Posts CreateRefundDto.items[] to POST /returns/refund and waits for manager approval.
-// Single-item form is unchanged; Refund all remaining reuses condition and reason.
+// Cashier refund request modal: check remaining invoice lines, then submit one POST.
+// Posts CreateRefundDto.items[] to POST /returns/refund without a uom property (API rejects it).
+// Select all remaining checks every unfinished line; UoM is stored in the reason text.
 
 import { useState, useMemo, useEffect } from "react";
 import {
@@ -48,15 +48,30 @@ function remainingForItem(item: ReceiptItem, receipt: Receipt): number {
   return Math.max(0, item.quantity - already);
 }
 
-/** Purchased selling UoM for a line, used on refund payloads. */
+/** Purchased selling UoM for a line, used in the reason string. */
 function purchasedUomFor(item: ReceiptItem): string {
-  return (
-    item.unit_of_measure ||
-    item.pricing_uom ||
-    "PCS"
+  return (item.unit_of_measure || item.pricing_uom || "PCS")
+    .toString()
+    .toUpperCase();
+}
+
+/** Purchased UoM plus catalog base UoM for a line. */
+function allowedUomsFor(
+  item: ReceiptItem,
+  products: { id: string | number; base_uom?: string | null }[],
+): string[] {
+  const purchasedUom = purchasedUomFor(item);
+  const catalogProduct = products.find(
+    (p) => Number(p.id) === Number(item.productId),
+  );
+  const baseUom = (
+    item.base_uom ||
+    catalogProduct?.base_uom ||
+    purchasedUom
   )
     .toString()
     .toUpperCase();
+  return Array.from(new Set([purchasedUom, baseUom])).filter(Boolean);
 }
 
 interface RefundModalProps {
@@ -74,68 +89,54 @@ export function RefundModal({
 }: RefundModalProps) {
   const { products } = usePosCatalog();
 
-  const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
-  const [quantity, setQuantity] = useState<string>("1");
-  const [selectedUom, setSelectedUom] = useState<string>("");
+  const [checked, setChecked] = useState<Record<number, boolean>>({});
+  const [qtyByIndex, setQtyByIndex] = useState<Record<number, string>>({});
+  const [uomByIndex, setUomByIndex] = useState<Record<number, string>>({});
   const [condition, setCondition] = useState<ItemCondition | null>(null);
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedItem =
-    selectedItemIndex !== null ? receipt.items[selectedItemIndex] : null;
-
-  const remainingLines = useMemo(
+  const remainingIndexes = useMemo(
     () =>
-      receipt.items.filter((item) => remainingForItem(item, receipt) > 0),
+      receipt.items
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => remainingForItem(item, receipt) > 0)
+        .map(({ index }) => index),
     [receipt],
   );
 
-  // Remaining refundable quantity on the selected line
-  const maxQuantity = selectedItem
-    ? remainingForItem(selectedItem, receipt)
-    : 0;
+  const selectedIndexes = remainingIndexes.filter((index) => checked[index]);
+  const allRemainingSelected =
+    remainingIndexes.length > 0 &&
+    remainingIndexes.every((index) => checked[index]);
 
-  // Derive allowed UoMs strictly restricted to: [purchasedUom, baseUom]
-  const allowedUoms = useMemo(() => {
-    if (!selectedItem) return [];
+  const invoiceLabel =
+    receipt.invoice_number || `INV-${receipt.transactionId}`;
 
-    const purchasedUom = (
-      selectedItem.unit_of_measure ||
-      selectedItem.pricing_uom ||
-      "PCS"
-    ).toString().toUpperCase();
-
-    // Look up product in catalog to find canonical base_uom if missing on line item
-    const catalogProduct = products.find(
-      (p) => Number(p.id) === Number(selectedItem.productId),
-    );
-    const baseUom = (
-      selectedItem.base_uom ||
-      catalogProduct?.base_uom ||
-      purchasedUom
-    ).toString().toUpperCase();
-
-    return Array.from(new Set([purchasedUom, baseUom])).filter(Boolean);
-  }, [selectedItem, products]);
-
-  // When selected item changes, auto-default UoM to purchasedUom and reset quantity
+  /** Seeds qty/UoM maps when the modal opens; leaves checkboxes empty. */
   useEffect(() => {
-    if (selectedItem) {
-      const defaultUom =
-        selectedItem.unit_of_measure ||
-        selectedItem.pricing_uom ||
-        allowedUoms[0] ||
-        "PCS";
-      setSelectedUom(defaultUom.toString().toUpperCase());
-      setQuantity(maxQuantity > 0 ? "1" : "0");
-    }
-  }, [selectedItemIndex]);
+    if (!open) return;
+    const nextQty: Record<number, string> = {};
+    const nextUom: Record<number, string> = {};
+    receipt.items.forEach((item, index) => {
+      const remaining = remainingForItem(item, receipt);
+      if (remaining <= 0) return;
+      nextQty[index] = String(remaining);
+      nextUom[index] = purchasedUomFor(item);
+    });
+    setQtyByIndex(nextQty);
+    setUomByIndex(nextUom);
+    setChecked({});
+    setCondition(null);
+    setReason("");
+    setError(null);
+  }, [open, receipt]);
 
   const resetForm = () => {
-    setSelectedItemIndex(null);
-    setQuantity("1");
-    setSelectedUom("");
+    setChecked({});
+    setQtyByIndex({});
+    setUomByIndex({});
     setCondition(null);
     setReason("");
     setError(null);
@@ -147,78 +148,27 @@ export function RefundModal({
     onOpenChange(false);
   };
 
-  const handleSubmit = async () => {
-    if (selectedItemIndex === null || !selectedItem?.productId) {
-      setError("Please select an item to return.");
+  /** Checks or clears every remaining line. */
+  const handleToggleSelectAll = () => {
+    if (allRemainingSelected) {
+      setChecked({});
       return;
     }
-
-    if (maxQuantity <= 0) {
-      setError("This item has already been fully returned.");
-      return;
-    }
-
-    const qty = Number(quantity);
-    if (isNaN(qty) || qty <= 0) {
-      setError("Quantity must be greater than 0.");
-      return;
-    }
-
-    if (qty > maxQuantity) {
-      setError(
-        `Quantity cannot exceed remaining refundable quantity (${maxQuantity} ${selectedUom}).`,
-      );
-      return;
-    }
-
-    if (!selectedUom) {
-      setError("Please select a valid unit of measure (UoM).");
-      return;
-    }
-
-    if (!condition) {
-      setError("Please select an item condition (Defective or Change of Mind).");
-      return;
-    }
-
-    if (reason.trim().length < 5) {
-      setError("Please provide a return reason (minimum 5 characters).");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      // Build DTO: includes both root fields and nested items array for complete backend compatibility
-    const formattedReason = selectedUom
-        ? `${reason.trim()} (UoM: ${selectedUom})`
-        : reason.trim();
-      const refundItem = {
-        productId: Number(selectedItem.productId),
-        quantity: qty,
-        condition,
-        reason: formattedReason,
-      };
-      const requestPayload: CreateRefundDto = {
-        transactionId: Number(receipt.transactionId),
-        items: [refundItem],
-      };
-
-      const response: ReturnResponse = await processRefund(requestPayload);
-      onSuccess(response.approvalRequestId);
-      handleClose();
-    } catch (err: unknown) {
-      setError(getErrorMessage(err, "Failed to submit refund request."));
-    } finally {
-      setIsSubmitting(false);
-    }
+    const next: Record<number, boolean> = {};
+    remainingIndexes.forEach((index) => {
+      next[index] = true;
+    });
+    setChecked(next);
   };
 
-  /** Submits every unfinished line in one POST using shared condition/reason. */
-  const handleRefundAllRemaining = async () => {
-    if (remainingLines.length === 0) {
-      setError("There are no remaining quantities to refund.");
+  /** Toggles one remaining line and keeps its default remaining qty. */
+  const handleToggleLine = (index: number) => {
+    setChecked((prev) => ({ ...prev, [index]: !prev[index] }));
+  };
+
+  const handleSubmit = async () => {
+    if (selectedIndexes.length === 0) {
+      setError("Select at least one item to return.");
       return;
     }
 
@@ -232,20 +182,44 @@ export function RefundModal({
       return;
     }
 
+    const items: CreateRefundItemDto[] = [];
+    for (const index of selectedIndexes) {
+      const item = receipt.items[index];
+      const remaining = remainingForItem(item, receipt);
+      const qty = Number(qtyByIndex[index]);
+      const uom = (uomByIndex[index] || purchasedUomFor(item)).toUpperCase();
+
+      if (!item?.productId) {
+        setError("A selected line is missing a product id.");
+        return;
+      }
+      if (isNaN(qty) || qty <= 0) {
+        setError(`Quantity for ${item.product_name} must be greater than 0.`);
+        return;
+      }
+      if (qty > remaining) {
+        setError(
+          `Quantity for ${item.product_name} cannot exceed remaining ${remaining} ${uom}.`,
+        );
+        return;
+      }
+      if (!uom) {
+        setError(`Select a unit of measure for ${item.product_name}.`);
+        return;
+      }
+
+      items.push({
+        productId: Number(item.productId),
+        quantity: qty,
+        condition,
+        reason: `${reason.trim()} (UoM: ${uom})`,
+      });
+    }
+
     setIsSubmitting(true);
     setError(null);
 
     try {
-      const items: CreateRefundItemDto[] = remainingLines.map((item) => {
-        const uom = purchasedUomFor(item);
-        return {
-          productId: Number(item.productId),
-          quantity: remainingForItem(item, receipt),
-          condition,
-          reason: `${reason.trim()} (UoM: ${uom})`,
-          uom,
-        };
-      });
       const requestPayload: CreateRefundDto = {
         transactionId: Number(receipt.transactionId),
         items,
@@ -260,136 +234,164 @@ export function RefundModal({
     }
   };
 
-  const canRefundAll =
-    remainingLines.length >= 1 &&
+  const canSubmit =
+    selectedIndexes.length > 0 &&
     !!condition &&
     reason.trim().length >= 5 &&
     !isSubmitting;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
-      <DialogContent className="flex flex-col sm:max-w-[520px] max-h-[85vh] overflow-hidden rounded-[4px] border border-input shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
+      <DialogContent className="flex flex-col sm:max-w-[560px] max-h-[85vh] overflow-hidden rounded-[4px] border border-input bg-card shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
         <DialogHeader className="shrink-0">
           <DialogTitle className="text-xl font-bold font-heading text-center">
             Process Refund
           </DialogTitle>
           <DialogDescription className="text-center text-xs text-muted-foreground font-sans">
-            Select an item, UoM, condition, and reason for transaction #{receipt.transactionId}
+            Check items to return on {invoiceLabel}. Stay on this invoice after
+            submit to wait for approval.
           </DialogDescription>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto space-y-3.5 pr-1">
-        {error && (
-          <div className="flex items-center gap-2 text-xs font-medium text-destructive bg-destructive/10 border border-destructive/30 p-2.5 rounded-[4px]">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
+          {error && (
+            <div className="flex items-center gap-2 text-xs font-medium text-destructive bg-destructive/10 border border-destructive/30 p-2.5 rounded-[4px]">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
-        <div className="space-y-3.5">
-          {/* 1. Item Selection */}
           <div className="space-y-1.5">
-            <Label htmlFor="item-select" className="text-xs font-medium">
-              Select Item to Return <span className="text-destructive">*</span>
-            </Label>
-            <Select
-              value={selectedItemIndex !== null ? String(selectedItemIndex) : ""}
-              onValueChange={(value) => setSelectedItemIndex(Number(value))}
-            >
-              <SelectTrigger id="item-select" className="w-full rounded-[4px] text-xs h-8">
-                <SelectValue placeholder="Choose an item from receipt">
-                  {(val: string | null) => {
-                    if (val === null || val === "" || val === undefined) {
-                      return "Choose an item from receipt";
-                    }
-                    const idx = Number(val);
-                    const it = receipt.items[idx];
-                    return it ? `${it.product_name} (Qty: ${it.quantity})` : "Choose an item from receipt";
-                  }}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {receipt.items.map((item, index) => {
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-xs font-medium">
+                Items to return <span className="text-destructive">*</span>
+              </Label>
+              {remainingIndexes.length > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleToggleSelectAll}
+                  disabled={isSubmitting}
+                  className="h-7 rounded-[4px] text-[11px] border-input px-2"
+                >
+                  {allRemainingSelected
+                    ? "Clear selection"
+                    : "Select all remaining"}
+                </Button>
+              )}
+            </div>
+
+            {remainingIndexes.length === 0 ? (
+              <p className="text-xs text-muted-foreground border border-input rounded-[4px] p-2.5">
+                Nothing left to refund on this invoice.
+              </p>
+            ) : (
+              <div className="border border-input rounded-[4px] divide-y divide-border">
+                {remainingIndexes.map((index) => {
+                  const item = receipt.items[index];
                   const remaining = remainingForItem(item, receipt);
+                  const uoms = allowedUomsFor(item, products);
+                  const isChecked = !!checked[index];
+                  const lineUom = uomByIndex[index] || purchasedUomFor(item);
 
                   return (
-                    <SelectItem
-                      key={index}
-                      value={String(index)}
-                      disabled={remaining <= 0}
-                      className="text-xs"
+                    <div
+                      key={`${item.productId ?? "line"}-${index}`}
+                      className="p-2.5 space-y-2"
                     >
-                      {item.product_name} — {remaining} / {item.quantity}{" "}
-                      {item.unit_of_measure || item.pricing_uom || "PCS"} available
-                      {remaining <= 0 ? " (Fully Returned)" : ""}
-                    </SelectItem>
+                      <label className="flex items-start gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleLine(index)}
+                          disabled={isSubmitting}
+                          className="mt-0.5 rounded-[2px] border-input"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-xs font-medium text-foreground leading-tight">
+                            {item.product_name}
+                          </span>
+                          <span className="block text-[10px] font-mono text-muted-foreground">
+                            {remaining} / {item.quantity}{" "}
+                            {purchasedUomFor(item)} remaining
+                          </span>
+                        </span>
+                      </label>
+
+                      {isChecked && (
+                        <div className="grid grid-cols-2 gap-2 pl-6">
+                          <div className="space-y-1">
+                            <Label
+                              htmlFor={`qty-${index}`}
+                              className="text-[10px] font-medium"
+                            >
+                              Qty
+                            </Label>
+                            <Input
+                              id={`qty-${index}`}
+                              type="number"
+                              min="0.01"
+                              step="any"
+                              max={remaining}
+                              value={qtyByIndex[index] ?? ""}
+                              onChange={(e) =>
+                                setQtyByIndex((prev) => ({
+                                  ...prev,
+                                  [index]: e.target.value,
+                                }))
+                              }
+                              disabled={isSubmitting}
+                              className="rounded-[4px] text-xs h-8 font-mono"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label
+                              htmlFor={`uom-${index}`}
+                              className="text-[10px] font-medium"
+                            >
+                              UoM
+                            </Label>
+                            <Select
+                              value={lineUom}
+                              onValueChange={(val) =>
+                                setUomByIndex((prev) => ({
+                                  ...prev,
+                                  [index]: val ?? purchasedUomFor(item),
+                                }))
+                              }
+                              disabled={isSubmitting || uoms.length === 0}
+                            >
+                              <SelectTrigger
+                                id={`uom-${index}`}
+                                className="w-full rounded-[4px] text-xs h-8 font-mono"
+                              >
+                                <SelectValue>{lineUom}</SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {uoms.map((uom) => (
+                                  <SelectItem
+                                    key={uom}
+                                    value={uom}
+                                    className="text-xs font-mono"
+                                  >
+                                    {uom}
+                                    {uom === purchasedUomFor(item)
+                                      ? " (Purchased)"
+                                      : " (Base)"}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* 2. Quantity & UoM Selection */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Quantity */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center">
-                <Label htmlFor="quantity" className="text-xs font-medium">
-                  Quantity <span className="text-destructive">*</span>
-                </Label>
-                {selectedItem && (
-                  <span className="text-[10px] font-mono text-muted-foreground">
-                    Max: {maxQuantity}
-                  </span>
-                )}
               </div>
-              <Input
-                id="quantity"
-                type="number"
-                min="0.01"
-                step="any"
-                max={maxQuantity}
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                disabled={!selectedItem || maxQuantity <= 0}
-                className="rounded-[4px] text-xs h-8 font-mono"
-              />
-            </div>
-
-            {/* UoM Dropdown: strictly purchased UoM vs base UoM */}
-            <div className="space-y-1.5">
-              <Label htmlFor="uom-select" className="text-xs font-medium">
-                Unit of Measure (UoM) <span className="text-destructive">*</span>
-              </Label>
-              <Select
-                value={selectedUom}
-                onValueChange={(val) => setSelectedUom(val ?? "")}
-                disabled={!selectedItem || allowedUoms.length === 0}
-              >
-                <SelectTrigger id="uom-select" className="w-full rounded-[4px] text-xs h-8 font-mono">
-                  <SelectValue placeholder="Select UoM">
-                    {selectedUom || "Select UoM"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {allowedUoms.map((uom) => {
-                    const isPurchased =
-                      uom.toUpperCase() ===
-                      (selectedItem?.unit_of_measure || selectedItem?.pricing_uom || "PCS")
-                        .toString()
-                        .toUpperCase();
-                    return (
-                      <SelectItem key={uom} value={uom} className="text-xs font-mono">
-                        {uom} {isPurchased ? "(Purchased UoM)" : "(Base UoM)"}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
+            )}
           </div>
 
-          {/* 3. Condition */}
           <div className="space-y-1.5">
             <Label htmlFor="condition" className="text-xs font-medium">
               Item Condition <span className="text-destructive">*</span>
@@ -397,9 +399,12 @@ export function RefundModal({
             <Select
               value={condition || ""}
               onValueChange={(value) => setCondition(value as ItemCondition)}
-              disabled={!selectedItem && remainingLines.length === 0}
+              disabled={remainingIndexes.length === 0}
             >
-              <SelectTrigger id="condition" className="w-full rounded-[4px] text-xs h-8">
+              <SelectTrigger
+                id="condition"
+                className="w-full rounded-[4px] text-xs h-8"
+              >
                 <SelectValue placeholder="Select condition">
                   {condition === "DEFECTIVE"
                     ? "Defective"
@@ -419,7 +424,6 @@ export function RefundModal({
             </Select>
           </div>
 
-          {/* 4. Reason */}
           <div className="space-y-1.5">
             <Label htmlFor="reason" className="text-xs font-medium">
               Reason for Return <span className="text-destructive">*</span>
@@ -429,7 +433,7 @@ export function RefundModal({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Describe the defect or reason for the refund request..."
-              disabled={!selectedItem && remainingLines.length === 0}
+              disabled={remainingIndexes.length === 0}
               className="rounded-[4px] text-xs min-h-[70px]"
               maxLength={500}
             />
@@ -438,14 +442,12 @@ export function RefundModal({
             </p>
           </div>
         </div>
-        </div>
 
-        {remainingLines.length >= 1 && (
-          <p className="shrink-0 text-[10px] text-muted-foreground font-sans">
-            This will request a refund of {remainingLines.length} line(s). Fill
-            condition and reason, then Refund all remaining.
-          </p>
-        )}
+        <p className="shrink-0 text-[10px] text-muted-foreground font-sans">
+          {selectedIndexes.length === 0
+            ? "Check one or more lines, or Select all remaining."
+            : `Submitting ${selectedIndexes.length} line(s) for ${invoiceLabel}.`}
+        </p>
 
         <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card pt-3">
           <Button
@@ -457,21 +459,10 @@ export function RefundModal({
           >
             Cancel
           </Button>
-          {remainingLines.length >= 1 && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleRefundAllRemaining}
-              disabled={!canRefundAll}
-              className="rounded-[4px] text-xs border-input hover:bg-muted"
-            >
-              Refund all remaining
-            </Button>
-          )}
           <Button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting || !selectedItem || maxQuantity <= 0}
+            disabled={!canSubmit}
             className="bg-primary hover:bg-primary/80 text-white rounded-[4px] text-xs font-bold uppercase tracking-wider"
           >
             {isSubmitting ? (

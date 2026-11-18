@@ -49,6 +49,7 @@ import {
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/pageheader";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { formatReceiptDate } from "@/lib/pos";
 
 /** Parses string or object approval payloads into a plain object. */
 function parseApprovalPayload(raw: unknown): Record<string, unknown> {
@@ -414,7 +415,7 @@ export default function ApprovalRequestsPage() {
 
                     {/* Date Cell */}
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(req.createdAt).toLocaleString()}
+                      {formatReceiptDate(req.createdAt)}
                     </TableCell>
 
                     {/* Status Cell */}
@@ -538,7 +539,7 @@ export default function ApprovalRequestsPage() {
                     Created At
                   </span>
                   <span className="text-foreground">
-                    {new Date(selectedRequest.createdAt).toLocaleString()}
+                    {formatReceiptDate(selectedRequest.createdAt)}
                   </span>
                 </div>
                 <div>
@@ -546,7 +547,7 @@ export default function ApprovalRequestsPage() {
                     Updated At
                   </span>
                   <span className="text-foreground">
-                    {new Date(selectedRequest.updatedAt).toLocaleString()}
+                    {formatReceiptDate(selectedRequest.updatedAt)}
                   </span>
                 </div>
               </div>
