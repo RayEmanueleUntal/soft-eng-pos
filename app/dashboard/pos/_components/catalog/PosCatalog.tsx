@@ -4,25 +4,13 @@ import { useState, useEffect } from "react";
 import {
   AlertCircle,
   ArrowLeft,
-  ArrowRight,
-  Boxes,
-  Folder,
-  FolderOpen,
   Loader2,
   PackageSearch,
   RefreshCw,
   SearchIcon,
-  X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ProductCard } from "./ProductCard";
 import {
   usePosCatalog,
@@ -54,17 +42,20 @@ export function PosCatalog({
     search: debouncedSearch,
     categoryId: selectedCategoryId,
   });
-  // 2. Refetch stock counts whenever a transaction finishes
+
+  // Refetch stock counts whenever a transaction finishes
   useEffect(() => {
     if (refreshTrigger) {
       refetch();
     }
   }, [refreshTrigger, refetch]);
 
+  const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
+
   return (
-    <div className="lg:col-span-6 flex flex-col gap-3 overflow-hidden">
+    <div className="lg:col-span-6 flex flex-col gap-2.5 overflow-hidden">
+      {/* Search Input Row with Category Back Button */}
       <div className="flex items-center gap-2 shrink-0">
-        {/* Barcode / Search Input */}
         <div className="relative min-w-0 flex-1">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <SearchIcon className="h-4 w-4 text-muted-foreground/80" />
@@ -72,8 +63,8 @@ export function PosCatalog({
           <Input
             ref={searchInputRef}
             type="text"
-            placeholder="Search SKU..."
-            className="pl-9 h-9 rounded-[4px] border-input focus-visible:ring-0 focus-visible:border-primary focus-visible:ring-offset-0 focus-visible:ring-transparent focus-visible:shadow-[0_0_0_2px_rgba(0,96,178,0.2)]"
+            placeholder="Search SKU or product name..."
+            className="pl-9 pr-12 h-9 rounded-[4px] border-input focus-visible:ring-0 focus-visible:border-primary focus-visible:ring-offset-0 focus-visible:ring-transparent focus-visible:shadow-[0_0_0_2px_rgba(0,96,178,0.2)]"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -84,57 +75,46 @@ export function PosCatalog({
           </div>
         </div>
 
-        {/* Category Filter */}
-        {categories.length > 0 && (
-          <Select
-            value={
-              selectedCategoryId === undefined
-                ? ""
-                : String(selectedCategoryId)
-            }
-            onValueChange={(value) =>
-              setSelectedCategoryId(value ? Number(value) : undefined)
-            }
+        {selectedCategory && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedCategoryId(undefined)}
+            className="h-9 px-3 rounded-[4px] text-xs font-semibold border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 shrink-0 gap-1.5 transition-all shadow-none cursor-pointer"
+            title="Back to all categories"
           >
-            <SelectTrigger
-              className={`!h-9 w-[50%] min-w-[160px] max-w-[260px] rounded-[4px] text-[13px] ${
-                selectedCategoryId !== undefined
-                  ? "border-primary bg-primary text-primary-foreground [&_svg]:text-primary-foreground"
-                  : ""
-              }`}
-            >
-              <SelectValue placeholder="Categories">
-                {(value: string | null) =>
-                  !value
-                    ? "Categories"
-                    : (categories.find(
-                        (category) => String(category.id) === value,
-                      )?.name ?? "Categories")
-                }
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent side="bottom" alignItemWithTrigger={false}>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={String(category.id)}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate max-w-[150px]">{selectedCategory.name}</span>
+          </Button>
         )}
       </div>
 
-      {/* Product Catalog Grid */}
+      {/* Product Catalog Grid / Categories Box */}
       <div className="min-h-0 flex-1 overflow-y-auto rounded-md border border-input bg-muted/30 p-1"> 
         {selectedCategoryId === undefined && !searchQuery ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center text-xs text-muted-foreground gap-2">
-            <PackageSearch className="h-8 w-8 text-muted-foreground/50" />
-            <p className="text-foreground font-medium text-sm">
-              Select a category to open products
-            </p>
-            <p className="text-muted-foreground text-xs">
-              Choose a category above to view products
-            </p>
+          /* Categories Box at Starting Page */
+          <div className="p-2.5 h-full overflow-y-auto">
+            {categories.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center text-xs text-muted-foreground gap-2">
+                <PackageSearch className="h-8 w-8 text-muted-foreground/40" />
+                <p>No categories found in database.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-1.5">
+                {categories.map((category) => (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => setSelectedCategoryId(category.id)}
+                    className="flex items-center justify-center p-4 min-h-[72px] rounded-[4px] border border-primary/25 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary hover:shadow-xs transition-all text-center cursor-pointer active:scale-[0.98]"
+                  >
+                    <span className="font-heading font-bold text-xs sm:text-sm tracking-tight line-clamp-2">
+                      {category.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : loading ? (
           <div className="flex items-center justify-center py-12 text-muted-foreground text-xs gap-2">
