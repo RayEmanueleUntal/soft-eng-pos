@@ -16,8 +16,15 @@ interface FormModalProps {
   title: React.ReactNode;
   description?: React.ReactNode;
   children: React.ReactNode;
+  size?: "md" | "lg" | "xl";
   className?: string;
 }
+
+const SIZE_CLASSES = {
+  md: "sm:max-w-xl",  // 576px (new default, wider than shadcn's 512px)
+  lg: "sm:max-w-2xl", // 672px (great for multi-field forms)
+  xl: "sm:max-w-3xl", // 768px (great for detailed previews)
+};
 
 export function FormModal({
   open,
@@ -25,6 +32,7 @@ export function FormModal({
   title,
   description,
   children,
+  size = "md",
   className,
 }: FormModalProps) {
   return (
@@ -32,6 +40,7 @@ export function FormModal({
       <DialogContent
         className={cn(
           "w-[95vw] sm:w-full rounded-[4px] border border-[#0F172A] shadow-[0px_4px_0px_rgba(15,23,42,0.08)] ring-0",
+          SIZE_CLASSES[size],
           className,
         )}
       >
