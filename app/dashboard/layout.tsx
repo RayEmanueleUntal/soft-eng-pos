@@ -92,12 +92,12 @@ const navigation: NavItem[] = [
     children: [
       {
         name: "Purchase Orders",
-        href: "/dashboard/inventory/purchase-orders",
+        href: "/dashboard/suppliers/purchase-orders",
         allowedRoles: ROLE_PERMISSIONS["/dashboard/inventory/purchase-orders"],
       },
       {
         name: "Receive Deliveries",
-        href: "/dashboard/inventory/deliveries",
+        href: "/dashboard/suppliers/deliveries",
       },
     ],
   },
@@ -109,7 +109,7 @@ const navigation: NavItem[] = [
     children: [
       {
         name: "Outgoing Shipments",
-        href: "/dashboard/inventory/shipments",
+        href: "/dashboard/forwarder/shipments",
       },
     ],
   },
