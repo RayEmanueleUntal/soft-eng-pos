@@ -1,6 +1,3 @@
-// Filter bar for the Inventory Management module of the POS system.
-// Provides search, size, thread, material, category, status, and sort filters with a clear button.
-// Used by the inventory page, which owns the filter state.
 "use client";
 
 import * as React from "react";
@@ -12,10 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { SortSelect, SortKey } from "@/components/ui/sort-select";
+import { SearchInput } from "@/components/ui/search-input";
 
 export type StatusTab = "all" | "low" | "adequate";
 export type SortOption = SortKey;
@@ -29,15 +25,6 @@ interface InventoryFilterBarProps {
   search: string;
   setSearch: (search: string) => void;
 
-  size: string | null;
-  setSize: (size: string | null) => void;
-
-  threadType: string | null;
-  setThreadType: (threadType: string | null) => void;
-
-  material: string | null;
-  setMaterial: (material: string | null) => void;
-
   category: string | null;
   setCategory: (category: string | null) => void;
 
@@ -50,16 +37,9 @@ interface InventoryFilterBarProps {
   setSort: (sort: SortOption) => void;
 }
 
-// Renders the filter inputs and reports every change to the parent page.
 export function InventoryFilterBar({
   search,
   setSearch,
-  size,
-  setSize,
-  threadType,
-  setThreadType,
-  material,
-  setMaterial,
   category,
   setCategory,
   categories,
@@ -72,40 +52,16 @@ export function InventoryFilterBar({
   const sort = externalSort ?? internalSort;
   const setSort = externalSetSort ?? setInternalSort;
 
-  // Resets every filter at once.
-  const handleClearFilters = () => {
-    setSearch("");
-    setSize(null);
-    setThreadType(null);
-    setMaterial(null);
-    setCategory(null);
-    setStatus("all");
-    setSort("DEFAULT");
-  };
-
-  const areFiltersActive =
-    Boolean(search) ||
-    Boolean(size) ||
-    Boolean(threadType) ||
-    Boolean(material) ||
-    Boolean(category) ||
-    status !== "all" ||
-    sort !== "DEFAULT";
-
   return (
     <div className="space-y-4">
       <div className="grid items-end gap-3 md:grid-cols-2 lg:grid-cols-5">
         <div className="space-y-2 lg:col-span-2">
           <Label>Search</Label>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search by name, description, or SKU..."
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className="pl-9 h-9 text-sm font-sans focus-visible:ring-1 focus-visible:ring-primary"
-            />
-          </div>
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search by name, description, or SKU..."
+          />
         </div>
 
         <div className="flex flex-col gap-2">
@@ -166,12 +122,7 @@ export function InventoryFilterBar({
           value={sort}
           onChange={setSort}
           showDefaultOption
-          options={[
-            "NAME_ASC",
-            "NAME_DESC",
-            "STOCK_ASC",
-            "STOCK_DESC",
-          ]}
+          options={["NAME_ASC", "NAME_DESC", "STOCK_ASC", "STOCK_DESC"]}
           triggerClassName="w-full !h-9 text-sm rounded-[2px]"
         />
       </div>

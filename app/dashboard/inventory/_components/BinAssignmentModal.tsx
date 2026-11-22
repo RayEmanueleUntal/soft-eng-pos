@@ -4,13 +4,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,6 +14,7 @@ import {
 } from "@/lib/inventory/types";
 import { apiClient } from "@/lib/api";
 import { getApiErrorMessage } from "@/lib/inventory/api-error";
+import { FormModal } from "@/components/shared/FormModal";
 
 interface BinAssignmentModalProps {
   isOpen: boolean;
@@ -311,14 +306,12 @@ export function BinAssignmentModal({
   item,
 }: BinAssignmentModalProps) {
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="rounded-[4px] border border-[#0F172A] shadow-[0px_4px_0px_rgba(15,23,42,0.08)] ring-0">
-        <DialogHeader>
-          <DialogTitle>Assign Bin Location for {item.name}</DialogTitle>
-        </DialogHeader>
-
-        <BinForm item={item} onClose={onClose} onSaved={onSaved} />
-      </DialogContent>
-    </Dialog>
+    <FormModal
+      open={isOpen}
+      onOpenChange={(open) => !open && onClose()}
+      title={`Assign Bin Location for ${item.name}`}
+    >
+      <BinForm item={item} onClose={onClose} onSaved={onSaved} />
+    </FormModal>
   );
 }
