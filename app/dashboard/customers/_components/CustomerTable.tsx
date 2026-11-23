@@ -32,7 +32,7 @@ import { sortItems } from "@/lib/utils/sort";
 
 import { CustomerFilterBar } from "./CustomerFilterBar";
 import { CustomerPaymentModal } from "./CustomerPaymentModal";
-import { AddCustomerModal } from "@/components/customers/AddCustomerModal";
+import { AddCustomerModal } from "@/app/dashboard/customers/_components/AddCustomerModal";
 import { TablePagination } from "@/components/ui/table-pagination";
 
 import { mapCustomerSortKeyToApiParams } from "@/lib/utils/sort";

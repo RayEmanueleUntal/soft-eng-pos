@@ -51,9 +51,6 @@ import { formatReceiptDate } from "@/lib/pos";
 
 const PAGE_SIZE = 15;
 
-const HEAD_CLASS =
-  "text-foreground font-semibold font-mono text-[11px] uppercase tracking-wider";
-
 export default function ApprovalRequestsPage() {
   const [requests, setRequests] = useState<ApprovalRequestResponseDto[]>([]);
   const [staffMap, setStaffMap] = useState<Record<number, string>>({});
@@ -355,13 +352,13 @@ return (
           <CardContent className="p-0 overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-[#F1F5F9] hover:bg-[#F1F5F9]">
-                  <TableHead className={HEAD_CLASS}>Request ID</TableHead>
-                  <TableHead className={HEAD_CLASS}>Date</TableHead>
-                  <TableHead className={HEAD_CLASS}>Type</TableHead>
-                  <TableHead className={HEAD_CLASS}>Status</TableHead>
-                  <TableHead className={HEAD_CLASS}>Requested By</TableHead>
-                  <TableHead className={HEAD_CLASS}>Actions</TableHead>
+                <TableRow>
+                  <TableHead>Request ID</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Requested By</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

@@ -14,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { InventoryItem, StockMovementResponseDto } from "@/lib/inventory/types";
 import { StockMovementResponse } from "@/lib/inventory/stock-movement-api";
-import { StockAdjustmentModal } from "@/components/inventory/StockAdjustmentModal";
+import { StockAdjustmentModal } from "@/app/dashboard/inventory/_components/StockAdjustmentModal";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ArrowUpDown, RefreshCw, Search, X } from "lucide-react";
@@ -71,8 +71,7 @@ interface StockMovementHistoryTableProps {
   ) => void;
 }
 
-const HEAD_CLASS =
-  "text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold";
+const HEAD_CLASS = "";
 
 type BadgeVariant = "default" | "destructive" | "secondary" | "outline";
 

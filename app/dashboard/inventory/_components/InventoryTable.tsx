@@ -18,11 +18,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { InventoryItem } from "@/lib/inventory/types";
 import { getStockStatus } from "@/lib/inventory/stock-status";
-import { StockStatusBadge } from "../../../../components/inventory/StockStatusBadge";
+import { StockStatusBadge } from "./StockStatusBadge";
 import { BinAssignmentModal } from "./BinAssignmentModal";
-import { StockMovementModal } from "../../../../components/inventory/StockMovementModal";
-import { StockAdjustmentModal } from "../../../../components/inventory/StockAdjustmentModal";
-import { EditROPModal } from "../../../../components/inventory/EditROPModal";
+import { StockMovementModal } from "./StockMovementModal";
+import { StockAdjustmentModal } from "./StockAdjustmentModal";
+import { EditROPModal } from "./EditROPModal";
 import { Pencil, SlidersHorizontal } from "lucide-react";
 import { TagBadge } from "@/components/shared/TagBadge";
 
@@ -34,8 +34,7 @@ interface InventoryTableProps {
   canEditROP: boolean;
 }
 
-const HEAD_CLASS =
-  "text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold";
+const HEAD_CLASS = "";
 
 type RowAction = "in" | "out" | "adjust" | "bin" | "rop";
 

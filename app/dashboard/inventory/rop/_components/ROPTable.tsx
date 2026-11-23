@@ -23,9 +23,9 @@ import {
 import { MoreHorizontal, SearchIcon } from "lucide-react"
 import { InventoryItem } from "@/lib/inventory/types"
 import { getStockStatus } from "@/lib/inventory/stock-status"
-import { StockStatusBadge } from "@/components/inventory/StockStatusBadge"
-import { StockMovementModal } from "@/components/inventory/StockMovementModal"
-import { EditROPModal } from "@/components/inventory/EditROPModal"
+import { StockStatusBadge } from "@/app/dashboard/inventory/_components/StockStatusBadge"
+import { StockMovementModal } from "@/app/dashboard/inventory/_components/StockMovementModal"
+import { EditROPModal } from "@/app/dashboard/inventory/_components/EditROPModal"
 
 interface ROPTableProps {
   ropItems: InventoryItem[]

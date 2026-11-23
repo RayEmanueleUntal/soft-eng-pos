@@ -33,7 +33,7 @@ interface ShipmentTableProps {
   onPageChange: (page: number) => void;
 }
 
-const HEAD_CLASS = "text-xs uppercase tracking-wider font-semibold";
+const HEAD_CLASS = "";
 
 export function ShipmentTable({
   shipments,

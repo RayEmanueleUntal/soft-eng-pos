@@ -18,7 +18,7 @@ import { formatPeso, type PosCustomer } from "@/lib/pos";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useState, useRef, useEffect } from "react";
-import { AddCustomerModal } from "@/components/customers/AddCustomerModal";
+import { AddCustomerModal } from "@/app/dashboard/customers/_components/AddCustomerModal";
 import { Button } from "@/components/ui/button";
 
 interface PosCartProps {

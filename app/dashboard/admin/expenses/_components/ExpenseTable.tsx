@@ -24,8 +24,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 
 const COLUMN_COUNT = 7;
 
-const HEAD_CLASS =
-  "text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold";
+const HEAD_CLASS = "";
 
 function getPaymentBadgeVariant(method: string) {
   switch (method) {
@@ -92,14 +91,14 @@ export function ExpenseTable({
         <Table>
           <TableHeader className="bg-muted border-b border-border">
             <TableRow>
-              <TableHead className={HEAD_CLASS}>Date</TableHead>
-              <TableHead className={HEAD_CLASS}>Category</TableHead>
-              <TableHead className={HEAD_CLASS}>Payment</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Payment</TableHead>
               <TableHead className={`${HEAD_CLASS} text-right`}>
                 Amount
               </TableHead>
-              <TableHead className={HEAD_CLASS}>Logged by</TableHead>
-              <TableHead className={HEAD_CLASS}>Notes</TableHead>
+              <TableHead>Logged by</TableHead>
+              <TableHead>Notes</TableHead>
               <TableHead className={`${HEAD_CLASS} text-center`}>
                 Actions
               </TableHead>
