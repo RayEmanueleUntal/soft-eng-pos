@@ -109,7 +109,7 @@ const navigation: NavItem[] = [
     children: [
       {
         name: "Outgoing Shipments",
-        href: "/dashboard/forwarder/shipments",
+        href: "/dashboard/forwarders/shipments",
       },
     ],
   },

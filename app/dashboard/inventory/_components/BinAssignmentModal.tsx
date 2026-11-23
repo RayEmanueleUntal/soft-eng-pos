@@ -310,6 +310,7 @@ export function BinAssignmentModal({
       open={isOpen}
       onOpenChange={(open) => !open && onClose()}
       title={`Assign Bin Location for ${item.name}`}
+      size="xl"
     >
       <BinForm item={item} onClose={onClose} onSaved={onSaved} />
     </FormModal>

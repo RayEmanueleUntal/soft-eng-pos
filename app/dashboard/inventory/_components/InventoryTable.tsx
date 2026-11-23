@@ -233,7 +233,7 @@ export function InventoryTable({
                             <DropdownMenuItem
                               onClick={() => setActive({ type: "rop", item })}
                             >
-                              Edit
+                              Update ROP
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
