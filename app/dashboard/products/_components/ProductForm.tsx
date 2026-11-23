@@ -17,6 +17,7 @@ import { useProductCategories } from "@/lib/products/product-categories";
 import { apiClient } from "@/lib/api";
 import { formatPeso, getErrorMessage } from "@/lib/utils";
 import { BinLocationSelect } from "./BinLocationSelect";
+import { useFormDraft } from "@/lib/utils/useFormDraft";
 
 interface ProductFormProps {
   product?: Product;

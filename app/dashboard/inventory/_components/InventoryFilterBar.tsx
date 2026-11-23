@@ -4,21 +4,19 @@ import * as React from "react";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  CategorySelect,
+  type CategoryOption,
+} from "@/components/ui/category-select";
 import { SortSelect, SortKey } from "@/components/ui/sort-select";
 import { FilterBarShell, FilterField } from "@/components/shared/FilterBarShell";
 
 export type StatusTab = "all" | "low" | "adequate";
 export type SortOption = SortKey;
-
-interface CategoryOption {
-  id: number;
-  name: string;
-}
 
 interface InventoryFilterBarProps {
   search: string;
@@ -53,33 +51,11 @@ export function InventoryFilterBar({
       }}
     >
       <FilterField label="Category">
-        <Select
-          value={category || "all"}
-          onValueChange={(value) => setCategory(value === "all" ? null : value)}
-        >
-          <SelectTrigger className="w-full !h-9 text-sm rounded-[2px]">
-            <SelectValue placeholder="Filter by category...">
-              {(val: string | null) => {
-                if (!val || val === "all") return "All Categories";
-                return (
-                  categories.find((item) => String(item.id) === val)?.name ??
-                  "Filter by category..."
-                );
-              }}
-            </SelectValue>
-          </SelectTrigger>
-
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((item) => (
-                <SelectItem key={item.id} value={item.id.toString()}>
-                  {item.name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+        <CategorySelect
+          value={category}
+          onChange={setCategory}
+          categories={categories}
+        />
       </FilterField>
 
       <FilterField label="Stock Status">

@@ -6,14 +6,15 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { DetailShell } from "@/components/shared/DetailShell";
 import { Button } from "@/components/ui/button";
 import { PrintableInvoice } from "./_components/PrintableInvoice";
 import { ReceiptSummaryCard } from "./_components/ReceiptSummaryCard";
 import { RefundModal } from "./_components/return/RefundModal";
 import { ExchangeModal } from "./_components/return/ExchangeModal";
-import { fetchReceiptApi, ItemCondition, type Receipt } from "@/lib/pos";
+import { fetchReceiptApi, type Receipt } from "@/lib/pos";
 import { getApprovalRequests } from "@/lib/approval/approval-api";
-import { ArrowLeft, Printer, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Printer } from "lucide-react";
 import { getErrorMessage } from "@/lib/utils";
 
 /** Prefers the backend invoice_number, then INV-{transactionId}. */
@@ -124,109 +125,120 @@ export default function ReceiptPage() {
     loadReceiptAndApprovals();
   };
 
+  const errorConfig = error
+    ? {
+        title:
+          error === "Receipt not found"
+            ? "Receipt Not Found"
+            : "Error Loading Receipt",
+        message:
+          error === "Receipt not found"
+            ? `The receipt with ID #${id} could not be found. It may have been deleted or the ID is incorrect.`
+            : "There was a problem loading the receipt. Please try again later.",
+        actionLabel: "Back to Receipts",
+        onAction: handleBack,
+      }
+    : null;
+
   return (
-    <div className="flex-1 space-y-6 p-6 bg-background min-h-screen max-w-4xl mx-auto font-sans">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            onClick={handleBack}
-            className="text-muted-foreground hover:text-foreground hover:bg-accent rounded-[4px] text-xs"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Invoices
-          </Button>
-          <div className="h-6 w-px bg-border" />
-          <h1 className="text-[24px] font-bold font-heading tracking-tight text-foreground">
-            {getInvoiceHeading(receipt, id)}
-          </h1>
-        </div>
-      </div>
-
-      {/* Loading State */}
-      {loading && (
-        <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
-          <p className="text-muted-foreground text-xs font-sans">
-            Loading receipt...
-          </p>
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && (
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="bg-card rounded-[4px] border border-input p-6 max-w-md text-center shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
-            <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-4" />
-            <h2 className="text-lg font-heading font-bold text-foreground mb-2">
-              {error === "Receipt not found"
-                ? "Receipt Not Found"
-                : "Error Loading Receipt"}
-            </h2>
-            <p className="text-muted-foreground text-xs mb-6 font-sans">
-              {error === "Receipt not found"
-                ? `The receipt with ID #${id} could not be found. It may have been deleted or the ID is incorrect.`
-                : "There was a problem loading the receipt. Please try again later."}
-            </p>
-            <Button
-              onClick={handleBack}
-              className="bg-primary hover:bg-primary/80 text-white rounded-[4px] text-xs font-bold uppercase tracking-wider"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Receipts
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Success State */}
-      {!loading && !error && receipt && (
-        <div className="space-y-6">
-          {/* Receipt Card */}
-          <div className="bg-card rounded-[4px] border border-input p-6 shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
-            {/* Status Badges */}
-            <div className="flex flex-wrap gap-2 mb-6">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] text-xs font-mono font-bold border border-primary bg-primary/10 text-primary uppercase">
-                {receipt.transaction_type}
-              </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] text-xs font-mono font-bold border border-border bg-muted text-muted-foreground">
-                #{receipt.transactionId}
-              </span>
-              {hasPendingApproval && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] text-xs font-mono font-bold border border-amber-500 bg-amber-500/10 text-amber-600 uppercase">
-                  Pending Return
+    <DetailShell
+      title={getInvoiceHeading(receipt, id)}
+      backLabel="Back to Invoices"
+      onBack={handleBack}
+      loading={loading}
+      loadingMessage="Loading receipt..."
+      error={errorConfig}
+    >
+      {receipt && (
+        <>
+          <div className="space-y-6">
+            {/* Receipt Card */}
+            <div className="bg-card rounded-[4px] border border-input p-6 shadow-[0px_4px_0px_rgba(15,23,42,0.08)]">
+              {/* Status Badges */}
+              <div className="flex flex-wrap gap-2 mb-6">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] text-xs font-mono font-bold border border-primary bg-primary/10 text-primary uppercase">
+                  {receipt.transaction_type}
                 </span>
-              )}
-            </div>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] text-xs font-mono font-bold border border-border bg-muted text-muted-foreground">
+                  #{receipt.transactionId}
+                </span>
+                {hasPendingApproval && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] text-xs font-mono font-bold border border-amber-500 bg-amber-500/10 text-amber-600 uppercase">
+                    Pending Return
+                  </span>
+                )}
+              </div>
 
-            {/* Pending Return Breakdown Card */}
-            {hasPendingApproval && pendingBreakdown && (
-              <div className="mb-6 rounded-[4px] border border-amber-300 bg-amber-50/50 p-4 space-y-2 text-xs">
-                <div className="flex items-center justify-between pb-1 border-b border-amber-200">
-                  <span className="font-heading font-semibold text-amber-800 uppercase tracking-wider">
-                    Pending Refund / Exchange Breakdown
-                  </span>
-                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">
-                    PENDING APPROVAL
-                  </span>
-                </div>
-                <div
-                  className={`grid grid-cols-1 gap-3 pt-1 ${
-                    getPendingCreditAmount(pendingBreakdown) !== 0
-                      ? "sm:grid-cols-2"
-                      : ""
-                  }`}
-                >
-                  {getPendingCreditAmount(pendingBreakdown) !== 0 && (
+              {/* Pending Return Breakdown Card */}
+              {hasPendingApproval && pendingBreakdown && (
+                <div className="mb-6 rounded-[4px] border border-amber-300 bg-amber-50/50 p-4 space-y-2 text-xs">
+                  <div className="flex items-center justify-between pb-1 border-b border-amber-200">
+                    <span className="font-heading font-semibold text-amber-800 uppercase tracking-wider">
+                      Pending Refund / Exchange Breakdown
+                    </span>
+                    <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">
+                      PENDING APPROVAL
+                    </span>
+                  </div>
+                  <div
+                    className={`grid grid-cols-1 gap-3 pt-1 ${
+                      getPendingCreditAmount(pendingBreakdown) !== 0
+                        ? "sm:grid-cols-2"
+                        : ""
+                    }`}
+                  >
+                    {getPendingCreditAmount(pendingBreakdown) !== 0 && (
+                      <div className="rounded border border-amber-200 bg-white/80 p-2.5">
+                        <span className="text-muted-foreground block text-[11px] mb-1">
+                          Credit Debt Cancellation
+                        </span>
+                        <span className="font-mono text-sm font-bold text-foreground">
+                          ₱
+                          {getPendingCreditAmount(
+                            pendingBreakdown,
+                          ).toLocaleString("en-PH", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                    )}
                     <div className="rounded border border-amber-200 bg-white/80 p-2.5">
                       <span className="text-muted-foreground block text-[11px] mb-1">
-                        Credit Debt Cancellation
+                        Cash Payout
                       </span>
                       <span className="font-mono text-sm font-bold text-foreground">
                         ₱
-                        {getPendingCreditAmount(
-                          pendingBreakdown,
+                        {Number(
+                          pendingBreakdown.cashPayout ??
+                            pendingBreakdown.cash_payout ??
+                            pendingBreakdown.cashPayoutAmount ??
+                            pendingBreakdown.cash_payout_amount ??
+                            pendingBreakdown.cash ??
+                            0,
+                        ).toLocaleString("en-PH", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                  {(pendingBreakdown.totalRefund !== undefined ||
+                    pendingBreakdown.total_refund !== undefined ||
+                    pendingBreakdown.totalRefundAmount !== undefined ||
+                    pendingBreakdown.total_refund_amount !== undefined) && (
+                    <div className="flex justify-between pt-1 border-t border-amber-200 font-medium">
+                      <span className="text-muted-foreground">
+                        Total Refund Amount
+                      </span>
+                      <span className="font-mono font-bold text-foreground">
+                        ₱
+                        {Number(
+                          pendingBreakdown.totalRefund ??
+                            pendingBreakdown.total_refund ??
+                            pendingBreakdown.totalRefundAmount ??
+                            pendingBreakdown.total_refund_amount ??
+                            0,
                         ).toLocaleString("en-PH", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
@@ -234,115 +246,58 @@ export default function ReceiptPage() {
                       </span>
                     </div>
                   )}
-                  <div className="rounded border border-amber-200 bg-white/80 p-2.5">
-                    <span className="text-muted-foreground block text-[11px] mb-1">
-                      Cash Payout
-                    </span>
-                    <span className="font-mono text-sm font-bold text-foreground">
-                      ₱
-                      {Number(
-                        pendingBreakdown.cashPayout ??
-                          pendingBreakdown.cash_payout ??
-                          pendingBreakdown.cashPayoutAmount ??
-                          pendingBreakdown.cash_payout_amount ??
-                          pendingBreakdown.cash ??
-                          0,
-                      ).toLocaleString("en-PH", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
-                  </div>
                 </div>
-                {(pendingBreakdown.totalRefund !== undefined ||
-                  pendingBreakdown.total_refund !== undefined ||
-                  pendingBreakdown.totalRefundAmount !== undefined ||
-                  pendingBreakdown.total_refund_amount !== undefined) && (
-                  <div className="flex justify-between pt-1 border-t border-amber-200 font-medium">
-                    <span className="text-muted-foreground">
-                      Total Refund Amount
-                    </span>
-                    <span className="font-mono font-bold text-foreground">
-                      ₱
-                      {Number(
-                        pendingBreakdown.totalRefund ??
-                          pendingBreakdown.total_refund ??
-                          pendingBreakdown.totalRefundAmount ??
-                          pendingBreakdown.total_refund_amount ??
-                          0,
-                      ).toLocaleString("en-PH", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
+              )}
 
-            {/* Printable Invoice or Rich Receipt Summary Display */}
-            {/* <div className="mb-6 flex justify-center">
-              {(receipt.returns && receipt.returns.length > 0) ||
-              (receipt.exchanges && receipt.exchanges.length > 0) ? (
+              {/* Receipt Summary Display */}
+              <div className="mb-6 flex justify-center">
                 <div className="w-full max-w-lg bg-card border border-input rounded-[4px] p-4 shadow-[0px_2px_0px_rgba(15,23,42,0.06)]">
                   <ReceiptSummaryCard receipt={receipt} />
                 </div>
-              ) : (
-                <PrintableInvoice receipt={receipt} />
-              )}
-            </div> */}
-            {/* Receipt Summary Display */}
-            <div className="mb-6 flex justify-center">
-              <div className="w-full max-w-lg bg-card border border-input rounded-[4px] p-4 shadow-[0px_2px_0px_rgba(15,23,42,0.06)]">
-                <ReceiptSummaryCard receipt={receipt} />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap justify-end gap-2.5 pt-4 border-t border-border">
+                <Button
+                  variant="outline"
+                  onClick={handleBack}
+                  className="rounded-[4px] text-xs border-input hover:bg-muted"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setRefundModalOpen(true)}
+                  disabled={hasPendingApproval}
+                  className="rounded-[4px] text-xs border-input hover:bg-muted"
+                >
+                  Refund
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setExchangeModalOpen(true)}
+                  disabled={hasPendingApproval}
+                  className="rounded-[4px] text-xs border-input hover:bg-muted"
+                >
+                  Exchange
+                </Button>
+                <Button
+                  onClick={handlePrint}
+                  className="bg-primary hover:bg-primary/80 text-white rounded-[4px] text-xs font-bold uppercase tracking-wider"
+                >
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print Invoice
+                </Button>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex justify-end gap-2.5 pt-4 border-t border-border">
-              <Button
-                variant="outline"
-                onClick={handleBack}
-                className="rounded-[4px] text-xs border-input hover:bg-muted"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setRefundModalOpen(true)}
-                disabled={hasPendingApproval}
-                className="rounded-[4px] text-xs border-input hover:bg-muted"
-              >
-                Refund
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setExchangeModalOpen(true)}
-                disabled={hasPendingApproval}
-                className="rounded-[4px] text-xs border-input hover:bg-muted"
-              >
-                Exchange
-              </Button>
-              <Button
-                onClick={handlePrint}
-                className="bg-primary hover:bg-primary/80 text-white rounded-[4px] text-xs font-bold uppercase tracking-wider"
-              >
-                <Printer className="mr-2 h-4 w-4" />
-                Print Invoice
-              </Button>
+            {/* Hidden Printable Invoice for Print */}
+            <div aria-hidden="true" className="hidden print:block">
+              <PrintableInvoice receipt={receipt} id="printable-receipt" />
             </div>
           </div>
 
-          {/* Hidden Printable Invoice for Print */}
-          <div aria-hidden="true" className="hidden print:block">
-            <PrintableInvoice receipt={receipt} id="printable-receipt" />
-          </div>
-        </div>
-      )}
-
-      {receipt && (
-        <>
           <RefundModal
             open={refundModalOpen}
             onOpenChange={setRefundModalOpen}
@@ -357,6 +312,6 @@ export default function ReceiptPage() {
           />
         </>
       )}
-    </div>
+    </DetailShell>
   );
 }
