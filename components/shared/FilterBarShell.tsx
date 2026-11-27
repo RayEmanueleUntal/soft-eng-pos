@@ -14,14 +14,19 @@ interface FilterBarShellProps {
   };
   children?: React.ReactNode;
   action?: React.ReactNode;
-  columns?: 4 | 5 | 6;
+  columns?: 3 | 4 | 5 | 6 | 7 | 8;
+  /** Extra classes for the inner grid (e.g. custom lg:grid-cols-[...] template) */
+  gridClassName?: string;
   className?: string;
 }
 
 const GRID_COLS = {
+  3: "lg:grid-cols-3",
   4: "lg:grid-cols-4",
   5: "lg:grid-cols-5",
   6: "lg:grid-cols-6",
+  7: "lg:grid-cols-7",
+  8: "lg:grid-cols-8",
 };
 
 export function FilterBarShell({
@@ -29,14 +34,16 @@ export function FilterBarShell({
   children,
   action,
   columns = 5,
+  gridClassName,
   className,
 }: FilterBarShellProps) {
   return (
-    <div className={cn("flex flex-col lg:flex-row lg:items-end gap-3", className)}>
+    <div className={cn("flex flex-col lg:flex-row lg:items-end gap-2", className)}>
       <div
         className={cn(
-          "flex-1 grid items-end gap-3 md:grid-cols-2",
+          "flex-1 grid items-end gap-2 md:grid-cols-2",
           GRID_COLS[columns],
+          gridClassName,
         )}
       >
         {search && (

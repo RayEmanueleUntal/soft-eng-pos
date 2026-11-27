@@ -161,7 +161,7 @@ export function ProductSearch({
           endDate={endDate}
           onStartDateChange={onStartDateChange}
           onEndDateChange={onEndDateChange}
-          inputClassName="h-9 w-[135px]"
+          inputClassName="h-9"
         /> */}
 
         {/* Add Product Button Slot (Furthest Right) */}

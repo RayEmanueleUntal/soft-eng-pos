@@ -89,6 +89,8 @@ export interface SortSelectProps {
   label?: string | null;
   /** Adjust trigger height/width to match sibling filters (e.g. "!h-9 w-[150px]") */
   triggerClassName?: string;
+  /** Hide the leading sort icon to save horizontal space in narrow columns */
+  hideIcon?: boolean;
   className?: string;
 }
 
@@ -100,6 +102,7 @@ export function SortSelect({
   showDefaultOption = false,
   label = "Sort",
   triggerClassName,
+  hideIcon = false,
   className,
 }: SortSelectProps) {
   const getConfig = (key: SortKey): SortOptionConfig => ({
@@ -122,19 +125,24 @@ export function SortSelect({
             triggerClassName,
           )}
         >
-          <ArrowUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          {!hideIcon && (
+            <ArrowUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          )}
           <SelectValue placeholder="Default Sort">
             {activeConfig.shortLabel}
           </SelectValue>
         </SelectTrigger>
-        <SelectContent alignItemWithTrigger={false}>
+        <SelectContent
+          alignItemWithTrigger={false}
+          className="min-w-[230px]"
+        >
           {showDefaultOption && (
-            <SelectItem value="DEFAULT" className="text-xs">
+            <SelectItem value="DEFAULT" className="text-sm">
               {getConfig("DEFAULT").menuLabel}
             </SelectItem>
           )}
           {options.map((key) => (
-            <SelectItem key={key} value={key} className="text-xs">
+            <SelectItem key={key} value={key} className="text-sm">
               {getConfig(key).menuLabel}
             </SelectItem>
           ))}

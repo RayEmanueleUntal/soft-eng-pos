@@ -55,8 +55,8 @@ export function SupplierSearchSelect({
       <Combobox.Portal>
         <Combobox.Positioner sideOffset={4} className="isolate z-[60]">
           <Combobox.Popup className="w-(--anchor-width) overflow-hidden rounded-[4px] border border-border bg-popover text-popover-foreground">
-            <Combobox.Empty className="px-3 py-2 text-xs text-muted-foreground">
-              No suppliers match
+            <Combobox.Empty className="text-xs text-muted-foreground">
+              <span className="block px-3 py-2">No suppliers match</span>
             </Combobox.Empty>
             <Combobox.List className="max-h-60 overflow-y-auto p-1">
               {(supplier: Supplier) => (

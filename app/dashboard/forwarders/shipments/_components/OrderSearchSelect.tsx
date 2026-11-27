@@ -67,7 +67,7 @@ export function OrderSearchSelect({
           aria-label="Search completed orders"
           placeholder="Search invoice number or customer"
           autoComplete="off"
-          className="h-8 w-full min-w-0 rounded-[4px] border border-input bg-transparent pr-8 pl-2.5 text-xs outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-8 w-full min-w-0 rounded-[4px] border border-input bg-transparent pr-8 pl-2.5 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
         />
         <Combobox.Trigger
           aria-label="Show completed orders"
@@ -79,8 +79,10 @@ export function OrderSearchSelect({
       <Combobox.Portal>
         <Combobox.Positioner sideOffset={4} className="isolate z-[60]">
           <Combobox.Popup className="w-(--anchor-width) overflow-hidden rounded-[4px] border border-border bg-popover text-popover-foreground">
-            <Combobox.Empty className="px-3 py-2 text-xs text-muted-foreground">
-              {loading ? "Loading orders..." : "No completed orders found."}
+            <Combobox.Empty className="text-sm text-muted-foreground">
+              <span className="block px-3 py-2">
+                {loading ? "Loading orders..." : "No completed orders found."}
+              </span>
             </Combobox.Empty>
             <Combobox.List className="max-h-60 overflow-y-auto p-1">
               {(transaction: EligibleTransaction) => {
@@ -90,18 +92,18 @@ export function OrderSearchSelect({
                     key={transaction.id}
                     value={transaction}
                     disabled={blocked}
-                    className="flex cursor-default items-center gap-2 rounded-[4px] py-1.5 pr-2 pl-2 text-xs outline-none select-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60 data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
+                    className="flex cursor-default items-center gap-2 rounded-[4px] py-1.5 pr-2 pl-2 text-sm outline-none select-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60 data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-mono font-semibold tabular-nums">
+                      <span className="block truncate">
                         {getOrderLabel(transaction)}
                       </span>
-                      <span className="block truncate text-[11px] text-muted-foreground">
+                      <span className="block truncate text-xs text-muted-foreground">
                         {transaction.customer?.name ?? "Walk-in Customer"}
                       </span>
                     </span>
                     <span className="shrink-0 text-right">
-                      <span className="block font-mono text-[11px] tabular-nums">
+                      <span className="block font-mono text-xs tabular-nums">
                         {formatPeso(Number(transaction.grand_total))}
                       </span>
                       {blocked && (

@@ -1,15 +1,7 @@
 "use client";
 import { getErrorMessage } from "@/lib/utils";
 import * as React from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { FormModal } from "@/components/shared/FormModal";
 import {
   Table,
   TableBody,
@@ -23,7 +15,6 @@ import { fetchDeliveryById } from "@/lib/inventory/delivery-api";
 import {
   Loader2,
   PackageCheck,
-  Printer,
   Calendar,
   User,
   FileText,
@@ -93,17 +84,18 @@ export function DeliveryDetailViewModal({
     ) ?? 0;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl w-full font-sans overflow-hidden">
-        <DialogHeader>
-          <div className="flex items-center gap-2">
-            <PackageCheck className="h-5 w-5 text-primary" />
-            <DialogTitle className="text-xl font-bold tracking-tight">
-              Delivery Invoice #{deliveryId}
-            </DialogTitle>
-          </div>
-        </DialogHeader>
-
+    <FormModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title={
+        <span className="flex items-center gap-2 text-xl font-bold tracking-tight">
+          <PackageCheck className="h-5 w-5 text-primary" />
+          Delivery Invoice #{deliveryId}
+        </span>
+      }
+      size="xl"
+      className="sm:max-w-3xl w-full font-sans overflow-hidden"
+    >
         {loading ? (
           <div className="py-12 flex flex-col items-center justify-center gap-2 text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -212,7 +204,6 @@ export function DeliveryDetailViewModal({
             </div>
           </div>
         ) : null}
-      </DialogContent>
-    </Dialog>
+      </FormModal>
   );
 }

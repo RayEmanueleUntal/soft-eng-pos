@@ -5,14 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { apiClient } from "@/lib/api";
 import { getErrorMessage } from "@/lib/utils";
 import { Forwarder } from "./types";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { FormModal } from "@/components/shared/FormModal";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
@@ -52,33 +45,32 @@ export function DeleteForwarderModal({
   };
 
 return (
-    <Dialog
+    <FormModal
       open={open}
       onOpenChange={(nextOpen) => {
         if (!nextOpen && !loading) {
           onOpenChange(false);
         }
       }}
+      title="Are you sure?"
+      description={
+        <>
+          This action will remove or deactivate{" "}
+          <span className="font-semibold text-foreground">
+            {forwarder?.company_name || "this forwarder"}
+          </span>
+          . This action cannot be undone.
+        </>
+      }
+      size="md"
     >
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Are you sure?</DialogTitle>
-          <DialogDescription>
-            This action will remove or deactivate{" "}
-            <span className="font-semibold text-foreground">
-              {forwarder?.company_name || "this forwarder"}
-            </span>
-            . This action cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
-
         {error && (
           <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2.5 text-sm text-destructive">
             {error}
           </div>
         )}
 
-        <DialogFooter className="gap-2 sm:gap-0 mt-4">
+        <div className="gap-2 mt-4 flex justify-end">
           <Button
             type="button"
             variant="outline"
@@ -99,8 +91,7 @@ return (
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Delete Forwarder
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </FormModal>
   );
 }

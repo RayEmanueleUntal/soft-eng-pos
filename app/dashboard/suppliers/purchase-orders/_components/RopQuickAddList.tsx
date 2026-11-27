@@ -56,7 +56,7 @@ export function RopQuickAddList({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex min-h-9 items-center justify-between gap-2">
         <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Below reorder point
         </h4>

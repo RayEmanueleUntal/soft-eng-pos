@@ -1,15 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { FormModal } from "@/components/shared/FormModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +30,7 @@ import {
 
 interface ReceiveDeliveryModalProps {
   onSuccess?: (info: { message: string; isPartial: boolean }) => void;
-  trigger?: React.ReactElement;
+  trigger?: React.ReactElement<{ onClick?: React.MouseEventHandler }>;
 }
 
 // Mirrors the backend Prisma enum UnitOfMeasure (may change in the future)
@@ -338,31 +330,37 @@ export function ReceiveDeliveryModal({
     }`;
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger
-        render={
-          trigger ?? (
-            <Button className="h-8 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm">
-              <Plus className="h-3.5 w-3.5" /> Receive Delivery
-            </Button>
-          )
-        }
-      />
+    <>
+      {trigger ? (
+        React.cloneElement(trigger, {
+          onClick: () => handleOpenChange(true),
+        })
+      ) : (
+        <Button
+          onClick={() => handleOpenChange(true)}
+          className="h-8 bg-[#0060B2] hover:bg-[#004888] text-white font-semibold text-xs tracking-wide rounded-sm px-3 flex items-center gap-1.5 shadow-sm"
+        >
+          <Plus className="h-3.5 w-3.5" /> Receive Delivery
+        </Button>
+      )}
 
-      <DialogContent className="sm:max-w-4xl w-full font-sans max-h-[90vh] flex flex-col gap-4">
-        <DialogHeader>
-          <div className="flex items-center gap-2">
+      <FormModal
+        open={open}
+        onOpenChange={handleOpenChange}
+        title={
+          <span className="flex items-center gap-2 text-xl font-bold tracking-tight">
             <Truck className="h-5 w-5 text-primary" />
-            <DialogTitle className="text-xl font-bold tracking-tight">
-              Process Stock Delivery Intake
-            </DialogTitle>
-          </div>
-          <DialogDescription className="text-sm text-muted-foreground">
-            {selectedPO
-              ? "Remaining quantities are pre-filled based on prior deliveries. Set an item to 0 if it wasn't included in this shipment."
-              : "Choose the Purchase Order this delivery belongs to. Use the date range to narrow the list."}
-          </DialogDescription>
-        </DialogHeader>
+            Process Stock Delivery Intake
+          </span>
+        }
+        description={
+          selectedPO
+            ? "Remaining quantities are pre-filled based on prior deliveries. Set an item to 0 if it wasn't included in this shipment."
+            : "Choose the Purchase Order this delivery belongs to. Use the date range to narrow the list."
+        }
+        size="xl"
+        className="sm:max-w-4xl w-full font-sans max-h-[90vh] flex flex-col gap-4"
+      >
 
         {successInfo && (
           <div className="p-4 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-700 flex items-center gap-3 text-sm">
@@ -775,7 +773,7 @@ export function ReceiveDeliveryModal({
             )}
           </div>
 
-          <DialogFooter className="pt-4 border-t border-border flex items-center sm:justify-between gap-3">
+          <div className="pt-4 border-t border-border flex items-center sm:justify-between gap-3">
             <Button
               type="button"
               variant="outline"
@@ -820,9 +818,9 @@ export function ReceiveDeliveryModal({
                 </Button>
               </div>
             )}
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </FormModal>
+    </>
   );
 }

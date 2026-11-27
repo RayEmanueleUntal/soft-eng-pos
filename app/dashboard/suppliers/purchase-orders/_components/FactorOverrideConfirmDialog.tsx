@@ -5,14 +5,7 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormModal } from "@/components/shared/FormModal";
 
 export interface FactorOverrideConfirm {
   productId: number;
@@ -41,53 +34,50 @@ export function FactorOverrideConfirmDialog({
   }, [confirm]);
 
   return (
-    <Dialog
+    <FormModal
       open={confirm !== null}
       onOpenChange={(open) => {
         if (!open && confirm && !acceptedRef.current) onNo(confirm.productId);
       }}
+      title="Use this conversion factor?"
+      description={
+        confirm ? (
+          <>
+            <span className="font-medium text-foreground">
+              {confirm.productName}
+            </span>
+            {": "}
+            <span className="font-mono text-foreground">
+              {confirm.uom} ×{confirm.overrideFactor}
+            </span>
+            {" (product record is "}
+            <span className="font-mono">×{confirm.catalogFactor}</span>
+            ).
+          </>
+        ) : null
+      }
+      size="md"
+      className="z-[70] sm:max-w-sm"
     >
-      <DialogContent
-        className="z-[70] rounded-md border border-border sm:max-w-sm"
-        showCloseButton={false}
-      >
-        <DialogHeader>
-          <DialogTitle>Use this conversion factor?</DialogTitle>
-          <DialogDescription>
-            {confirm ? (
-              <>
-                <span className="font-medium text-foreground">{confirm.productName}</span>
-                {": "}
-                <span className="font-mono text-foreground">
-                  {confirm.uom} ×{confirm.overrideFactor}
-                </span>
-                {" (product record is "}
-                <span className="font-mono">×{confirm.catalogFactor}</span>
-                ).
-              </>
-            ) : null}
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="mt-2 gap-2 sm:gap-0">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => confirm && onNo(confirm.productId)}
-          >
-            No
-          </Button>
-          <Button
-            type="button"
-            onClick={() => {
-              if (!confirm) return;
-              acceptedRef.current = true;
-              onYes(confirm.productId);
-            }}
-          >
-            Yes
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <div className="mt-4 flex justify-end gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => confirm && onNo(confirm.productId)}
+        >
+          No
+        </Button>
+        <Button
+          type="button"
+          onClick={() => {
+            if (!confirm) return;
+            acceptedRef.current = true;
+            onYes(confirm.productId);
+          }}
+        >
+          Yes
+        </Button>
+      </div>
+    </FormModal>
   );
 }

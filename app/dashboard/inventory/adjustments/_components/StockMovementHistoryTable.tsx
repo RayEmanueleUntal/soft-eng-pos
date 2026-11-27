@@ -226,7 +226,7 @@ export function StockMovementHistoryTable({
           endDate={endDate}
           onStartDateChange={onStartDateChange} // or setStartDate if this component owns useState
           onEndDateChange={onEndDateChange} // or setEndDate if this component owns useState
-          inputClassName="h-9 w-[135px]"
+          inputClassName="h-9"
         />
 
         <SortSelect

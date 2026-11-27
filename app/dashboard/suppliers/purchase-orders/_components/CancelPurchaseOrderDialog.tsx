@@ -6,14 +6,7 @@
 import * as React from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormModal } from "@/components/shared/FormModal";
 import { updatePurchaseOrderStatus } from "@/lib/inventory/purchase-order-api";
 import { PurchaseOrderDto } from "@/lib/inventory/purchase-order-types";
 import { getErrorMessage } from "@/lib/utils";
@@ -56,46 +49,47 @@ export function CancelPurchaseOrderDialog({
   };
 
   return (
-    <Dialog open={order !== null} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="rounded-md border border-border sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Cancel PO #{order?.id}?</DialogTitle>
-          <DialogDescription>
-            This cancels the order placed with{" "}
-            <span className="font-semibold text-foreground break-words">
-              {order?.supplierName}
-            </span>
-            . This cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
+    <FormModal
+      open={order !== null}
+      onOpenChange={(open) => !open && handleClose()}
+      title={`Cancel PO #${order?.id}?`}
+      description={
+        <>
+          This cancels the order placed with{" "}
+          <span className="font-semibold text-foreground break-words">
+            {order?.supplierName}
+          </span>
+          . This cannot be undone.
+        </>
+      }
+      size="md"
+    >
+      {error && (
+        <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span className="break-words">{error}</span>
+        </div>
+      )}
 
-        {error && (
-          <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span className="break-words">{error}</span>
-          </div>
-        )}
-
-        <DialogFooter className="mt-2 gap-2 sm:gap-0">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={submitting}
-            onClick={handleClose}
-          >
-            Keep PO
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            disabled={submitting}
-            onClick={handleConfirm}
-          >
-            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Cancel PO
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <div className="mt-4 flex justify-end gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={submitting}
+          onClick={handleClose}
+        >
+          Keep PO
+        </Button>
+        <Button
+          type="button"
+          variant="destructive"
+          disabled={submitting}
+          onClick={handleConfirm}
+        >
+          {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Cancel PO
+        </Button>
+      </div>
+    </FormModal>
   );
 }

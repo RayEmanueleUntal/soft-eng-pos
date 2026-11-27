@@ -1,204 +1,83 @@
-// Forwarders dashboard page for courier and logistics vendor master data.
-// Loads paginated forwarder profiles with search/status filters and create/edit/delete modals.
-// Page size is 15; the table footer uses shared TablePagination.
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { CheckCircle2, X } from "lucide-react";
-import { apiClient } from "@/lib/api";
-import { getErrorMessage } from "@/lib/utils";
-import { Forwarder, ForwardersResponse } from "./_components/types";
+import { PageShell } from "@/components/shared/PageShell";
+import { AlertBanner } from "@/components/shared/AlertBanner";
+import { DataTableShell } from "@/components/shared/DataTableShell";
 import { ForwarderFilterBar } from "./_components/ForwarderFilterBar";
 import { ForwarderTable } from "./_components/ForwarderTable";
 import { CreateForwarderModal } from "./_components/CreateForwarderModal";
 import { EditForwarderModal } from "./_components/EditForwarderModal";
 import { DeleteForwarderModal } from "./_components/DeleteForwarderModal";
-import { PageHeader } from "@/components/ui/pageheader";
-import { SortKey, mapForwarderSortKeyToApiParams } from "@/lib/utils/sort";
+import { useForwarders } from "@/lib/forwarders/useForwarders";
 
 export default function ForwardersPage() {
-  const [forwarders, setForwarders] = useState<Forwarder[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
-  // Filters & Pagination
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [sort, setSort] = useState<SortKey>("DEFAULT");
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-  const limit = 15;
-
-  // Modal State
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<Forwarder | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Forwarder | null>(null);
-
-  // Fetch Forwarders Data
-  const fetchForwarders = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const params: Record<string, string | number | boolean> = {
-        page,
-        limit,
-        ...mapForwarderSortKeyToApiParams(sort),
-      };
-
-      if (searchQuery.trim()) {
-        params.search = searchQuery.trim();
-      }
-
-      if (statusFilter === "active") {
-        params.is_active = true;
-      } else if (statusFilter === "inactive") {
-        params.is_active = false;
-      }
-
-      const response = await apiClient.get<ForwardersResponse>("/forwarders", {
-        params,
-      });
-      setForwarders(response.data.data || []);
-      setTotalPages(response.data.meta?.totalPages || 1);
-      setTotal(response.data.meta?.total || 0);
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [page, limit, searchQuery, statusFilter, sort]);
-
-  useEffect(() => {
-    fetchForwarders();
-  }, [fetchForwarders]);
-
-  useEffect(() => {
-    if (!successMsg) return;
-    const timer = setTimeout(() => setSuccessMsg(null), 4000);
-    return () => clearTimeout(timer);
-  }, [successMsg]);
-
-  // Reset page on filter/search change
-  const handleSearchChange = (query: string) => {
-    setSearchQuery(query);
-    setPage(1);
-  };
-
-  const handleStatusFilterChange = (status: string) => {
-    setStatusFilter(status);
-    setPage(1);
-  };
-
-  const handleSortChange = (nextSort: SortKey) => {
-    setSort(nextSort);
-    setPage(1);
-  };
+  const f = useForwarders();
 
   return (
-    <div className="flex-1 space-y-6">
-      {/* Page Header */}
-      <div className="shrink-0 mt-4 mb-4">
-        <PageHeader
-          header="Forwarders Management"
-          subheader="Manage courier and logistics vendor accounts, contact channels, and status tracking."
+    <PageShell
+      title="Forwarders Management"
+      subtitle="Manage courier and logistics vendor accounts, contact channels, and status tracking."
+    >
+      <ForwarderFilterBar
+        searchQuery={f.searchQuery}
+        onSearchChange={f.handleSearchChange}
+        statusFilter={f.statusFilter}
+        onStatusFilterChange={f.handleStatusFilterChange}
+        sort={f.sort}
+        onSortChange={f.handleSortChange}
+        onOpenCreateModal={f.openCreateModal}
+      />
+
+      {f.successMsg && (
+        <AlertBanner
+          variant="success"
+          message={f.successMsg}
+          onDismiss={f.dismissSuccess}
         />
-      </div>
+      )}
 
-      {/* Main Content Card */}
-      <div className="bg-card p-6 rounded-lg shadow-sm border border-border space-y-4">
-        {successMsg && (
-          <div
-            role="status"
-            className="flex items-center justify-between gap-3 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700"
-          >
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              <span>{successMsg}</span>
-            </div>
+      {f.error && <AlertBanner message={f.error} onRetry={f.fetchForwarders} />}
 
-            <button
-              type="button"
-              onClick={() => setSuccessMsg(null)}
-              className="rounded p-1 text-emerald-700 hover:bg-emerald-500/20"
-              aria-label="Dismiss notification"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {error && (
-          <div className="p-3 rounded text-xs font-mono bg-destructive/10 text-destructive border border-destructive/20">
-            {error}
-          </div>
-        )}
-
-        <ForwarderFilterBar
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
-          statusFilter={statusFilter}
-          onStatusFilterChange={handleStatusFilterChange}
-          sort={sort}
-          onSortChange={handleSortChange}
-          onOpenCreateModal={() => setCreateModalOpen(true)}
-        />
-
-        <ForwarderTable
-          data={forwarders}
-          loading={loading}
-          currentPage={page}
-          totalPages={totalPages}
-          total={total}
-          pageSize={limit}
-          sort={sort}
-          onPageChange={setPage}
-          onEdit={setEditTarget}
-          onDelete={setDeleteTarget}
-        />
-      </div>
-
-      {/* Modals */}
-      <CreateForwarderModal
-        open={createModalOpen}
-        onOpenChange={setCreateModalOpen}
-        onSuccess={(createdCompanyName) => {
-          setSuccessMsg(
-            `Forwarder "${createdCompanyName}" added successfully.`,
-          );
-          fetchForwarders();
+      <DataTableShell
+        title="Forwarder Profile List"
+        totalRecords={f.total}
+        pagination={{
+          page: f.page,
+          totalPages: f.totalPages,
+          totalItems: f.total,
+          pageSize: f.pageSize,
+          itemLabel: "forwarders",
+          loading: f.loading,
+          onPageChange: f.setPage,
         }}
+      >
+        <ForwarderTable
+          data={f.forwarders}
+          loading={f.loading}
+          onEdit={f.setEditTarget}
+          onDelete={f.setDeleteTarget}
+        />
+      </DataTableShell>
+
+      <CreateForwarderModal
+        open={f.createModalOpen}
+        onOpenChange={f.setCreateModalOpen}
+        onSuccess={f.handleCreated}
       />
 
       <EditForwarderModal
-        forwarder={editTarget}
-        open={!!editTarget}
-        onOpenChange={(open) => !open && setEditTarget(null)}
-        onSuccess={() => {
-          if (editTarget) {
-            setSuccessMsg(
-              `Forwarder "${editTarget.company_name}" updated successfully.`,
-            );
-          }
-          fetchForwarders();
-        }}
+        forwarder={f.editTarget}
+        open={!!f.editTarget}
+        onOpenChange={f.handleEditOpenChange}
+        onSuccess={f.handleUpdated}
       />
 
       <DeleteForwarderModal
-        forwarder={deleteTarget}
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-        onSuccess={() => {
-          if (deleteTarget) {
-            setSuccessMsg(
-              `Forwarder "${deleteTarget.company_name}" deleted successfully.`,
-            );
-          }
-          fetchForwarders();
-        }}
+        forwarder={f.deleteTarget}
+        open={!!f.deleteTarget}
+        onOpenChange={f.handleDeleteOpenChange}
+        onSuccess={f.handleDeleted}
       />
-    </div>
+    </PageShell>
   );
 }
