@@ -4,6 +4,11 @@
 // Owns the debounced search, status/date filters, client-side sort, the
 // active+history merge with request-sequence guard, and modal state.
 // Backend has no sort params, so sorting runs client-side on the merged set.
+//
+// Fetching is keyed only by statusFilter + search: the full match set is
+// cached in `allItems` and page/date/sort changes slice it locally, so paging
+// never re-downloads history. Filter state lives in the URL so returning from
+// the detail page restores the same list.
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -38,6 +43,11 @@ const SHIPMENT_SORTS: SortKey[] = [
   "ID_ASC",
   "ID_DESC",
 ];
+
+const SORT_ACCESSORS = {
+  getDate: (s: Shipment) => s.dispatch_date,
+  getId: (s: Shipment) => s.id,
+};
 
 // Client-side sorting/pagination needs the full match set, not just the
 // first API page — loops through every page of a paginated endpoint.
@@ -85,62 +95,89 @@ function matchesShipmentDateRange(
   return true;
 }
 
+function parseStatusParam(value: string | null): ShipmentFilter {
+  return SHIPMENT_STATUS_FILTERS.includes(value as ShipmentFilter)
+    ? (value as ShipmentFilter)
+    : "ALL";
+}
+
+function parseSortParam(value: string | null): SortKey {
+  return SHIPMENT_SORTS.includes(value as SortKey)
+    ? (value as SortKey)
+    : "DEFAULT";
+}
+
+function parsePageParam(value: string | null): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+}
+
 export function useShipments() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   // List settings live in the URL so returning from the detail page restores them.
-  const [statusFilter, setStatusFilter] = React.useState<ShipmentFilter>(() => {
-    const value = searchParams.get("status");
-    return SHIPMENT_STATUS_FILTERS.includes(value as ShipmentFilter)
-      ? (value as ShipmentFilter)
-      : "ALL";
-  });
+  const [statusFilter, setStatusFilter] = React.useState<ShipmentFilter>(() =>
+    parseStatusParam(searchParams.get("status")),
+  );
   const [startDate, setStartDate] = React.useState(
     () => searchParams.get("from") ?? "",
   );
   const [endDate, setEndDate] = React.useState(
     () => searchParams.get("to") ?? "",
   );
-  const [sort, setSort] = React.useState<SortKey>(() => {
-    const value = searchParams.get("sort");
-    return SHIPMENT_SORTS.includes(value as SortKey)
-      ? (value as SortKey)
-      : "DEFAULT";
-  });
-  const [page, setPage] = React.useState(() => {
-    const value = Number(searchParams.get("page"));
-    return Number.isInteger(value) && value > 0 ? value : 1;
-  });
+  const [sort, setSort] = React.useState<SortKey>(() =>
+    parseSortParam(searchParams.get("sort")),
+  );
+  const [page, setPage] = React.useState(() =>
+    parsePageParam(searchParams.get("page")),
+  );
   const [searchInput, setSearchInput] = React.useState(
     () => searchParams.get("q") ?? "",
   );
   const [search, setSearch] = React.useState(
     () => (searchParams.get("q") ?? "").trim(),
   );
-  const [reloadKey, setReloadKey] = React.useState(0);
 
-  const [shipments, setShipments] = React.useState<Shipment[]>([]);
-  const [total, setTotal] = React.useState(0);
-  const [totalPages, setTotalPages] = React.useState(1);
+  // Full match set for the current statusFilter + search; page/date/sort
+  // are applied on top of this without refetching.
+  const [allItems, setAllItems] = React.useState<Shipment[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [notice, setNotice] = React.useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = React.useState(false);
   const [statusTarget, setStatusTarget] = React.useState<Shipment | null>(null);
+  const [reloadKey, setReloadKey] = React.useState(0);
 
   const requestId = React.useRef(0);
 
-  // Applies the search box after a short pause and resets to page 1.
+  // Applies the search box after a short pause. Page resets only when the
+  // committed search actually changes, so a URL-restored page survives mount.
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      setSearch(searchInput.trim());
+      const next = searchInput.trim();
+      if (next === search) return;
+      setSearch(next);
       setPage(1);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, search]);
+
+  // Resyncs state when the URL query changes externally (e.g. the nav link
+  // drops the query string). Values matching current state bail out, so the
+  // hook's own router.replace below does not loop.
+  React.useEffect(() => {
+    setStatusFilter(parseStatusParam(searchParams.get("status")));
+    setStartDate(searchParams.get("from") ?? "");
+    setEndDate(searchParams.get("to") ?? "");
+    setSort(parseSortParam(searchParams.get("sort")));
+    setPage(parsePageParam(searchParams.get("page")));
+    const q = searchParams.get("q") ?? "";
+    setSearchInput(q);
+    setSearch(q.trim());
+  }, [searchParams]);
 
   // Serializes the current filters into a query string (shared by URL sync and the detail return link).
   const buildListQuery = React.useCallback(() => {
@@ -161,104 +198,42 @@ export function useShipments() {
     router.replace(buildListQuery(), { scroll: false });
   }, [buildListQuery, router]);
 
-  // Loads shipments for the active filters; ignores superseded responses.
+  // Loads the full match set only when statusFilter or the committed search
+  // changes (or on explicit reload). Date range, sort, and page are applied
+  // client-side on top, so paging never re-fetches.
   React.useEffect(() => {
     const current = ++requestId.current;
     setLoading(true);
     setError(null);
 
-    const hasDateFilter = Boolean(startDate || endDate);
-
-    const sortAccessors = {
-      getDate: (s: Shipment) => s.dispatch_date,
-      getId: (s: Shipment) => s.id,
-    };
-
     const load = async () => {
-      let items: Shipment[] = [];
-
-      if (
-        statusFilter === "DELIVERED" &&
-        !hasDateFilter &&
-        sort === "DEFAULT"
-      ) {
-        // Fast path: server-paginated history, backend's own ordering.
-        const res = await fetchShipmentHistory({
-          page,
-          limit: PAGE_LIMIT,
-          search,
-        });
-        return {
-          items: res.items ?? [],
-          totalItems: res.meta?.totalItems ?? 0,
-          totalPages: res.meta?.totalPages ?? 1,
-        };
-      }
-
       if (statusFilter === "DELIVERED") {
-        items = (
-          await fetchAllShipmentPages((p) =>
-            fetchShipmentHistory({
-              page: p,
-              limit: FETCH_LIMIT,
-              search,
-            }),
-          )
-        ).filter((item) => matchesShipmentDateRange(item, startDate, endDate));
-      } else if (statusFilter === "PENDING" || statusFilter === "DISPATCHED") {
-        // Fetch active shipments (PENDING + DISPATCHED) and filter to the selected status
-        items = (
-          await fetchAllShipmentPages((p) =>
-            fetchActiveShipments({
-              page: p,
-              limit: FETCH_LIMIT,
-              search,
-            }),
-          )
-        ).filter(
-          (item) =>
-            item.tracking_status === statusFilter &&
-            matchesShipmentDateRange(item, startDate, endDate),
-        );
-      } else {
-        // statusFilter === "ALL": combine active (PENDING/DISPATCHED) and history (DELIVERED)
-        const [activeItems, historyItems] = await Promise.all([
-          fetchAllShipmentPages((p) =>
-            fetchActiveShipments({ page: p, limit: FETCH_LIMIT, search }),
-          ),
-          fetchAllShipmentPages((p) =>
-            fetchShipmentHistory({ page: p, limit: FETCH_LIMIT, search }),
-          ),
-        ]);
-        items = [...activeItems, ...historyItems].filter((item) =>
-          matchesShipmentDateRange(item, startDate, endDate),
+        return fetchAllShipmentPages((p) =>
+          fetchShipmentHistory({ page: p, limit: FETCH_LIMIT, search }),
         );
       }
-
-      const sorted =
-        sort === "DEFAULT" ? items : sortItems(items, sort, sortAccessors);
-      const computedTotalPages = Math.max(
-        1,
-        Math.ceil(sorted.length / PAGE_LIMIT),
-      );
-      const start = (page - 1) * PAGE_LIMIT;
-      return {
-        items: sorted.slice(start, start + PAGE_LIMIT),
-        totalItems: sorted.length,
-        totalPages: computedTotalPages,
-      };
+      if (statusFilter === "PENDING" || statusFilter === "DISPATCHED") {
+        const items = await fetchAllShipmentPages((p) =>
+          fetchActiveShipments({ page: p, limit: FETCH_LIMIT, search }),
+        );
+        return items.filter((item) => item.tracking_status === statusFilter);
+      }
+      // statusFilter === "ALL": combine active (PENDING/DISPATCHED) and history (DELIVERED)
+      const [activeItems, historyItems] = await Promise.all([
+        fetchAllShipmentPages((p) =>
+          fetchActiveShipments({ page: p, limit: FETCH_LIMIT, search }),
+        ),
+        fetchAllShipmentPages((p) =>
+          fetchShipmentHistory({ page: p, limit: FETCH_LIMIT, search }),
+        ),
+      ]);
+      return [...activeItems, ...historyItems];
     };
 
     load()
-      .then((res) => {
+      .then((items) => {
         if (current !== requestId.current) return;
-        if (res.items.length === 0 && page > 1) {
-          setPage(Math.max(1, Math.min(page - 1, res.totalPages)));
-          return;
-        }
-        setShipments(res.items);
-        setTotal(res.totalItems);
-        setTotalPages(res.totalPages);
+        setAllItems(items);
         setLoading(false);
       })
       .catch((err) => {
@@ -270,12 +245,10 @@ export function useShipments() {
             "Failed to load shipments. Please check your connection.",
           ),
         );
-        setShipments([]);
-        setTotal(0);
-        setTotalPages(1);
+        setAllItems([]);
         setLoading(false);
       });
-  }, [statusFilter, startDate, endDate, sort, page, search, reloadKey]);
+  }, [statusFilter, search, reloadKey]);
 
   const reload = () => setReloadKey((key) => key + 1);
 
@@ -337,13 +310,34 @@ export function useShipments() {
 
   const closeStatusModal = () => setStatusTarget(null);
 
+  // Client-side pipeline: date filter -> sort -> paginate over allItems.
+  const view = React.useMemo(() => {
+    const filtered = allItems.filter((item) =>
+      matchesShipmentDateRange(item, startDate, endDate),
+    );
+    const sorted =
+      sort === "DEFAULT" ? filtered : sortItems(filtered, sort, SORT_ACCESSORS);
+    const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_LIMIT));
+    const start = (page - 1) * PAGE_LIMIT;
+    return {
+      items: sorted.slice(start, start + PAGE_LIMIT),
+      total: sorted.length,
+      totalPages,
+    };
+  }, [allItems, startDate, endDate, sort, page]);
+
+  // If filters shrink the result set below the current page, step back.
+  React.useEffect(() => {
+    if (page > view.totalPages) setPage(view.totalPages);
+  }, [page, view.totalPages]);
+
   const hasDateFilter = Boolean(startDate || endDate);
   const hasActiveFilters = hasDateFilter || sort !== "DEFAULT";
 
   return {
-    shipments,
-    total,
-    totalPages,
+    shipments: view.items,
+    total: view.total,
+    totalPages: view.totalPages,
     page,
     setPage,
     pageSize: PAGE_LIMIT,
