@@ -232,10 +232,10 @@ export function useShipments() {
   // fetched (page is a dependency). In client mode the full match set is
   // fetched once per statusFilter/search/reload — page, date, and sort
   // changes reuse the cache via clientFetchKey instead of refetching.
-  // The cache key is only recorded after a successful response. Cache hits
-  // return early after invalidating any pending request (it belongs to a
-  // different query) so it cannot overwrite the cached rows or leave its
-  // error visible.
+  // The cache key is only recorded after a successful response, and a cache
+  // hit invalidates any pending request — it belongs to a different query
+  // (e.g. a search the user cleared) and must not overwrite the cached rows
+  // or leave its error visible.
   React.useEffect(() => {
     const handleError = (err: unknown, requestedPage: number) => {
       console.error("Failed to load shipments:", err);
