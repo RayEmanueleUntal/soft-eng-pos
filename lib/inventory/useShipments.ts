@@ -257,7 +257,13 @@ export function useShipments() {
       const current = ++requestId.current;
       setLoading(true);
       setError(null);
-      clientFetchKey.current = "";
+      // Coming from client mode: allItems holds the full unpaged set, not a
+      // server page, so no loaded page can be claimed until the first
+      // server response lands.
+      if (clientFetchKey.current !== "") {
+        clientFetchKey.current = "";
+        loadedPageRef.current = -1;
+      }
       fetchShipmentHistory({ page, limit: PAGE_LIMIT, search })
         .then((res) => {
           if (current !== requestId.current) return;
@@ -275,7 +281,15 @@ export function useShipments() {
     }
 
     const key = `${statusFilter}|${search}|${reloadKey}`;
-    if (clientFetchKey.current === key) return;
+    if (clientFetchKey.current === key) {
+      // Cache hit: keep the cached rows but invalidate any pending request —
+      // it belongs to a different query (e.g. a search the user cleared) and
+      // must not overwrite them or leave its error visible.
+      requestId.current += 1;
+      setLoading(false);
+      setError(null);
+      return;
+    }
 
     const current = ++requestId.current;
     setLoading(true);
