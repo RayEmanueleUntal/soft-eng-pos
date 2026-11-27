@@ -224,17 +224,19 @@ export function useShipments() {
   const serverPaginated =
     statusFilter === "DELIVERED" && !hasDateFilter && sort === "DEFAULT";
 
+  // Page of the rows currently in allItems while server-paginated; used to
+  // detect when a failed page fetch would leave stale rows under a new page.
+  const loadedPageRef = React.useRef(1);
+
   // Loads shipment data. In server-paginated mode only the visible page is
   // fetched (page is a dependency). In client mode the full match set is
   // fetched once per statusFilter/search/reload — page, date, and sort
   // changes reuse the cache via clientFetchKey instead of refetching.
+  // The cache key is only recorded after a successful response, and cache
+  // hits return before bumping requestId so they cannot invalidate an
+  // in-flight request.
   React.useEffect(() => {
-    const current = ++requestId.current;
-    setLoading(true);
-    setError(null);
-
-    const handleError = (err: unknown) => {
-      if (current !== requestId.current) return;
+    const handleError = (err: unknown, requestedPage: number) => {
       console.error("Failed to load shipments:", err);
       setError(
         getErrorMessage(
@@ -242,12 +244,19 @@ export function useShipments() {
           "Failed to load shipments. Please check your connection.",
         ),
       );
-      // Keep the previous items so a failed refresh does not wipe the table
-      // or reset the user's pagination.
+      // Keep previous rows for a failed refresh of the same page, but clear
+      // them when the failed request was for a different page — otherwise
+      // stale rows would appear under the newly selected page number.
+      if (serverPaginated && requestedPage !== loadedPageRef.current) {
+        setAllItems([]);
+      }
       setLoading(false);
     };
 
     if (serverPaginated) {
+      const current = ++requestId.current;
+      setLoading(true);
+      setError(null);
       clientFetchKey.current = "";
       fetchShipmentHistory({ page, limit: PAGE_LIMIT, search })
         .then((res) => {
@@ -255,18 +264,22 @@ export function useShipments() {
           setAllItems(res.items ?? []);
           setServerTotal(res.meta?.totalItems ?? 0);
           setServerTotalPages(res.meta?.totalPages ?? 1);
+          loadedPageRef.current = page;
           setLoading(false);
         })
-        .catch(handleError);
+        .catch((err) => {
+          if (current !== requestId.current) return;
+          handleError(err, page);
+        });
       return;
     }
 
     const key = `${statusFilter}|${search}|${reloadKey}`;
-    if (clientFetchKey.current === key) {
-      setLoading(false);
-      return;
-    }
-    clientFetchKey.current = key;
+    if (clientFetchKey.current === key) return;
+
+    const current = ++requestId.current;
+    setLoading(true);
+    setError(null);
 
     const load = async () => {
       if (statusFilter === "DELIVERED") {
@@ -295,10 +308,14 @@ export function useShipments() {
     load()
       .then((items) => {
         if (current !== requestId.current) return;
+        clientFetchKey.current = key;
         setAllItems(items);
         setLoading(false);
       })
-      .catch(handleError);
+      .catch((err) => {
+        if (current !== requestId.current) return;
+        handleError(err, page);
+      });
   }, [statusFilter, search, reloadKey, serverPaginated, page]);
 
   const reload = () => setReloadKey((key) => key + 1);
@@ -395,9 +412,12 @@ export function useShipments() {
   ]);
 
   // If filters shrink the result set below the current page, step back.
+  // Skipped while loading so an empty pre-fetch result cannot reset a
+  // URL-restored page and invalidate the pending request.
   React.useEffect(() => {
+    if (loading) return;
     if (page > view.totalPages) setPage(view.totalPages);
-  }, [page, view.totalPages]);
+  }, [page, view.totalPages, loading]);
 
   const hasActiveFilters = hasDateFilter || sort !== "DEFAULT";
 
