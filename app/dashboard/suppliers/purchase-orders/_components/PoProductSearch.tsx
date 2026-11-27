@@ -82,18 +82,20 @@ export function PoProductSearch({
 
   return (
     <div className="space-y-2">
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Search products
-      </h4>
-      <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search by SKU or name..."
-          value={filters.search}
-          disabled={disabled}
-          onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-          className="h-9 rounded-[4px] pl-8 text-xs"
-        />
+      <div className="flex items-center gap-2">
+        <h4 className="shrink-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Search products
+        </h4>
+        <div className="relative min-w-0 flex-1">
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by SKU or name..."
+            value={filters.search}
+            disabled={disabled}
+            onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+            className="h-9 rounded-[4px] pl-8 text-xs"
+          />
+        </div>
       </div>
 
       <div className="max-h-44 divide-y divide-border overflow-y-auto rounded-md border border-border bg-card">

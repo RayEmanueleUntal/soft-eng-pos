@@ -67,7 +67,8 @@ export function POSelectList({ onSelectPO, actionSlot }: POSelectListProps) {
           endDate={endDate}
           onStartDateChange={setStartDate}
           onEndDateChange={setEndDate}
-          inputClassName="h-9 w-[140px]"
+          inputClassName="h-9 px-2"
+          className="w-[340px] max-w-full"
         />
         <div className="flex items-center gap-2">
           {hasFilter && (

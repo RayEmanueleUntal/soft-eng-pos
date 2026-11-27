@@ -7,22 +7,9 @@ import * as React from "react";
 import axios from "axios";
 import { AlertCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormModal } from "@/components/shared/FormModal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   createShipment,
@@ -36,6 +23,7 @@ import {
 } from "@/lib/inventory/shipment-types";
 import { getErrorMessage } from "@/lib/utils";
 import { OrderSearchSelect } from "./OrderSearchSelect";
+import { ForwarderSearchSelect } from "./ForwarderSearchSelect";
 
 const TRACKING_MAX = 100;
 const NOTES_MAX = 500;
@@ -201,17 +189,18 @@ export function CreateShipmentModal({
     !forwardersLoading && !forwardersError && forwarders.length === 0;
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-md border border-border p-5 sm:max-w-[540px]">
-        <DialogHeader className="border-b border-border pb-3">
-          <DialogTitle className="font-heading text-base font-bold tracking-tight">
-            Log New Shipment
-          </DialogTitle>
-          <DialogDescription>
-            Assign a forwarder to a completed order. The shipment starts as
-            Pending.
-          </DialogDescription>
-        </DialogHeader>
+    <FormModal
+      open={open}
+      onOpenChange={handleClose}
+      title={
+        <span className="font-heading text-base font-bold tracking-tight">
+          Log New Shipment
+        </span>
+      }
+      description="Assign a forwarder to a completed order. The shipment starts as Pending."
+      size="lg"
+      className="max-h-[90vh] overflow-y-auto rounded-md border border-border p-5 sm:max-w-[540px]"
+    >
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           {conflict && (
@@ -260,28 +249,17 @@ export function CreateShipmentModal({
             <Label className="text-xs text-muted-foreground">
               Forwarder <span className="text-destructive">*</span>
             </Label>
-            <Select
-              value={forwarderId || null}
+            <ForwarderSearchSelect
+              forwarders={forwarders}
+              value={
+                forwarders.find((f) => String(f.id) === forwarderId) ?? null
+              }
               disabled={submitting || forwardersLoading || noForwarders}
-              onValueChange={(value) => setForwarderId(value ?? "")}
-            >
-              <SelectTrigger className="h-8 w-full text-xs">
-                <SelectValue placeholder="Select forwarder">
-                  {(value: string | null) =>
-                    forwarders.find((f) => String(f.id) === value)
-                      ?.company_name ??
-                    (forwardersLoading ? "Loading..." : "Select forwarder")
-                  }
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent alignItemWithTrigger={false}>
-                {forwarders.map((forwarder) => (
-                  <SelectItem key={forwarder.id} value={String(forwarder.id)}>
-                    {forwarder.company_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              loading={forwardersLoading}
+              onChange={(forwarder) =>
+                setForwarderId(forwarder ? String(forwarder.id) : "")
+              }
+            />
             {forwardersError && (
               <p className="text-xs text-destructive break-words">
                 {forwardersError}
@@ -309,7 +287,7 @@ export function CreateShipmentModal({
               maxLength={TRACKING_MAX}
               onChange={(e) => setTrackingNumber(e.target.value)}
               placeholder="e.g. LBC-987654321-PH"
-              className="h-8 font-mono text-xs tabular-nums"
+              className="h-8 text-sm"
               disabled={submitting}
             />
           </div>
@@ -327,7 +305,7 @@ export function CreateShipmentModal({
               maxLength={NOTES_MAX}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Destination remarks or special instructions"
-              className="min-h-[72px] text-xs"
+              className="min-h-[72px] text-sm"
               disabled={submitting}
             />
             <p className="text-right font-mono text-[10px] text-muted-foreground">
@@ -354,7 +332,6 @@ export function CreateShipmentModal({
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </FormModal>
   );
 }

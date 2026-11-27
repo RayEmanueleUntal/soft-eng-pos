@@ -3,13 +3,7 @@
 // Opened from the purchase orders page.
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormModal } from "@/components/shared/FormModal";
 import { PurchaseOrderDto } from "@/lib/inventory/purchase-order-types";
 import { CreatePurchaseOrderForm } from "./CreatePurchaseOrderForm";
 
@@ -26,21 +20,22 @@ export function CreatePurchaseOrderModal({
   onCreated,
 }: CreatePurchaseOrderModalProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] flex-col rounded-md border border-border p-4 sm:max-w-4xl">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-bold tracking-tight">
-            New Purchase Order
-          </DialogTitle>
-          <DialogDescription className="text-xs">
-            Pick an active supplier, then add low-stock items or search products.
-          </DialogDescription>
-        </DialogHeader>
-        <CreatePurchaseOrderForm
-          onCancel={() => onOpenChange(false)}
-          onCreated={onCreated}
-        />
-      </DialogContent>
-    </Dialog>
+    <FormModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title={
+        <span className="text-lg font-bold tracking-tight">
+          New Purchase Order
+        </span>
+      }
+      description="Pick an active supplier, then add low-stock items or search products."
+      size="xl"
+      className="sm:max-w-4xl flex max-h-[90vh] flex-col rounded-md border border-border p-4"
+    >
+      <CreatePurchaseOrderForm
+        onCancel={() => onOpenChange(false)}
+        onCreated={onCreated}
+      />
+    </FormModal>
   );
 }

@@ -6,13 +6,7 @@
 import * as React from "react";
 import { AlertCircle, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormModal } from "@/components/shared/FormModal";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
@@ -84,21 +78,24 @@ export function UpdateShipmentStatusModal({
   };
 
   return (
-    <Dialog
+<FormModal
       open={shipment !== null}
       onOpenChange={(open) => !open && handleClose()}
+      title={
+        <span className="font-heading text-base font-bold tracking-tight">
+          Update Shipment #{shipment?.id}
+        </span>
+      }
+      description={
+        <span className="break-words">
+          {shipment?.transaction?.invoice_number ??
+            `Order #${shipment?.transactionId}`}
+          {shipment?.forwarder ? ` via ${shipment.forwarder.company_name}` : ""}
+        </span>
+      }
+      size="md"
+      className="rounded-md border border-border p-5 sm:max-w-md"
     >
-      <DialogContent className="rounded-md border border-border p-5 sm:max-w-md">
-        <DialogHeader className="border-b border-border pb-3">
-          <DialogTitle className="font-heading text-base font-bold tracking-tight">
-            Update Shipment #{shipment?.id}
-          </DialogTitle>
-          <DialogDescription className="break-words">
-            {shipment?.transaction?.invoice_number ??
-              `Order #${shipment?.transactionId}`}
-            {shipment?.forwarder ? ` via ${shipment.forwarder.company_name}` : ""}
-          </DialogDescription>
-        </DialogHeader>
 
         {shipment && nextStatus ? (
           <form onSubmit={handleConfirm} className="space-y-4 pt-1">
@@ -173,7 +170,6 @@ export function UpdateShipmentStatusModal({
             This shipment is already delivered and cannot be changed.
           </p>
         )}
-      </DialogContent>
-    </Dialog>
+      </FormModal>
   );
 }

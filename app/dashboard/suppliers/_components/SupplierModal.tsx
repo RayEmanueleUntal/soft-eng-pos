@@ -1,14 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormModal } from "@/components/shared/FormModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -104,18 +97,17 @@ export function SupplierModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "Edit Supplier" : "Add New Supplier"}
-          </DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? "Update procurement contacts and lead times."
-              : "Register procurement details and lead times for hardware suppliers."}
-          </DialogDescription>
-        </DialogHeader>
+    <FormModal
+      open={isOpen}
+      onOpenChange={(open) => !open && onClose()}
+      title={isEditing ? "Edit Supplier" : "Add New Supplier"}
+      description={
+        isEditing
+          ? "Update procurement contacts and lead times."
+          : "Register procurement details and lead times for hardware suppliers."
+      }
+      size="md"
+    >
 
         <form onSubmit={handleSubmit} className="grid gap-4 py-2">
           <div className="grid gap-1.5">
@@ -209,28 +201,7 @@ export function SupplierModal({
             )}
           </div>
 
-          <div className="grid gap-1.5">
-            <Label htmlFor="leadTimeDays">Delivery Lead Time (Days)</Label>
-            <Input
-              id="leadTimeDays"
-              type="number"
-              min="0"
-              placeholder="0"
-              value={formData.leadTimeDays === 0 ? "" : formData.leadTimeDays}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  leadTimeDays:
-                    e.target.value === "" ? 0 : parseInt(e.target.value, 10),
-                })
-              }
-            />
-            {errors.leadTimeDays && (
-              <p className="text-xs text-destructive">{errors.leadTimeDays}</p>
-            )}
-          </div>
-
-          <DialogFooter className="mt-4">
+          <div className="mt-4 flex justify-end gap-2">
             <Button
               type="button"
               variant="outline"
@@ -247,9 +218,8 @@ export function SupplierModal({
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? "Save Changes" : "Save Supplier"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+    </FormModal>
   );
 }

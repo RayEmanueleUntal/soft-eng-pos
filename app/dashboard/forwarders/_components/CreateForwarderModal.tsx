@@ -3,13 +3,7 @@
 import React, { useState } from "react";
 import { apiClient } from "@/lib/api";
 import { getErrorMessage } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { FormModal } from "@/components/shared/FormModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,14 +55,16 @@ export function CreateForwarderModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] border-border shadow-md">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-bold tracking-tight">
-            Add New Forwarder
-          </DialogTitle>
-        </DialogHeader>
-
+    <FormModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title={
+        <span className="text-lg font-bold tracking-tight">
+          Add New Forwarder
+        </span>
+      }
+      size="md"
+    >
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           {error && (
             <div className="p-2.5 rounded text-xs font-mono bg-destructive/10 text-destructive border border-destructive/20">
@@ -104,7 +100,7 @@ export function CreateForwarderModal({
             />
           </div>
 
-          <DialogFooter className="pt-3">
+          <div className="pt-3 flex justify-end gap-2">
             <Button
               type="button"
               variant="outline"
@@ -122,9 +118,8 @@ export function CreateForwarderModal({
               {loading && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
               Save Forwarder
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+    </FormModal>
   );
 }
