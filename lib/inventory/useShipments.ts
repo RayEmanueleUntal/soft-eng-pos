@@ -141,8 +141,12 @@ export function useShipments() {
   );
 
   // Full match set for the current statusFilter + search; page/date/sort
-  // are applied on top of this without refetching.
+  // are applied on top of this without refetching. In server-paginated mode
+  // (Delivered + no date filter + default sort) this holds only the visible
+  // page and serverTotal/serverTotalPages carry the real totals.
   const [allItems, setAllItems] = React.useState<Shipment[]>([]);
+  const [serverTotal, setServerTotal] = React.useState(0);
+  const [serverTotalPages, setServerTotalPages] = React.useState(1);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [notice, setNotice] = React.useState<string | null>(null);
@@ -152,6 +156,12 @@ export function useShipments() {
   const [reloadKey, setReloadKey] = React.useState(0);
 
   const requestId = React.useRef(0);
+  // Key of the last completed client-mode fetch; page/sort/date-only changes
+  // reuse the cached set instead of refetching.
+  const clientFetchKey = React.useRef("");
+  // Last query string this hook wrote to the URL, used to tell its own
+  // router.replace echo apart from external navigation.
+  const lastWrittenUrl = React.useRef<string | null>(null);
 
   // Applies the search box after a short pause. Page resets only when the
   // committed search actually changes, so a URL-restored page survives mount.
@@ -166,18 +176,26 @@ export function useShipments() {
   }, [searchInput, search]);
 
   // Resyncs state when the URL query changes externally (e.g. the nav link
-  // drops the query string). Values matching current state bail out, so the
-  // hook's own router.replace below does not loop.
+  // drops the query string). The search draft is only overwritten on external
+  // navigation — the hook's own router.replace echo must not clobber typing
+  // (e.g. "LBC " would lose its trailing space mid-search).
   React.useEffect(() => {
+    const qs = searchParams.toString();
+    const currentUrl = qs ? `${pathname}?${qs}` : pathname;
+    const isOwnEcho = lastWrittenUrl.current === currentUrl;
+
     setStatusFilter(parseStatusParam(searchParams.get("status")));
     setStartDate(searchParams.get("from") ?? "");
     setEndDate(searchParams.get("to") ?? "");
     setSort(parseSortParam(searchParams.get("sort")));
     setPage(parsePageParam(searchParams.get("page")));
-    const q = searchParams.get("q") ?? "";
-    setSearchInput(q);
-    setSearch(q.trim());
-  }, [searchParams]);
+
+    if (!isOwnEcho) {
+      const q = searchParams.get("q") ?? "";
+      setSearchInput(q);
+      setSearch(q.trim());
+    }
+  }, [searchParams, pathname]);
 
   // Serializes the current filters into a query string (shared by URL sync and the detail return link).
   const buildListQuery = React.useCallback(() => {
@@ -195,16 +213,60 @@ export function useShipments() {
   // Mirrors the filters into the URL so browser back/forward and detail-page
   // returns restore the same list state.
   React.useEffect(() => {
-    router.replace(buildListQuery(), { scroll: false });
+    const url = buildListQuery();
+    lastWrittenUrl.current = url;
+    router.replace(url, { scroll: false });
   }, [buildListQuery, router]);
 
-  // Loads the full match set only when statusFilter or the committed search
-  // changes (or on explicit reload). Date range, sort, and page are applied
-  // client-side on top, so paging never re-fetches.
+  const hasDateFilter = Boolean(startDate || endDate);
+  // Fast path: Delivered + no date filter + default sort can use the
+  // backend's own pagination instead of downloading the full history.
+  const serverPaginated =
+    statusFilter === "DELIVERED" && !hasDateFilter && sort === "DEFAULT";
+
+  // Loads shipment data. In server-paginated mode only the visible page is
+  // fetched (page is a dependency). In client mode the full match set is
+  // fetched once per statusFilter/search/reload — page, date, and sort
+  // changes reuse the cache via clientFetchKey instead of refetching.
   React.useEffect(() => {
     const current = ++requestId.current;
     setLoading(true);
     setError(null);
+
+    const handleError = (err: unknown) => {
+      if (current !== requestId.current) return;
+      console.error("Failed to load shipments:", err);
+      setError(
+        getErrorMessage(
+          err,
+          "Failed to load shipments. Please check your connection.",
+        ),
+      );
+      // Keep the previous items so a failed refresh does not wipe the table
+      // or reset the user's pagination.
+      setLoading(false);
+    };
+
+    if (serverPaginated) {
+      clientFetchKey.current = "";
+      fetchShipmentHistory({ page, limit: PAGE_LIMIT, search })
+        .then((res) => {
+          if (current !== requestId.current) return;
+          setAllItems(res.items ?? []);
+          setServerTotal(res.meta?.totalItems ?? 0);
+          setServerTotalPages(res.meta?.totalPages ?? 1);
+          setLoading(false);
+        })
+        .catch(handleError);
+      return;
+    }
+
+    const key = `${statusFilter}|${search}|${reloadKey}`;
+    if (clientFetchKey.current === key) {
+      setLoading(false);
+      return;
+    }
+    clientFetchKey.current = key;
 
     const load = async () => {
       if (statusFilter === "DELIVERED") {
@@ -236,19 +298,8 @@ export function useShipments() {
         setAllItems(items);
         setLoading(false);
       })
-      .catch((err) => {
-        if (current !== requestId.current) return;
-        console.error("Failed to load shipments:", err);
-        setError(
-          getErrorMessage(
-            err,
-            "Failed to load shipments. Please check your connection.",
-          ),
-        );
-        setAllItems([]);
-        setLoading(false);
-      });
-  }, [statusFilter, search, reloadKey]);
+      .catch(handleError);
+  }, [statusFilter, search, reloadKey, serverPaginated, page]);
 
   const reload = () => setReloadKey((key) => key + 1);
 
@@ -311,7 +362,15 @@ export function useShipments() {
   const closeStatusModal = () => setStatusTarget(null);
 
   // Client-side pipeline: date filter -> sort -> paginate over allItems.
+  // In server-paginated mode allItems is already the visible page.
   const view = React.useMemo(() => {
+    if (serverPaginated) {
+      return {
+        items: allItems,
+        total: serverTotal,
+        totalPages: Math.max(1, serverTotalPages),
+      };
+    }
     const filtered = allItems.filter((item) =>
       matchesShipmentDateRange(item, startDate, endDate),
     );
@@ -324,14 +383,22 @@ export function useShipments() {
       total: sorted.length,
       totalPages,
     };
-  }, [allItems, startDate, endDate, sort, page]);
+  }, [
+    allItems,
+    startDate,
+    endDate,
+    sort,
+    page,
+    serverPaginated,
+    serverTotal,
+    serverTotalPages,
+  ]);
 
   // If filters shrink the result set below the current page, step back.
   React.useEffect(() => {
     if (page > view.totalPages) setPage(view.totalPages);
   }, [page, view.totalPages]);
 
-  const hasDateFilter = Boolean(startDate || endDate);
   const hasActiveFilters = hasDateFilter || sort !== "DEFAULT";
 
   return {
