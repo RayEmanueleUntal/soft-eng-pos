@@ -103,7 +103,7 @@ export function OrderSearchSelect({
                       </span>
                     </span>
                     <span className="shrink-0 text-right">
-                      <span className="block text-xs">
+                      <span className="block font-mono text-xs tabular-nums">
                         {formatPeso(Number(transaction.grand_total))}
                       </span>
                       {blocked && (

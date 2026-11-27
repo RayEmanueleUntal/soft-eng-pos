@@ -25,8 +25,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ShipmentStatusBadge } from "../../../_components/ShipmentStatusBadge";
-import { UpdateShipmentStatusModal } from "../../../_components/UpdateShipmentStatusModal";
+import { ShipmentStatusBadge } from "@/components/inventory/ShipmentStatusBadge";
+import { UpdateShipmentStatusModal } from "@/components/inventory/UpdateShipmentStatusModal";
 import { useShipmentDetail } from "@/lib/inventory/useShipmentDetail";
 import { canDeleteShipment, canUpdateShipment } from "@/lib/auth/permissions";
 import { useCurrentRole } from "@/lib/auth/use-current-role";

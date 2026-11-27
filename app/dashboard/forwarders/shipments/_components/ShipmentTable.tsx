@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
+import { ShipmentStatusBadge } from "@/components/inventory/ShipmentStatusBadge";
 import { Shipment } from "@/lib/inventory/shipment-types";
 import { formatDateTime, getNextStatus } from "@/lib/inventory/shipment-utils";
 

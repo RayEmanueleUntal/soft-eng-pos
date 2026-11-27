@@ -57,10 +57,9 @@ export function DateRangeFilter({
 
   const triggerBaseClasses = cn(
     buttonVariants({ variant: "outline" }),
-    "h-8 w-[130px] justify-start px-2.5 text-left text-xs font-normal rounded-[2px]",
+    "h-8 justify-start px-2.5 text-left text-xs font-normal rounded-[2px]",
     "bg-white hover:bg-white dark:bg-background dark:hover:bg-background",
     "disabled:bg-muted disabled:text-muted-foreground disabled:opacity-50",
-    inputClassName,
   );
 
   return (
@@ -78,6 +77,7 @@ export function DateRangeFilter({
               className={cn(
                 triggerBaseClasses,
                 "w-full",
+                inputClassName,
                 startObj ? "font-mono" : "font-sans text-muted-foreground",
               )}
             >
@@ -113,6 +113,7 @@ export function DateRangeFilter({
               className={cn(
                 triggerBaseClasses,
                 "w-full",
+                inputClassName,
                 endObj ? "font-mono" : "font-sans text-muted-foreground",
               )}
             >

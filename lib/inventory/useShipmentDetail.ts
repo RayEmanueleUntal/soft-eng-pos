@@ -5,7 +5,7 @@
 // edit form, delete confirmation, and the status-update modal state.
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   deleteShipment,
   fetchActiveForwarders,
@@ -28,6 +28,7 @@ const NOTES_MAX = 500;
 
 export function useShipmentDetail(shipmentId: number | null) {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [shipment, setShipment] = React.useState<Shipment | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -54,7 +55,12 @@ export function useShipmentDetail(shipmentId: number | null) {
 
   // Loads the shipment (and active forwarders for editing/warnings) on mount and after changes.
   React.useEffect(() => {
-    if (shipmentId === null) return;
+    if (shipmentId === null) {
+      setShipment(null);
+      setLoading(false);
+      setLoadError("Invalid shipment link.");
+      return;
+    }
 
     let cancelled = false;
     setShipment(null);
@@ -107,7 +113,15 @@ export function useShipmentDetail(shipmentId: number | null) {
 
   const reload = () => setReloadKey((key) => key + 1);
 
-  const goBack = () => router.push("/dashboard/forwarders/shipments");
+  // Returns to the filtered list when the detail page was opened from it;
+  // the `back` param is validated to stay inside the shipments list route.
+  const goBack = () => {
+    const back = searchParams.get("back");
+    const isListUrl =
+      back === "/dashboard/forwarders/shipments" ||
+      back?.startsWith("/dashboard/forwarders/shipments?");
+    router.push(isListUrl ? back! : "/dashboard/forwarders/shipments");
+  };
 
   const startEditing = () => {
     if (!shipment) return;

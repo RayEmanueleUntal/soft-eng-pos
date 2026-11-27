@@ -14,6 +14,7 @@ import {
 } from "./suppliers";
 import { SortKey } from "@/components/ui/sort-select";
 import { mapSupplierSortKeyToApiParams } from "@/lib/utils/sort";
+import { getErrorMessage } from "@/lib/utils";
 
 const PAGE_SIZE = 15;
 
@@ -71,11 +72,8 @@ export function useSuppliers() {
       setSuppliers(res.data);
       setTotalPages(res.totalPages);
       setTotalItems(res.total);
-    } catch (err: any) {
-      showFeedback(
-        "error",
-        err.response?.data?.message || "Failed to load suppliers.",
-      );
+    } catch (err) {
+      showFeedback("error", getErrorMessage(err, "Failed to load suppliers."));
     } finally {
       setLoading(false);
     }
@@ -122,8 +120,8 @@ export function useSuppliers() {
       }
       closeModal();
       loadData();
-    } catch (err: any) {
-      showFeedback("error", err.response?.data?.message || "Operation failed.");
+    } catch (err) {
+      showFeedback("error", getErrorMessage(err, "Operation failed."));
     } finally {
       setActionLoading(false);
     }
@@ -146,10 +144,10 @@ export function useSuppliers() {
       } else {
         loadData();
       }
-    } catch (err: any) {
+    } catch (err) {
       showFeedback(
         "error",
-        err.response?.data?.message || "Failed to delete supplier.",
+        getErrorMessage(err, "Failed to delete supplier."),
       );
     } finally {
       setActionLoading(false);
